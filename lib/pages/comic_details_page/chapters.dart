@@ -390,8 +390,15 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                                 ),
                               ),
                             )
-                          : Image.network(
-                              coverUrl,
+                          // 必須走 App 的圖片載入器：它會套用源的 onImageLoad
+                          // headers（帶 UA）。Image.network 是 Flutter 原生 HTTP，
+                          // 不帶 UA → 栗子圖床回 403 → 封面永遠顯示佔位圖。
+                          : Image(
+                              image: CachedImageProvider(
+                                coverUrl,
+                                sourceKey: details.sourceKey,
+                                cid: details.id,
+                              ),
                               fit: BoxFit.cover,
                               errorBuilder: (c, e, st) => Container(
                                 color: context.colorScheme.surfaceContainerHighest,
