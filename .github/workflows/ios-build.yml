@@ -1,0 +1,40 @@
+name: venerax-ios
+on: [workflow_dispatch, push]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          cache: true
+      - name: Build iOS (no codesign)
+        run: |
+          flutter pub get
+          (flutter build ios --release --no-codesign) 2>&1 | tee ios_build.log
+      - name: Package unsigned IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -qry ../../../VeneraX-unsigned.ipa Payload
+          ls -lh ../../../VeneraX-unsigned.ipa
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: VeneraX build ${{ github.run_number }}
+          files: VeneraX-unsigned.ipa
+      - name: Commit build log
+        if: always()
+        run: |
+          git config user.email 'actions@github.com'
+          git config user.name 'github-actions'
+          git add -A
+          git commit -m 'ios build log [skip ci]' || echo 'no changes'
+          git pull --rebase origin main || true
+          git push || true
