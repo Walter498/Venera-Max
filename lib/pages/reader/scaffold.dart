@@ -750,9 +750,14 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         onTap: saveCurrentImage,
       ),
       _ReaderBottomItem(
-        icon: Icons.share,
-        label: "分享",
-        onTap: share,
+        icon: Icons.skip_previous_rounded,
+        label: "上一话",
+        onTap: () => context.reader.toPrevChapter(),
+      ),
+      _ReaderBottomItem(
+        icon: Icons.skip_next_rounded,
+        label: "下一话",
+        onTap: () => context.reader.toNextChapter(),
       ),
     ];
 

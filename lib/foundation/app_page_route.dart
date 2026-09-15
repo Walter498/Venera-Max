@@ -6,7 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
 
-const double _kBackGestureWidth = 20.0;
+const double _kBackGestureWidth = 19.0; // 約 0.5cm：僅邊緣可觸發返回
 const int _kMaxDroppedSwipePageForwardAnimationTime = 800;
 const int _kMaxPageBackAnimationTime = 300;
 const double _kMinFlingVelocity = 1.0;

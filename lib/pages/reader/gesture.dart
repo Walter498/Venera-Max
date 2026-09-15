@@ -382,7 +382,7 @@ class _ReaderGestureDetectorState
           _lastMovement == null ||
           DateTime.now().difference(_lastMovement!) >
               const Duration(milliseconds: 350);
-      if (settled && tapY >= screenHeight / 3 && tapY <= screenHeight * 2 / 3) {
+      if (settled && tapY >= screenHeight * 0.4 && tapY <= screenHeight * 0.6) {
         context.readerScaffold.openOrClose();
       }
     }
