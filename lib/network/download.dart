@@ -282,10 +282,11 @@ class ImagesDownloadTask extends DownloadTask with _TransferSpeedMixin {
         return;
       }
       if (tasks[i] != null) {
-        // A terminal image failure: stop scheduling and let the chapter pool
-        // surface the error (the wrapper already retried internally).
+        // 一張圖失敗不要讓整條下載任務停擺（原本是 return，等於「任何一頁
+        // 404/403 就整部卡死」）。改成跳過這一頁繼續排程其餘頁面，失敗頁仍會
+        // 由章節池回報，但其他頁面照常下完 (#栗子 下載 404 根治)。
         if (tasks[i]!.error != null) {
-          return;
+          continue;
         }
         if (!tasks[i]!.isComplete) {
           downloading++;
