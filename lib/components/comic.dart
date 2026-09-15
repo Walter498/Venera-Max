@@ -1718,6 +1718,7 @@ class _SliverGridComicsState extends State<SliverGridComics> {
   Widget build(BuildContext context) {
     return _SliverGridComics(
       comics: comics,
+      forceBriefMode: widget.forceBriefMode,
       heroIDs: heroIDs,
       enableHero: widget.enableHero,
       selection: widget.selections,
@@ -1734,8 +1735,12 @@ class _SliverGridComicsState extends State<SliverGridComics> {
 }
 
 class _SliverGridComics extends StatelessWidget {
+  /// 強制三列簡潔網格（首頁 3x2 / 3x3 版面用）。
+  final bool forceBriefMode;
+
   const _SliverGridComics({
     required this.comics,
+    this.forceBriefMode = false,
     required this.heroIDs,
     this.enableHero = true,
     this.onLastItemBuild,
@@ -1803,7 +1808,7 @@ class _SliverGridComics extends StatelessWidget {
               ? () => onLongPressed!(comics[index], heroIDs[index])
               : null,
           heroID: enableHero ? heroIDs[index] : null,
-          overrideDisplayMode: widget.forceBriefMode ? 'brief' : null,
+          overrideDisplayMode: forceBriefMode ? 'brief' : null,
         );
         Widget tile = comic;
         if (selection != null) {
@@ -1837,7 +1842,7 @@ class _SliverGridComics extends StatelessWidget {
         return tile;
       }, childCount: comics.length),
       gridDelegate: SliverGridDelegateWithComics(
-        overrideBrief: widget.forceBriefMode ? true : null,
+        overrideBrief: forceBriefMode ? true : null,
       ),
     );
   }
