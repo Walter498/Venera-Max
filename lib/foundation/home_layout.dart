@@ -24,6 +24,9 @@ class HomeSectionMeta {
 /// required for migration: [normalizeHomeLayout] appends any known section
 /// missing from a stored/synced config to the end, visible by default.
 const List<HomeSectionMeta> kHomeSections = [
+  // ⑩ 源內容首頁（圖七樣式）：頂部源分頁 + 三列網格 + 换一换/更多。
+  // 放在最前面，讓首頁一打開就是這個版面。
+  HomeSectionMeta('sourceHome', 'Source Home', Icons.home_outlined),
   HomeSectionMeta('history', 'History', Icons.history),
   HomeSectionMeta('readLater', 'Read Later', Icons.watch_later_outlined),
   HomeSectionMeta('translatedComics', 'Translation Library', Icons.translate),
@@ -85,7 +88,13 @@ List<HomeSectionConfig> normalizeHomeLayout() {
   }
   for (var s in kHomeSections) {
     if (!seen.contains(s.id)) {
-      result.add(HomeSectionConfig(s.id, true));
+      // 首頁源內容是新的主打版面：既有配置在遷移時直接插到最前，
+      // 而不是像其他新區塊那樣追加到末尾，否則使用者根本看不到它。
+      if (s.id == 'sourceHome') {
+        result.insert(0, HomeSectionConfig(s.id, true));
+      } else {
+        result.add(HomeSectionConfig(s.id, true));
+      }
     }
   }
   return result;

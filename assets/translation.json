@@ -1319,7 +1319,10 @@
     "@c comic sources will be updated. Continue?": "將更新 @c 個漫畫源，繼續嗎？",
     "Home Sources": "首页显示源",
     "All sources": "全部源",
-    "Leave every source unchecked to show all sources.": "全部不勾选 = 显示所有源"
+    "Leave every source unchecked to show all sources.": "全部不勾选 = 显示所有源",
+    "Source Home": "源首頁",
+    "Shuffle": "换一换",
+    "Recommended": "推荐"
   },
   "zh_TW": {
     "Reading Statistics": "閱讀統計",
@@ -2641,6 +2644,9 @@
     "@c comic sources will be updated. Continue?": "將更新 @c 個漫畫源，繼續嗎？",
     "Home Sources": "首頁顯示源",
     "All sources": "全部源",
-    "Leave every source unchecked to show all sources.": "全部不勾選 = 顯示所有源"
+    "Leave every source unchecked to show all sources.": "全部不勾選 = 顯示所有源",
+    "Source Home": "源首頁",
+    "Shuffle": "換一換",
+    "Recommended": "推薦"
   }
 }

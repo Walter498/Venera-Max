@@ -36,6 +36,8 @@ import 'package:venera/utils/import_comic.dart';
 import 'package:venera/utils/tags_translation.dart';
 import 'package:venera/utils/translations.dart';
 
+import 'home_source_feed.dart';
+
 import 'local_comics_page.dart';
 
 Size _homeComicTileSize(BuildContext context) {
@@ -204,6 +206,7 @@ class _HomePageState extends State<HomePage> {
   /// preserves the per-section [State] (these widgets hold data and listeners).
   Widget _sectionWidget(String id) {
     return switch (id) {
+      'sourceHome' => const HomeSourceFeed(key: ValueKey('sourceHome')),
       'history' => const _History(key: ValueKey('history')),
       'readLater' => const _ReadLater(key: ValueKey('readLater')),
       'translatedComics' => const _TranslatedComics(
