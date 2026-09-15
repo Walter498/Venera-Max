@@ -71,6 +71,49 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
       if (_weekdayOf(p.title) != null) (_weekdayOf(p.title)!, p),
   ]..sort((a, b) => a.$1.compareTo(b.$1));
 
+  /// 其他「首頁顯示源」中要併進推薦池的分區標題（例如騰訊動漫的
+  /// 「条漫」「独家」）。找不到這些標題時，退回該源的第一個分區。
+  static const _mergePartTitles = ["条漫", "條漫", "独家", "獨家"];
+
+  /// 收集「其他源」的推薦內容，併進首頁推薦池，讓 ⟳ 换一换 能輪到
+  /// 不同來源的作品（栗子 + 騰訊動漫 …）。
+  Future<List<Comic>> _collectCrossSourceComics(String currentKey) async {
+    final merged = <Comic>[];
+    final seen = <String>{};
+    for (final key in effectiveHomeDisplaySourceKeys()) {
+      if (key == currentKey) continue;
+      final source = ComicSource.find(key);
+      if (source == null || source.explorePages.isEmpty) continue;
+      final page = _pickPage(source);
+      if (page == null) continue;
+      List<ExplorePagePart> parts = const [];
+      try {
+        if (page.loadMultiPart != null) {
+          final res = await page.loadMultiPart!();
+          if (res.success) parts = res.data;
+        } else if (page.loadPage != null) {
+          final res = await page.loadPage!(1);
+          if (res.success) parts = [ExplorePagePart(page.title, res.data, null)];
+        }
+      } catch (_) {
+        continue;
+      }
+      var picked = [
+        for (final part in parts)
+          if (_mergePartTitles.any((t) => part.title.contains(t))) part,
+      ];
+      if (picked.isEmpty && parts.isNotEmpty) picked = [parts.first];
+      for (final part in picked) {
+        for (final comic in part.comics) {
+          if (seen.add('${comic.sourceKey}:${comic.id}')) {
+            merged.add(comic);
+          }
+        }
+      }
+    }
+    return merged;
+  }
+
   /// 從某個分區裡挑 [count] 部；帶入 [_seed] 讓「换一换」選到不同的一批。
   List<Comic> _pick(ExplorePagePart part, int count) {
     final list = List<Comic>.from(part.comics);
@@ -166,6 +209,27 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
         }
         result = [ExplorePagePart(page.title, res.data, null)];
       }
+      // 併入其他源（例如騰訊動漫的「条漫」「独家」）到推薦分區
+      try {
+        final cross = await _collectCrossSourceComics(source.key);
+        if (cross.isNotEmpty && result.isNotEmpty) {
+          final recIndex = result.indexWhere((p) => _weekdayOf(p.title) == null);
+          if (recIndex >= 0) {
+            final rec = result[recIndex];
+            final ids = {for (final c in rec.comics) '${c.sourceKey}:${c.id}'};
+            result[recIndex] = ExplorePagePart(
+              rec.title,
+              [
+                ...rec.comics,
+                for (final c in cross)
+                  if (!ids.contains('${c.sourceKey}:${c.id}')) c,
+              ],
+              rec.viewMore,
+            );
+          }
+        }
+      } catch (_) {}
+
       // 只有拿到兩個以上分區（推薦 + 周期更新）才寫，避免緩一半
       if (result.length >= 2) {
         _cache[cacheKey] = (time: DateTime.now(), parts: result);
