@@ -104,9 +104,13 @@ class ComicTile extends StatelessWidget {
     this.onTap,
     this.onLongPressed,
     this.heroID,
+    this.overrideDisplayMode,
   });
 
   final Comic comic;
+
+  /// 覆寫全域的漫畫顯示模式（'brief' / 'detailed'）；null = 跟隨設定。
+  final String? overrideDisplayMode;
 
   final bool enableLongPressed;
 
@@ -274,7 +278,7 @@ class ComicTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var type = appdata.settings['comicDisplayMode'];
+    var type = overrideDisplayMode ?? appdata.settings['comicDisplayMode'];
 
     final comicType = ComicType.fromKey(comic.sourceKey);
     var isFavorite = appdata.settings['showFavoriteStatusOnTile']
@@ -1614,6 +1618,7 @@ class SliverGridComics extends StatefulWidget {
     this.selections,
     this.enableHero = true,
     this.swipeActionBuilder,
+    this.forceBriefMode = false,
   });
 
   final List<Comic> comics;
@@ -1640,6 +1645,10 @@ class SliverGridComics extends StatefulWidget {
   /// panes (start = right swipe, end = left swipe) for a given comic, or null
   /// to leave that comic non-swipeable. See [SwipeActionTile].
   final SwipePanes Function(Comic)? swipeActionBuilder;
+
+  /// 強制用「簡潔模式」的三列網格（首頁的 3x2 / 3x3 版面需要），
+  /// 不受使用者「漫畫顯示模式」設定影響。
+  final bool forceBriefMode;
 
   @override
   State<SliverGridComics> createState() => _SliverGridComicsState();
@@ -1794,6 +1803,7 @@ class _SliverGridComics extends StatelessWidget {
               ? () => onLongPressed!(comics[index], heroIDs[index])
               : null,
           heroID: enableHero ? heroIDs[index] : null,
+          overrideDisplayMode: forceBriefMode ? 'brief' : null,
         );
         Widget tile = comic;
         if (selection != null) {
@@ -1826,7 +1836,9 @@ class _SliverGridComics extends StatelessWidget {
         }
         return tile;
       }, childCount: comics.length),
-      gridDelegate: SliverGridDelegateWithComics(),
+      gridDelegate: SliverGridDelegateWithComics(
+        overrideBrief: forceBriefMode ? true : null,
+      ),
     );
   }
 }

@@ -76,9 +76,13 @@ class SliverGridDelegateWithFixedHeight extends SliverGridDelegate {
 }
 
 class SliverGridDelegateWithComics extends SliverGridDelegate {
-  SliverGridDelegateWithComics();
+  SliverGridDelegateWithComics({this.overrideBrief});
 
-  final bool useBriefMode = appdata.settings['comicDisplayMode'] == 'brief';
+  /// 強制簡潔(網格)或詳細(列表)模式；null = 跟隨全域設定。
+  final bool? overrideBrief;
+
+  bool get useBriefMode =>
+      overrideBrief ?? (appdata.settings['comicDisplayMode'] == 'brief');
 
   final double scale = (appdata.settings['comicTileScale'] as num).toDouble();
 

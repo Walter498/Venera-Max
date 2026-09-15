@@ -23,6 +23,12 @@ class HomeSourceFeed extends StatefulWidget {
 /// 每個分區最多顯示幾部漫畫（設計圖是 3 列 x 2 排）。
 const int kHomeFeedMaxPerSection = 6;
 
+/// 周期更新：3x3。
+const int kHomeWeekdayMaxPerSection = 9;
+
+/// 「查看更多」最多列幾本。
+const int kHomeMoreMaxCount = 10;
+
 class _HomeSourceFeedState extends State<HomeSourceFeed> {
   int _selected = 0;
   bool _loading = false;
@@ -161,14 +167,6 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
     _load();
   }
 
-  void _openMore(ExplorePagePart part, ComicSource source) {
-    if (part.viewMore != null) {
-      part.viewMore!.jump(App.rootContext);
-      return;
-    }
-    context.to(() => SourcePartsPage(source: source));
-  }
-
   @override
   Widget build(BuildContext context) {
     final sources = _sources;
@@ -215,19 +213,20 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
       if (recommends.isNotEmpty) {
         final first = recommends.first;
         slivers.add(SliverToBoxAdapter(child: _buildSectionTitle(first)));
+        // 3 列 x 2 排 = 6 本，固定簡潔網格（不受「漫畫顯示模式」影響）
         slivers.add(
           SliverGridComics(
             comics: _pick(first, kHomeFeedMaxPerSection),
+            forceBriefMode: true,
           ),
         );
-        slivers.add(
-          SliverToBoxAdapter(child: _buildActions(first, _source!)),
-        );
+        slivers.add(SliverToBoxAdapter(child: _buildActions(first)));
         for (final part in recommends.skip(1)) {
           slivers.add(SliverToBoxAdapter(child: _buildSectionTitle(part)));
           slivers.add(
             SliverGridComics(
               comics: part.comics.take(kHomeFeedMaxPerSection).toList(),
+              forceBriefMode: true,
             ),
           );
         }
@@ -250,7 +249,14 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
           (e) => e.$1 == _weekday,
           orElse: () => weeks.first,
         );
-        slivers.add(SliverGridComics(comics: current.$2.comics));
+        // 3 列 x 3 排 = 9 本
+        slivers.add(
+          SliverGridComics(
+            comics: _pick(current.$2, kHomeWeekdayMaxPerSection),
+            forceBriefMode: true,
+          ),
+        );
+        slivers.add(SliverToBoxAdapter(child: _buildActions(current.$2)));
       }
     }
     return SliverMainAxisGroup(slivers: slivers);
@@ -381,7 +387,7 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
     );
   }
 
-  Widget _buildActions(ExplorePagePart part, ComicSource source) {
+  Widget _buildActions(ExplorePagePart part) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
@@ -397,7 +403,13 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
           const SizedBox(width: 12),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => _openMore(part, source),
+              // 查看更多：用 App 的漫畫列表樣式直直列出（最多 10 本）
+              onPressed: () => context.to(
+                () => HomeSectionListPage(
+                  title: part.title,
+                  comics: part.comics,
+                ),
+              ),
               icon: const Icon(Icons.chevron_right, size: 18),
               label: Text("View more".tl),
             ),
@@ -506,6 +518,31 @@ class _SourcePartsPageState extends State<SourcePartsPage> {
                 ],
               ],
             ),
+    );
+  }
+}
+
+/// 「查看更多」頁：用 App 預設的漫畫列表樣式（詳細／簡潔跟隨設定）
+/// 直直列出該分區的漫畫，最多 [kHomeMoreMaxCount] 本。
+class HomeSectionListPage extends StatelessWidget {
+  const HomeSectionListPage({
+    required this.title,
+    required this.comics,
+    super.key,
+  });
+
+  final String title;
+
+  final List<Comic> comics;
+
+  @override
+  Widget build(BuildContext context) {
+    final list = comics.take(kHomeMoreMaxCount).toList();
+    return Scaffold(
+      appBar: Appbar(title: Text(title)),
+      body: SmoothCustomScrollView(
+        slivers: [SliverGridComics(comics: list)],
+      ),
     );
   }
 }
