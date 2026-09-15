@@ -194,16 +194,124 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
     );
   }
 
+  /// 章節封面網格（詳情頁「封面預覽」模式）
+  Widget buildChapterCoverGrid(BuildContext context, ComicDetails details) {
+    final covers = details.chapterCovers ?? const <String, String>{};
+    final cross = context.width >= 840 ? 5 : 3;
+    return SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cross,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.58,
+      ),
+      delegate: SliverChildBuilderDelegate((context, slot) {
+        if (slot >= visible.length) return const SizedBox.shrink();
+        if (reverse) {
+          slot = visible.length - slot - 1;
+        }
+        var i = visible[slot];
+        var key = chapters.ids.elementAt(i);
+        var value = chapters[key]!;
+        var epKey = (i + 1).toString();
+        bool visited = (_history?.readEpisode ?? const {}).contains(epKey);
+        final coverUrl = covers[key];
+        return InkWell(
+          onTap: () => selectMode ? toggleSelect(epKey) : state.read(i + 1),
+          borderRadius: BorderRadius.circular(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: (coverUrl == null || coverUrl.isEmpty)
+                          ? Container(
+                              color: context.colorScheme.surfaceContainerHighest,
+                              child: Center(
+                                child: Text(
+                                  "${i + 1}",
+                                  style: TextStyle(
+                                    color: context.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Image.network(
+                              coverUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (c, e, st) => Container(
+                                color: context.colorScheme.surfaceContainerHighest,
+                                child: Icon(
+                                  Icons.broken_image_outlined,
+                                  color: context.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                    ),
+                    if (visited)
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.primary,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(10),
+                              bottomRight: Radius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            "Last read".tl,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: context.colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11),
+              ),
+            ],
+          ),
+        );
+      }, childCount: visible.length),
+    );
+  }
+
   /// The trailing controls of the title row when NOT selecting.
   Widget buildNormalTitle(
     BuildContext context, {
     required bool reverse,
     required VoidCallback onToggleOrder,
   }) {
+    final gridMode = appdata.settings['chapterCoverGrid'] == true;
+    final collapsed = appdata.settings['chaptersCollapsed'] == true;
     return _ComicSectionHeader(
       icon: Icons.view_list_rounded,
       title: "Chapters".tl,
       horizontalPadding: 0,
+      onTap: () {
+        setState(() {
+          appdata.settings['chapterCoverGrid'] = !gridMode;
+        });
+        appdata.saveData();
+      },
       // The list on screen came from cache/local data while the real request
       // is still running; make the ongoing refresh visible.
       titleBadge: pageState.isDetailsLoading
@@ -220,14 +328,19 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
             ),
           ),
           Tooltip(
-            message: "Order".tl,
+            message: (collapsed ? "Expand" : "Collapse").tl,
             child: IconButton(
               icon: Icon(
-                reverse
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
+                collapsed
+                    ? Icons.expand_more_rounded
+                    : Icons.expand_less_rounded,
               ),
-              onPressed: onToggleOrder,
+              onPressed: () {
+                setState(() {
+                  appdata.settings['chaptersCollapsed'] = !collapsed;
+                });
+                appdata.saveData();
+              },
             ),
           ),
         ],
@@ -340,6 +453,8 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
           }
         }
 
+        final gridMode = appdata.settings['chapterCoverGrid'] == true;
+        final collapsed = appdata.settings['chaptersCollapsed'] == true;
         return SliverMainAxisGroup(
           slivers: [
             SliverToBoxAdapter(
@@ -351,7 +466,12 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                       onToggleOrder: () => setState(() => reverse = !reverse),
                     ),
             ),
-            SliverGrid(
+            if (!collapsed && gridMode)
+              buildChapterCoverGrid(context, pageState.comic),
+            if (collapsed || gridMode)
+              const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
+            if (!collapsed && !gridMode)
+              SliverGrid(
               delegate: SliverChildBuilderDelegate(childCount: length, (
                 context,
                 slot,
@@ -414,7 +534,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 itemHeight: 44,
               ),
             ).sliverPadding(EdgeInsets.zero),
-            if (!canShowAll)
+            if (!collapsed && !gridMode && !canShowAll)
               SliverToBoxAdapter(
                 child: Align(
                   alignment: Alignment.center,

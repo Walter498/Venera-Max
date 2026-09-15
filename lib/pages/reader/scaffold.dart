@@ -662,15 +662,12 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         ? "--"
         : "${(displayPage / context.reader.maxPage * 100).clamp(1, 100).toStringAsFixed(0)}%";
 
-    final bool zhLocale = Localizations.localeOf(context).languageCode == 'zh';
-    String lbl(String zhText, String enText) => zhLocale ? zhText : enText;
-
     final items = <_ReaderBottomItem>[
       _ReaderBottomItem(
         icon: appdata.settings['readerNightMode'] == true
             ? Icons.nightlight_round
             : Icons.nightlight_outlined,
-        label: lbl("夜间", "Night"),
+        label: "夜间",
         onTap: () {
           // Manual toggle takes over: stop following the system theme so the
           // user's explicit choice isn't immediately overridden.
@@ -686,13 +683,13 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       ),
       _ReaderBottomItem(
         icon: isLiked() ? Icons.favorite : Icons.favorite_border,
-        label: lbl("收藏", "Collect"),
+        label: "收藏",
         onTap: addImageFavorite,
       ),
       if (App.isDesktop)
         _ReaderBottomItem(
           icon: Icons.fullscreen,
-          label: lbl("全屏", "Full"),
+          label: "全屏",
           onTap: () => context.reader.fullscreen(),
         ),
       if (App.isAndroid)
@@ -702,7 +699,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
               : rotation == false
               ? Icons.screen_lock_portrait
               : Icons.screen_lock_landscape,
-          label: lbl("旋转", "Rotate"),
+          label: "旋转",
           onTap: () {
             if (rotation == null) {
               setState(() {
@@ -732,7 +729,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         icon: context.reader.autoPageTurningTimer != null
             ? Icons.timer
             : Icons.timer_sharp,
-        label: lbl("自动", "Auto"),
+        label: "自动",
         onTap: () {
           context.reader.autoPageTurning(
             context.reader.cid,
@@ -744,17 +741,17 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       if (context.reader.widget.chapters != null)
         _ReaderBottomItem(
           icon: Icons.library_books,
-          label: lbl("目录", "Items"),
+          label: "目录",
           onTap: openChapterDrawer,
         ),
       _ReaderBottomItem(
         icon: Icons.download,
-        label: lbl("下载", "Save"),
+        label: "下载",
         onTap: saveCurrentImage,
       ),
       _ReaderBottomItem(
         icon: Icons.share,
-        label: lbl("分享", "Share"),
+        label: "分享",
         onTap: share,
       ),
     ];

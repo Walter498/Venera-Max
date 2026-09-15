@@ -380,7 +380,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
           slivers: [
             ...buildTitle(horizontalInset),
             inset(buildActions()),
-            inset(buildRelatedSources()),
             inset(buildDescription()),
             inset(buildChapters()),
             inset(buildComments()),
@@ -905,7 +904,17 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SelectableText(comic.title, style: titleStyle),
+        GestureDetector(
+          onLongPress: () {
+            Clipboard.setData(ClipboardData(text: comic.title));
+            showToast(
+              message: "Copied comic title".tl,
+              context: context,
+              seconds: 1,
+            );
+          },
+          child: Text(comic.title, style: titleStyle),
+        ),
         if (comic.subTitle?.trim().isNotEmpty == true) ...[
           const SizedBox(height: 6),
           SelectableText(
@@ -1619,6 +1628,7 @@ class _ComicSectionHeader extends StatelessWidget {
     this.titleBadge,
     this.trailing,
     this.horizontalPadding,
+    this.onTap,
   });
 
   final IconData icon;
@@ -1634,6 +1644,9 @@ class _ComicSectionHeader extends StatelessWidget {
   /// original asymmetric inset (12 / 8) used by the thumbnail & comment panels.
   final double? horizontalPadding;
 
+  /// 點擊標題區域的回調（詳情頁用於切換章節封面網格/列表）
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1643,7 +1656,10 @@ class _ComicSectionHeader extends StatelessWidget {
         horizontalPadding ?? 8,
         6,
       ),
-      child: Row(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Row(
         children: [
           Container(
             width: 34,
@@ -1678,7 +1694,8 @@ class _ComicSectionHeader extends StatelessWidget {
             ),
           ),
           if (trailing != null) trailing!,
-        ],
+          ],
+        ),
       ),
     );
   }

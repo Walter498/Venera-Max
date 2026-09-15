@@ -426,6 +426,8 @@ class Settings with ChangeNotifier {
     'enableTurnPageByVolumeKey': true,
     'enableClockAndBatteryInfoInReader': true,
     'showReadingProgressPercent': true,
+    'chapterCoverGrid': false,
+    'chaptersCollapsed': false,
     'enableIOSBackGesture': false,
     'quickCollectImage': 'No', // No, DoubleTap, Swipe
     'autoFavoriteCover': false, // 收藏图片时是否自动连带收藏该章节封面

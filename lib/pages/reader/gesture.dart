@@ -233,10 +233,6 @@ class _ReaderGestureDetectorState
       return;
     }
     final location = event.globalPosition;
-    if (!_enableDoubleTapToZoom) {
-      onTap(location);
-      return;
-    }
     final previousLocation = _previousEvent?.globalPosition;
     if (previousLocation != null) {
       if ((location - previousLocation).distanceSquared <
@@ -367,18 +363,17 @@ class _ReaderGestureDetectorState
           return;
         }
       }
-      // 僅在屏幕中間三分之一區域點擊才召喚/收起工具欄
-      final screenHeight = context.height;
-      final tapY = location.dy;
-      if (tapY < screenHeight / 3 || tapY > screenHeight * 2 / 3) {
-        return;
-      }
-      context.readerScaffold.openOrClose();
+      // 單擊不再召喚工具欄（改為雙擊召喚，見 onDoubleTap）
     }
   }
 
   void onDoubleTap(Offset location) {
-    context.reader._imageViewController?.handleDoubleTap(location);
+    if (_enableDoubleTapToZoom) {
+      context.reader._imageViewController?.handleDoubleTap(location);
+    } else {
+      // 雙擊召喚 / 收起上下工具欄
+      context.readerScaffold.openOrClose();
+    }
   }
 
   void onSecondaryTapUp(Offset location) {

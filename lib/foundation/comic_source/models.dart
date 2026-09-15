@@ -153,6 +153,9 @@ class ComicDetails with HistoryMixin {
   /// id-name
   final ComicChapters? chapters;
 
+  /// 章節封面 (chapterId -> url)，可選，用於詳情頁的封面網格預覽
+  final Map<String, String>? chapterCovers;
+
   final List<String>? thumbnails;
 
   final List<Comic>? recommend;
@@ -203,6 +206,11 @@ class ComicDetails with HistoryMixin {
         description = json["description"],
         tags = _generateMap(json["tags"]),
         chapters = ComicChapters.fromJsonOrNull(json["chapters"]),
+        chapterCovers = json["chapterCovers"] is Map
+            ? (json["chapterCovers"] as Map).map(
+                (k, v) => MapEntry(k.toString(), v.toString()),
+              )
+            : null,
         sourceKey = json["sourceKey"],
         comicId = json["comicId"],
         thumbnails = ListOrNull.from(json["thumbnails"]),
