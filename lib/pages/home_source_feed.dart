@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
@@ -26,6 +28,43 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
   bool _loading = false;
   String? _error;
   List<ExplorePagePart> _parts = const [];
+
+  static const _weekdayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+
+  /// 「换一换」用：換個種子 = 換一批推薦（立即有變化，不依賴網路）。
+  int _seed = 0;
+
+  /// 周期更新目前選中的星期（0 = 周一）。
+  int _weekday = 0;
+
+  /// 標題是不是星期幾（支援周/週、星期一）。回傳 0..6（周一=0）。
+  int? _weekdayOf(String title) {
+    final t = title.replaceAll("週", "周").replaceAll(" ", "").trim();
+    if (t == "周天") return 6;
+    for (var i = 0; i < _weekdayNames.length; i++) {
+      final n = _weekdayNames[i].substring(1);
+      if (t == "周$n" || t == "星期$n") return i;
+    }
+    return null;
+  }
+
+  /// 推薦分區（非星期分區）。
+  List<ExplorePagePart> get _recommendParts =>
+      [for (final p in _parts) if (_weekdayOf(p.title) == null) p];
+
+  /// 星期分區，按周一..周日排好（缺的就跳過）。
+  List<(int, ExplorePagePart)> get _weekdayParts => [
+    for (final p in _parts)
+      if (_weekdayOf(p.title) != null) (_weekdayOf(p.title)!, p),
+  ]..sort((a, b) => a.$1.compareTo(b.$1));
+
+  /// 從某個分區裡挑 [count] 部；帶入 [_seed] 讓「换一换」選到不同的一批。
+  List<Comic> _pick(ExplorePagePart part, int count) {
+    final list = List<Comic>.from(part.comics);
+    if (list.length <= count || count <= 0) return list;
+    list.shuffle(Random(_seed * 31 + part.title.hashCode));
+    return list.take(count).toList();
+  }
 
   List<ComicSource> get _sources => [
     for (final key in effectiveHomeDisplaySourceKeys())
@@ -171,23 +210,47 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
         ),
       );
     } else {
-      for (var i = 0; i < _parts.length; i++) {
-        final part = _parts[i];
-        slivers.add(SliverToBoxAdapter(child: _buildSectionTitle(part)));
-        if (part.comics.isNotEmpty) {
+      // ① 首頁推薦（栗子漫畫精選國漫）+ 换一换 / 更多
+      final recommends = _recommendParts;
+      if (recommends.isNotEmpty) {
+        final first = recommends.first;
+        slivers.add(SliverToBoxAdapter(child: _buildSectionTitle(first)));
+        slivers.add(
+          SliverGridComics(
+            comics: _pick(first, kHomeFeedMaxPerSection),
+          ),
+        );
+        slivers.add(
+          SliverToBoxAdapter(child: _buildActions(first, _source!)),
+        );
+        for (final part in recommends.skip(1)) {
+          slivers.add(SliverToBoxAdapter(child: _buildSectionTitle(part)));
           slivers.add(
             SliverGridComics(
               comics: part.comics.take(kHomeFeedMaxPerSection).toList(),
             ),
           );
         }
-        if (i == 0) {
-          slivers.add(
-            SliverToBoxAdapter(
-              child: _buildActions(part, _source!),
+      }
+
+      // ② 周期更新：周一~周日 分頁，資料由源按 updatedAt 事先分好桶
+      final weeks = _weekdayParts;
+      if (weeks.isNotEmpty) {
+        slivers.add(
+          SliverToBoxAdapter(
+            child: _buildSectionTitle(
+              ExplorePagePart("周期更新", const [], null),
             ),
-          );
-        }
+          ),
+        );
+        slivers.add(
+          SliverToBoxAdapter(child: _buildWeekdayChips(weeks)),
+        );
+        final current = weeks.firstWhere(
+          (e) => e.$1 == _weekday,
+          orElse: () => weeks.first,
+        );
+        slivers.add(SliverGridComics(comics: current.$2.comics));
       }
     }
     return SliverMainAxisGroup(slivers: slivers);
@@ -275,6 +338,49 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
     );
   }
 
+  /// 周期更新的星期分頁。
+  Widget _buildWeekdayChips(List<(int, ExplorePagePart)> weeks) {
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        itemCount: weeks.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final entry = weeks[i];
+          final selected = entry.$1 == _weekday;
+          return GestureDetector(
+            onTap: () => setState(() => _weekday = entry.$1),
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: selected ? context.colorScheme.primaryContainer : null,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: selected
+                      ? Colors.transparent
+                      : context.colorScheme.outlineVariant,
+                  width: 0.6,
+                ),
+              ),
+              child: Text(
+                _weekdayNames[entry.$1],
+                style: ts.s14.copyWith(
+                  fontWeight: selected ? FontWeight.w600 : null,
+                  color: selected
+                      ? context.colorScheme.onPrimaryContainer
+                      : null,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildActions(ExplorePagePart part, ComicSource source) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -282,7 +388,8 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: _loading ? null : _load,
+              // 换一换：立即換一批推薦（種子變化 → 立刻看得到效果）
+              onPressed: () => setState(() => _seed++),
               icon: const Icon(Icons.refresh, size: 18),
               label: Text("Shuffle".tl),
             ),
