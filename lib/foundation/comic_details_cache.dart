@@ -62,6 +62,10 @@ class ComicDetailsCache {
   }
 
   ComicDetails? find(String sourceKey, String comicId) {
+    // 依需求：詳情頁不做快取 —— 每次進入都重新向源載入（章節清單/封面/標籤
+    // 永遠是最新的）。寫入仍保留（供其他路徑使用），但不再讀取。
+    return null;
+    // ignore: dead_code
     if (!isCacheable(sourceKey)) return null;
     try {
       final rows = _db.select(
