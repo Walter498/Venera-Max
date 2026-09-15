@@ -234,7 +234,23 @@ abstract class ImageDownloader {
     var netRetries = 3;
     while (true) {
       try {
-        configs['headers'] ??= {'user-agent': webUA};
+        // 統一帶 UA：原本用 ??= ，只要源回傳的 headers 不是 null（例如回空 map
+        // 或只帶自己的 header），UA 就補不上 → 下載內頁變成裸請求 → CDN 回
+        // 403/404（閱讀走源 headers 所以正常）。這裡改成「缺 UA 就補」，
+        // 讓閱讀與下載走完全相同的請求形狀。
+        configs['headers'] ??= <String, dynamic>{};
+        var headers = Map<String, dynamic>.from(configs['headers'] as Map);
+        var hasUA = false;
+        for (var key in headers.keys) {
+          if (key.toString().toLowerCase() == 'user-agent') {
+            hasUA = true;
+            break;
+          }
+        }
+        if (!hasUA) {
+          headers['user-agent'] = webUA;
+        }
+        configs['headers'] = headers;
 
         if (configs['onLoadFailed'] is JSInvokable) {
           onLoadFailed = () async {
