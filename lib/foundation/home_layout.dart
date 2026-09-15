@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/comic_source/comic_source.dart';
 
 /// Metadata for a single customizable section on the home page.
 ///
@@ -183,4 +184,25 @@ void saveImageFavoritesTabs(List<HomeSectionConfig> tabs) {
     ...preserved,
   ];
   appdata.saveData();
+}
+
+/// ⑩ 首頁要顯示哪些漫畫源的內容。空集合代表「全部」（所有提供探索頁的源）。
+List<String> homeDisplaySourceKeys() {
+  final raw = appdata.settings['homeDisplaySources'];
+  if (raw is List) {
+    return raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+  }
+  return const [];
+}
+
+/// 首頁實際可顯示的源：設定為空時回傳全部有探索頁的源。
+List<String> effectiveHomeDisplaySourceKeys() {
+  final configured = homeDisplaySourceKeys();
+  if (configured.isNotEmpty) {
+    return configured.where((k) => ComicSource.find(k) != null).toList();
+  }
+  return [
+    for (final s in ComicSource.all())
+      if (s.explorePageData != null) s.key,
+  ];
 }

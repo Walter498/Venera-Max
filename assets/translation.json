@@ -1316,7 +1316,10 @@
     "@c selected": "已选 @c 项",
     "@c downloading tasks will be canceled. Continue?": "将取消 @c 个下载任务，继续吗？",
     "Update All Sources": "批量更新源",
-    "@c comic sources will be updated. Continue?": "將更新 @c 個漫畫源，繼續嗎？"
+    "@c comic sources will be updated. Continue?": "將更新 @c 個漫畫源，繼續嗎？",
+    "Home Sources": "首页显示源",
+    "All sources": "全部源",
+    "Leave every source unchecked to show all sources.": "全部不勾选 = 显示所有源"
   },
   "zh_TW": {
     "Reading Statistics": "閱讀統計",
@@ -2635,6 +2638,9 @@
     "@c selected": "已選 @c 項",
     "@c downloading tasks will be canceled. Continue?": "將取消 @c 個下載任務，繼續嗎？",
     "Update All Sources": "批量更新源",
-    "@c comic sources will be updated. Continue?": "將更新 @c 個漫畫源，繼續嗎？"
+    "@c comic sources will be updated. Continue?": "將更新 @c 個漫畫源，繼續嗎？",
+    "Home Sources": "首頁顯示源",
+    "All sources": "全部源",
+    "Leave every source unchecked to show all sources.": "全部不勾選 = 顯示所有源"
   }
 }

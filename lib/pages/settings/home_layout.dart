@@ -65,6 +65,7 @@ class _HomeLayoutSettingsState extends State<HomeLayoutSettings> {
               style: ts.s12.copyWith(color: context.colorScheme.outline),
             ),
           ),
+          const _HomeSourceEntry(),
           Expanded(
             child: ReorderableListView.builder(
               buildDefaultDragHandles: false,
@@ -301,6 +302,107 @@ class _ImageFavoritesTabTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// ⑩「首頁顯示源」入口：顯示目前設定，點進去多選。
+class _HomeSourceEntry extends StatelessWidget {
+  const _HomeSourceEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    final names = homeDisplaySourceKeys()
+        .map((k) => ComicSource.find(k)?.name ?? k)
+        .toList();
+    return ListTile(
+      leading: const Icon(Icons.source_outlined),
+      title: Text("Home Sources".tl),
+      subtitle: Text(
+        names.isEmpty ? "All sources".tl : names.join(", "),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => context.to(() => const HomeSourcePicker()),
+    );
+  }
+}
+
+/// ⑩ 首頁顯示源多選頁。清空 = 全部源。
+class HomeSourcePicker extends StatefulWidget {
+  const HomeSourcePicker({super.key});
+
+  @override
+  State<HomeSourcePicker> createState() => _HomeSourcePickerState();
+}
+
+class _HomeSourcePickerState extends State<HomeSourcePicker> {
+  late final List<ComicSource> sources = [
+    for (final s in ComicSource.all())
+      if (s.explorePageData != null) s,
+  ];
+
+  late Set<String> selected = homeDisplaySourceKeys().toSet();
+
+  void _save() {
+    appdata.settings['homeDisplaySources'] = selected.toList();
+    appdata.saveData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: Appbar(
+        title: Text("Home Sources".tl),
+        actions: [
+          Tooltip(
+            message: "Reset to Default".tl,
+            child: IconButton(
+              icon: const Icon(Icons.restart_alt),
+              onPressed: () {
+                setState(selected = <String>{});
+                _save();
+              },
+            ),
+          ),
+        ],
+      ),
+      body: sources.isEmpty
+          ? Center(
+              child: Text(
+                "No items".tl,
+                style: ts.s14.copyWith(color: context.colorScheme.outline),
+              ),
+            )
+          : ListView(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    "Leave every source unchecked to show all sources.".tl,
+                    style: ts.s12.copyWith(color: context.colorScheme.outline),
+                  ),
+                ),
+                for (final source in sources)
+                  CheckboxListTile(
+                    title: Text(source.name),
+                    subtitle: Text(source.key),
+                    value: selected.contains(source.key),
+                    onChanged: (v) {
+                      setState(() {
+                        if (v == true) {
+                          selected.add(source.key);
+                        } else {
+                          selected.remove(source.key);
+                        }
+                      });
+                      _save();
+                    },
+                  ),
+                SizedBox(height: context.padding.bottom + 8),
+              ],
+            ),
     );
   }
 }
