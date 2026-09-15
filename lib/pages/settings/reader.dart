@@ -79,11 +79,16 @@ class _ReaderSettingsState extends State<ReaderSettings> {
       showChapterComments = appdata.settings['showChapterComments'] as bool?;
     }
 
-    // Must have showChapterComments enabled and be in gallery mode
+    // Must have showChapterComments enabled. Supported in the horizontal
+    // gallery modes and — ⑧ — in every continuous scroll mode, where the
+    // comments are simply the last block the user reaches by scrolling down.
     if (showChapterComments != true) return false;
 
     return readerMode == 'galleryLeftToRight' ||
-        readerMode == 'galleryRightToLeft';
+        readerMode == 'galleryRightToLeft' ||
+        readerMode == 'continuousTopToBottom' ||
+        readerMode == 'continuousLeftToRight' ||
+        readerMode == 'continuousRightToLeft';
   }
 
   /// The source language that applies in this page's scope: the comic's own when

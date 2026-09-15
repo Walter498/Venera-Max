@@ -1674,6 +1674,46 @@ class _ContinuousModeState extends State<_ContinuousMode>
   ///    offset 0) regardless of the variable image heights above it.
   ///  - Prepending an earlier chapter only grows the first sliver away from the
   ///    pivot, so the content the user is looking at stays pinned — no jump.
+  /// ⑧ 連續滾動模式：滑過最後一頁後直接往下滑就能看到本章評論，
+  /// 不必再點右上角的評論按鈕。
+  bool get showChapterCommentsAtEnd {
+    if (reader.widget.chapters == null) return false;
+    var source = ComicSource.find(reader.type.sourceKey);
+    if (source?.chapterCommentsLoader == null) return false;
+    return appdata.settings.getReaderSetting(
+              reader.cid,
+              reader.type.sourceKey,
+              'showChapterComments',
+            ) ==
+            true &&
+        appdata.settings.getReaderSetting(
+              reader.cid,
+              reader.type.sourceKey,
+              'showChapterCommentsAtEnd',
+            ) ==
+            true;
+  }
+
+  Widget _buildChapterCommentsBlock() {
+    var source = ComicSource.find(reader.type.sourceKey);
+    var chapters = reader.widget.chapters;
+    if (source == null || chapters == null) return const SizedBox();
+    var chapterIndex = reader.chapter - 1;
+    if (chapterIndex < 0 || chapterIndex >= chapters.length) {
+      return const SizedBox();
+    }
+    return SizedBox(
+      height: reader.size.height,
+      child: _EmbeddedChapterCommentsPage(
+        comicId: reader.cid,
+        epId: chapters.ids.elementAt(chapterIndex),
+        source: source,
+        comicTitle: reader.widget.name,
+        chapterTitle: chapters.titles.elementAt(chapterIndex),
+      ),
+    );
+  }
+
   Widget _buildScrollView() {
     final before = _anchorIndex; // entries strictly before the pivot
     final afterCount = _entries.length - _anchorIndex; // pivot + following
@@ -1719,6 +1759,9 @@ class _ContinuousModeState extends State<_ContinuousMode>
             addSemanticIndexes: false,
           ),
         ),
+        // ⑧ 章節末評論：下滑即見（可在閱讀設定關閉）。
+        if (showChapterCommentsAtEnd)
+          SliverToBoxAdapter(child: _buildChapterCommentsBlock()),
       ],
     );
   }

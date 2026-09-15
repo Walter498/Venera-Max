@@ -307,7 +307,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                   message: "Download".tl,
                   child: IconButton(
                     icon: const Icon(Icons.download_outlined),
-                    onPressed: downloadFromReader,
+                    onPressed: pickChaptersAndDownload,
                   ),
                 ),
               ...buildTranslationControls(),
@@ -440,6 +440,114 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       context.reader.page,
       context.reader.chapter,
     );
+  }
+
+  /// ⑤ 閱讀器下載按鈕：開出「選章下載」頁，預設勾選當前正在閱讀的章節。
+  /// 單章漫畫（無章節列表）維持原本「下載整部」的行為。
+  Future<void> pickChaptersAndDownload() async {
+    final reader = context.reader;
+    final chapters = reader.widget.chapters;
+    if (chapters == null) {
+      downloadFromReader();
+      return;
+    }
+    final source = ComicSource.find(reader.type.sourceKey);
+    if (source == null) return;
+    if (LocalManager().isDownloading(reader.cid, reader.type)) {
+      showToast(message: "The comic is downloading".tl, context: context);
+      return;
+    }
+    if (!await ensureDownloadStorageWritable()) return;
+
+    final titles = chapters.titles.toList();
+    final ids = chapters.ids.toList();
+    if (titles.isEmpty || ids.isEmpty) {
+      downloadFromReader();
+      return;
+    }
+
+    final local = LocalManager().find(reader.cid, reader.type);
+    final downloaded = <int>[];
+    if (local != null) {
+      for (int i = 0; i < ids.length && i < titles.length; i++) {
+        if (local.downloadedChapters.contains(ids[i])) downloaded.add(i);
+      }
+    }
+
+    final current = reader.chapter - 1;
+    final selected = await showDownloadChapterSelect(
+      App.rootContext,
+      titles: titles,
+      downloadedEps: downloaded,
+      preselected: current >= 0 && current < titles.length
+          ? {current}
+          : const <int>{},
+      hiddenEps: {for (final c in reader._hiddenChapters) c - 1},
+    );
+    if (selected == null || selected.isEmpty) return;
+    if (!mounted) return;
+    LocalManager().addTask(
+      ImagesDownloadTask(
+        source: source,
+        comicId: reader.cid,
+        comicTitle: reader.widget.name,
+        chapters: [
+          for (final i in selected)
+            if (i >= 0 && i < ids.length) ids[i],
+        ],
+      ),
+    );
+    showToast(message: "Download started".tl, context: context);
+    update();
+  }
+
+  /// ⑥ 是否已把整部漫畫收進本地收藏夾。
+  bool isComicFavorited() {
+    final reader = context.reader;
+    if (reader.type == ComicType.local) return false;
+    return LocalFavoritesManager().find(reader.cid, reader.type).isNotEmpty;
+  }
+
+  /// ⑥ 收藏整部漫畫（原本的收藏按鈕是收藏「當前這一張圖」）。
+  /// 優先收進設定裡的快速收藏夾，沒有就收進第一個收藏夾。
+  void favoriteComicFromReader() {
+    final reader = context.reader;
+    if (reader.type == ComicType.local) {
+      showToast(
+        message: "Local comic collection is not supported at present".tl,
+        context: context,
+      );
+      return;
+    }
+    final manager = LocalFavoritesManager();
+    final folders = manager.folderNames;
+    if (folders.isEmpty) {
+      showToast(message: "No favorite folder".tl, context: context);
+      return;
+    }
+    if (manager.find(reader.cid, reader.type).isNotEmpty) {
+      showToast(message: "Already in favorites".tl, context: context);
+      return;
+    }
+    var folder = appdata.settings['quickFavorite'];
+    if (folder is! String || !folders.contains(folder)) {
+      folder = folders.first;
+    }
+    manager.addComic(
+      folder,
+      FavoriteItem(
+        id: reader.cid,
+        name: reader.widget.name,
+        coverPath: reader.widget.history.cover,
+        author: reader.widget.author,
+        type: reader.type,
+        tags: reader.widget.tags,
+      ),
+      null,
+      null,
+    );
+    showToast(message: "Added to favorites".tl, context: context);
+    update();
   }
 
   /// Whether the in-reader download button should show: only for online source
@@ -682,9 +790,9 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         },
       ),
       _ReaderBottomItem(
-        icon: isLiked() ? Icons.favorite : Icons.favorite_border,
+        icon: isComicFavorited() ? Icons.favorite : Icons.favorite_border,
         label: "收藏",
-        onTap: addImageFavorite,
+        onTap: favoriteComicFromReader,
       ),
       if (App.isDesktop)
         _ReaderBottomItem(

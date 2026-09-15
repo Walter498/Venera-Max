@@ -424,6 +424,57 @@ class _BodyState extends State<_Body> {
       )
       .toList();
 
+  /// ⑨ 批量更新源：
+  /// - 檢查更新：對所有已啟用的源倉庫目錄做一次檢查，有新版就回報數量。
+  /// - 全部更新：不管版本號，把目前安裝的每個源腳本重新下載一次。
+  bool _batchUpdating = false;
+
+  void _batchCheckUpdates() async {
+    if (_batchUpdating) return;
+    setState(() => _batchUpdating = true);
+    try {
+      var count = await ComicSourcePage.checkComicSourceUpdate();
+      if (!mounted) return;
+      updateUI();
+      if (count == -1) {
+        context.showMessage(message: "Network error".tl);
+      } else if (count == 0) {
+        context.showMessage(message: "No updates".tl);
+      } else {
+        context.showMessage(message: "@c updates".tlParams({"c": count}));
+      }
+    } finally {
+      if (mounted) setState(() => _batchUpdating = false);
+    }
+  }
+
+  void _batchUpdateAll() async {
+    final sources = _managedSources();
+    if (sources.isEmpty) {
+      context.showMessage(message: "No items".tl);
+      return;
+    }
+    showConfirmDialog(
+      context: App.rootContext,
+      title: "Update All Sources".tl,
+      content: "@c comic sources will be updated. Continue?".tlParams({
+        "c": sources.length,
+      }),
+      onConfirm: () async {
+        ComicSourceUpdateTaskManager.onPurgeLocalData ??= (s) =>
+            purgeSourceLocalData(s, deleteScript: false);
+        final task = ComicSourceUpdateTaskManager.instance.start(
+          sources,
+          targetVersions: ComicSourceManager().availableUpdates,
+        );
+        await ComicSourcePage.showUpdateTaskDialog(App.rootContext, task);
+        if (!mounted) return;
+        updateUI();
+        App.forceRebuild();
+      },
+    );
+  }
+
   void _enterSortMode() {
     final sources = _managedSources();
     if (sources.length < 2) return;
@@ -473,7 +524,27 @@ class _BodyState extends State<_Body> {
     return SmoothCustomScrollView(
       scrollbarTopPadding: context.padding.top + 56,
       slivers: [
-        SliverAppbar(title: Text('Comic Source'.tl), style: AppbarStyle.shadow),
+        SliverAppbar(
+          title: Text('Comic Source'.tl),
+          style: AppbarStyle.shadow,
+          actions: [
+            if (sorting == null)
+              MenuButton(
+                entries: [
+                  MenuEntry(
+                    icon: Icons.refresh,
+                    text: "Check updates".tl,
+                    onClick: _batchCheckUpdates,
+                  ),
+                  MenuEntry(
+                    icon: Icons.cloud_download_outlined,
+                    text: "Update All Sources".tl,
+                    onClick: _batchUpdateAll,
+                  ),
+                ],
+              ),
+          ],
+        ),
         if (sorting != null) ...[
           _SortModeBanner(onDone: _saveSortOrder, onSortByName: _sortByName),
           SliverReorderableList(

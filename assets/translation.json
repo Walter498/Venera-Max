@@ -1309,7 +1309,14 @@
     "Cover grid": "封面网格",
     "List view": "列表",
     "Last read": "上次观看",
-    "Preview covers": "预览封面"
+    "Preview covers": "预览封面",
+    "Invert selection": "反选",
+    "@a chapters selected": "已选 @a 章",
+    "No favorite folder": "没有可用的收藏夹",
+    "@c selected": "已选 @c 项",
+    "@c downloading tasks will be canceled. Continue?": "将取消 @c 个下载任务，继续吗？",
+    "Update All Sources": "批量更新源",
+    "@c comic sources will be updated. Continue?": "將更新 @c 個漫畫源，繼續嗎？"
   },
   "zh_TW": {
     "Reading Statistics": "閱讀統計",
@@ -2621,6 +2628,13 @@
     "Cover grid": "封面網格",
     "List view": "列表",
     "Last read": "上次觀看",
-    "Preview covers": "預覽封面"
+    "Preview covers": "預覽封面",
+    "Invert selection": "反選",
+    "@a chapters selected": "已選 @a 章",
+    "No favorite folder": "沒有可用的收藏夾",
+    "@c selected": "已選 @c 項",
+    "@c downloading tasks will be canceled. Continue?": "將取消 @c 個下載任務，繼續嗎？",
+    "Update All Sources": "批量更新源",
+    "@c comic sources will be updated. Continue?": "將更新 @c 個漫畫源，繼續嗎？"
   }
 }

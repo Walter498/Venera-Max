@@ -30,6 +30,64 @@ class _DownloadingPageState extends State<DownloadingPage> {
   /// per-second speed/progress across every active download (not just the head).
   final _listened = <DownloadTask>{};
 
+  /// ⑦ 長按進入多選模式：批次暫停 / 繼續 / 取消任務。
+  bool _selectionMode = false;
+  final _selected = <DownloadTask>{};
+
+  void _enterSelection(DownloadTask task) {
+    setState(() {
+      _selectionMode = true;
+      _selected.add(task);
+    });
+  }
+
+  void _toggleSelection(DownloadTask task) {
+    setState(() {
+      if (!_selected.remove(task)) {
+        _selected.add(task);
+      }
+      if (_selected.isEmpty) {
+        _selectionMode = false;
+      }
+    });
+  }
+
+  void _exitSelection() {
+    setState(() {
+      _selectionMode = false;
+      _selected.clear();
+    });
+  }
+
+  void _confirmCancelSelected() {
+    final targets = List<DownloadTask>.from(_selected);
+    if (targets.isEmpty) return;
+    showDialog(
+      context: context,
+      builder: (context) => ContentDialog(
+        title: "Cancel".tl,
+        content: Text(
+          "@c downloading tasks will be canceled. Continue?".tlParams({
+            "c": targets.length,
+          }),
+        ).paddingHorizontal(16),
+        actions: [
+          Button.filled(
+            color: context.colorScheme.error,
+            onPressed: () {
+              context.pop();
+              for (final t in targets) {
+                t.cancel();
+              }
+              _exitSelection();
+            },
+            child: Text("Confirm".tl),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     LocalManager().addListener(_onManagerChanged);
@@ -75,9 +133,54 @@ class _DownloadingPageState extends State<DownloadingPage> {
   @override
   Widget build(BuildContext context) {
     final tasks = LocalManager().downloadingTasks;
+    _selected.removeWhere((t) => !tasks.contains(t));
     return PopUpWidgetScaffold(
-      title: "Downloading".tl,
-      tailing: [
+      title: _selectionMode
+          ? "@c selected".tlParams({"c": _selected.length})
+          : "Downloading".tl,
+      tailing: _selectionMode
+          ? [
+              IconButton(
+                icon: const Icon(Icons.select_all),
+                tooltip: "Select All".tl,
+                onPressed: () => setState(() => _selected.addAll(tasks)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.pause),
+                tooltip: "Pause All".tl,
+                onPressed: _selected.isEmpty
+                    ? null
+                    : () {
+                        for (final t in List<DownloadTask>.from(_selected)) {
+                          LocalManager().pauseTask(t);
+                        }
+                      },
+              ),
+              IconButton(
+                icon: const Icon(Icons.play_arrow),
+                tooltip: "Resume All".tl,
+                onPressed: _selected.isEmpty
+                    ? null
+                    : () {
+                        for (final t in List<DownloadTask>.from(_selected)) {
+                          LocalManager().resumeTask(t);
+                        }
+                        DownloadKeepAlive.instance.refresh();
+                      },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: "Cancel".tl,
+                color: context.colorScheme.error,
+                onPressed: _selected.isEmpty ? null : _confirmCancelSelected,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: "Cancel".tl,
+                onPressed: _exitSelection,
+              ),
+            ]
+          : [
         MenuButton(
           entries: [
             MenuEntry(
@@ -116,6 +219,8 @@ class _DownloadingPageState extends State<DownloadingPage> {
                     ),
                   )
                 : ReorderableListView.builder(
+                    // 長按手勢改為「進入多選」，排序改由右側拖拽把手操作。
+                    buildDefaultDragHandles: false,
                     itemCount: tasks.length,
                     onReorderItem: (oldIndex, newIndex) {
                       LocalManager().reorderTask(oldIndex, newIndex);
@@ -125,6 +230,11 @@ class _DownloadingPageState extends State<DownloadingPage> {
                       return _DownloadTaskTile(
                         key: ValueKey(task),
                         task: task,
+                        reorderIndex: i,
+                        selectionMode: _selectionMode,
+                        selected: _selected.contains(task),
+                        onLongPress: () => _enterSelection(task),
+                        onTap: () => _toggleSelection(task),
                       );
                     },
                   ),
@@ -237,9 +347,28 @@ class _DownloadingPageState extends State<DownloadingPage> {
 }
 
 class _DownloadTaskTile extends StatefulWidget {
-  const _DownloadTaskTile({required this.task, super.key});
+  const _DownloadTaskTile({
+    required this.task,
+    this.reorderIndex,
+    this.selectionMode = false,
+    this.selected = false,
+    this.onLongPress,
+    this.onTap,
+    super.key,
+  });
 
   final DownloadTask task;
+
+  /// 供右側拖拽把手使用（ReorderableDragStartListener 需要索引）。
+  final int? reorderIndex;
+
+  final bool selectionMode;
+
+  final bool selected;
+
+  final VoidCallback? onLongPress;
+
+  final VoidCallback? onTap;
 
   @override
   State<_DownloadTaskTile> createState() => _DownloadTaskTileState();
@@ -289,11 +418,40 @@ class _DownloadTaskTileState extends State<_DownloadTaskTile> {
   @override
   Widget build(BuildContext context) {
     final t = widget.task;
-    return Container(
+    return GestureDetector(
+      onLongPress: widget.onLongPress,
+      onTap: widget.selectionMode ? widget.onTap : null,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
       height: 136,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      color: widget.selected
+          ? context.colorScheme.primary.withValues(alpha: 0.10)
+          : null,
       child: Row(
         children: [
+          if (widget.selectionMode) ...[
+            Icon(
+              widget.selected
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              size: 22,
+              color: widget.selected
+                  ? context.colorScheme.primary
+                  : context.colorScheme.outline,
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (!widget.selectionMode && widget.reorderIndex != null)
+            ReorderableDragStartListener(
+              index: widget.reorderIndex!,
+              child: Icon(
+                Icons.drag_handle,
+                size: 22,
+                color: context.colorScheme.outline,
+              ),
+            ),
+          const SizedBox(width: 4),
           Container(
             width: 82,
             height: double.infinity,
@@ -381,6 +539,7 @@ class _DownloadTaskTileState extends State<_DownloadTaskTile> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
