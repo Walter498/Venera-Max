@@ -1803,7 +1803,7 @@ class _SliverGridComics extends StatelessWidget {
               ? () => onLongPressed!(comics[index], heroIDs[index])
               : null,
           heroID: enableHero ? heroIDs[index] : null,
-          overrideDisplayMode: forceBriefMode ? 'brief' : null,
+          overrideDisplayMode: widget.forceBriefMode ? 'brief' : null,
         );
         Widget tile = comic;
         if (selection != null) {
@@ -1837,7 +1837,7 @@ class _SliverGridComics extends StatelessWidget {
         return tile;
       }, childCount: comics.length),
       gridDelegate: SliverGridDelegateWithComics(
-        overrideBrief: forceBriefMode ? true : null,
+        overrideBrief: widget.forceBriefMode ? true : null,
       ),
     );
   }
