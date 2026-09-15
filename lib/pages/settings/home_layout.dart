@@ -340,7 +340,7 @@ class HomeSourcePicker extends StatefulWidget {
 class _HomeSourcePickerState extends State<HomeSourcePicker> {
   late final List<ComicSource> sources = [
     for (final s in ComicSource.all())
-      if (s.explorePageData != null) s,
+      if (s.explorePages.isNotEmpty) s,
   ];
 
   late Set<String> selected = homeDisplaySourceKeys().toSet();
@@ -361,7 +361,9 @@ class _HomeSourcePickerState extends State<HomeSourcePicker> {
             child: IconButton(
               icon: const Icon(Icons.restart_alt),
               onPressed: () {
-                setState(selected = <String>{});
+                setState(() {
+                  selected = <String>{};
+                });
                 _save();
               },
             ),

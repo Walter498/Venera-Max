@@ -203,6 +203,6 @@ List<String> effectiveHomeDisplaySourceKeys() {
   }
   return [
     for (final s in ComicSource.all())
-      if (s.explorePageData != null) s.key,
+      if (s.explorePages.isNotEmpty) s.key,
   ];
 }
