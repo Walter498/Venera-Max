@@ -102,7 +102,8 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
         for (final part in parts)
           if (_mergePartTitles.any((t) => part.title.contains(t))) part,
       ];
-      if (picked.isEmpty && parts.isNotEmpty) picked = [parts.first];
+      // 嚴格模式：標題沒命中就「不收」，而不是退回第一個分區。
+      // 寧可少收，也不要混進跟条漫/独家無關的作品。
       for (final part in picked) {
         for (final comic in part.comics) {
           if (seen.add('${comic.sourceKey}:${comic.id}')) {
