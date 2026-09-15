@@ -50,7 +50,6 @@ class _MainPageState extends State<MainPage> {
   final _pages = [
     const HomePage(),
     const FavoritesPage(key: PageStorageKey('favorites')),
-    const ExplorePage(key: PageStorageKey('explore')),
     const CategoriesPage(key: PageStorageKey('categories')),
   ];
 
@@ -72,11 +71,6 @@ class _MainPageState extends State<MainPage> {
           label: 'Favorites'.tl,
           icon: Icons.local_activity_outlined,
           activeIcon: Icons.local_activity,
-        ),
-        PaneItemEntry(
-          label: 'Explore'.tl,
-          icon: Icons.explore_outlined,
-          activeIcon: Icons.explore,
         ),
         PaneItemEntry(
           label: 'Categories'.tl,

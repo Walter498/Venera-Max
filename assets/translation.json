@@ -1322,7 +1322,9 @@
     "Leave every source unchecked to show all sources.": "全部不勾选 = 显示所有源",
     "Source Home": "源首頁",
     "Shuffle": "换一换",
-    "Recommended": "推荐"
+    "Recommended": "推荐",
+    "Oldest first": "从第一话开始",
+    "Newest first": "从最后一话开始"
   },
   "zh_TW": {
     "Reading Statistics": "閱讀統計",
@@ -2647,6 +2649,8 @@
     "Leave every source unchecked to show all sources.": "全部不勾選 = 顯示所有源",
     "Source Home": "源首頁",
     "Shuffle": "換一換",
-    "Recommended": "推薦"
+    "Recommended": "推薦",
+    "Oldest first": "從第一話開始",
+    "Newest first": "從最後一話開始"
   }
 }

@@ -228,6 +228,22 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
               },
             ),
           ),
+          // 倒序：按一下從第一話開始顯示，再按一下從最後一話開始顯示
+          Tooltip(
+            message: (reverse ? "Oldest first" : "Newest first").tl,
+            child: IconButton(
+              icon: Icon(
+                reverse
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+              ),
+              onPressed: () {
+                onToggleOrder();
+                appdata.settings["reverseChapterOrder"] = !reverse;
+                appdata.saveData();
+              },
+            ),
+          ),
           Tooltip(
             message: (showAll ? "Collapse" : "Expand").tl,
             child: IconButton(
