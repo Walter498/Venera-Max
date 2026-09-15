@@ -459,7 +459,8 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
 
   VelocityTracker? _velocityTracker;
 
-  static const double _minDistance = 5.0;
+  // 必須真拖動（避免連點/輕觸被判成返回手勢）
+  static const double _minDistance = 12.0;
 
   @override
   void addPointer(PointerDownEvent event) {
@@ -491,8 +492,8 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
 
         final isRight = dx > 0;
         final isHorizontal = dx.abs() > dy * 1.5;
-        final bool eligible =
-            _startedNearLeftEdge || (!_startedInHorizontal);
+        // 只允許「從左邊緣 0.5cm 內」起手；畫面中間滑動不再觸發返回。
+        final bool eligible = _startedNearLeftEdge;
 
         if (isRight && isHorizontal && eligible) {
           _accepted = true;

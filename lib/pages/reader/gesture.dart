@@ -375,13 +375,21 @@ class _ReaderGestureDetectorState
           return;
         }
       }
-      // 點擊召喚工具欄：僅限屏幕中間三分之一，且漫畫需已停頓（剛滑動完不觸發，防誤觸）
+      // 點擊召喚工具欄：僅限屏幕中間五分之一，且必須「停下來超過 500ms」。
+      // 剛滑完（含慣性滑行）時點擊一律忽略，避免停手瞬間的誤觸。
       final screenHeight = context.height;
       final tapY = location.dy;
+      final now = DateTime.now();
+      const settleWindow = Duration(milliseconds: 500);
+      final sinceMovement = _lastMovement == null
+          ? null
+          : now.difference(_lastMovement!);
+      final lastStop = reader.lastScrollStop;
+      final sinceScrollStop = lastStop == null ? null : now.difference(lastStop);
       final settled =
-          _lastMovement == null ||
-          DateTime.now().difference(_lastMovement!) >
-              const Duration(milliseconds: 350);
+          !reader.readerScrolling &&
+          (sinceMovement == null || sinceMovement > settleWindow) &&
+          (sinceScrollStop == null || sinceScrollStop > settleWindow);
       if (settled && tapY >= screenHeight * 0.4 && tapY <= screenHeight * 0.6) {
         context.readerScaffold.openOrClose();
       }

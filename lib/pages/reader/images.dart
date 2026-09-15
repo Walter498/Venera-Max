@@ -1859,11 +1859,14 @@ class _ContinuousModeState extends State<_ContinuousMode>
       onNotification: (notification) {
         if (_repivoting) return true;
         if (notification is ScrollStartNotification) {
+          reader.readerScrolling = true;
           delayedSetIsScrolling(true);
           if (notification.dragDetails != null) {
             _cancelProgrammaticPageTurn();
           }
         } else if (notification is ScrollEndNotification) {
+          reader.readerScrolling = false;
+          reader.lastScrollStop = DateTime.now();
           delayedSetIsScrolling(false);
         }
 

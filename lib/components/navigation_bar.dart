@@ -622,14 +622,33 @@ class _SingleBottomNaviWidgetState extends State<_SingleBottomNaviWidget>
         ),
       ),
     );
-    final content = Center(child: iconSlot);
+    final content = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        iconSlot,
+        const SizedBox(height: 2),
+        Text(
+          widget.entry.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.0,
+            color: widget.enabled
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
     return Semantics(
       button: true,
       label: widget.entry.label,
       selected: widget.enabled,
       child: Tooltip(
         message: widget.entry.label,
-        child: SizedBox(width: double.infinity, height: 52, child: content),
+        child: SizedBox(width: double.infinity, height: 60, child: content),
       ),
     );
   }

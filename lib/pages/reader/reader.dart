@@ -494,6 +494,12 @@ class _ReaderState extends State<Reader>
   /// 1-based chapters collapsed by this comic's "hide duplicate chapters"
   /// switch. Computed once: the switch lives on the details page, so it cannot
   /// change while the reader is open.
+  /// 漫畫是否正在滾動中，以及上次停止滾動的時間。
+  /// 用途：剛滑完（或減速滑行中）不把點擊當成「召喚上下欄」，防誤觸。
+  bool readerScrolling = false;
+
+  DateTime? lastScrollStop;
+
   late final Set<int> _hiddenChapters = _computeHiddenChapters();
 
   Set<int> _computeHiddenChapters() {

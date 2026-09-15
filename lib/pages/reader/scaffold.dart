@@ -525,8 +525,11 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       showToast(message: "No favorite folder".tl, context: context);
       return;
     }
+    // 已是收藏 → 再按一次即取消收藏（雙向切換）
     if (manager.find(reader.cid, reader.type).isNotEmpty) {
-      showToast(message: "Already in favorites".tl, context: context);
+      manager.batchDeleteComicsInAllFolders([ComicID(reader.type, reader.cid)]);
+      showToast(message: "Removed from favorites".tl, context: context);
+      update();
       return;
     }
     var folder = appdata.settings['quickFavorite'];
@@ -852,11 +855,6 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           label: "目录",
           onTap: openChapterDrawer,
         ),
-      _ReaderBottomItem(
-        icon: Icons.download,
-        label: "下载",
-        onTap: saveCurrentImage,
-      ),
       _ReaderBottomItem(
         icon: Icons.skip_previous_rounded,
         label: "上一话",
