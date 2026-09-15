@@ -352,7 +352,11 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
         var value = chapters[key]!;
         var epKey = (i + 1).toString();
         bool visited = (_history?.readEpisode ?? const {}).contains(epKey);
-        final coverUrl = covers[key];
+        // 源沒提供章節封面時，用漫畫封面按章節序號錯位裁切，等效「條漫隨便截一段」
+        final coverUrl = (covers[key]?.isNotEmpty == true)
+            ? covers[key]
+            : details.cover;
+        final cropY = 2.0 * (((i * 0.37) % 1.0)) - 1.0;
         return InkWell(
           onTap: () => selectMode ? toggleSelect(epKey) : state.read(i + 1),
           borderRadius: BorderRadius.circular(10),
@@ -380,6 +384,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                           : Image.network(
                               coverUrl,
                               fit: BoxFit.cover,
+                              alignment: Alignment(0, cropY),
                               errorBuilder: (c, e, st) => Container(
                                 color: context.colorScheme.surfaceContainerHighest,
                                 child: Icon(
