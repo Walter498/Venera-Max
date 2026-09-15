@@ -36,9 +36,9 @@ class AppPageRoute<T> extends PageRoute<T> with _AppRouteTransitionMixin {
     super.fullscreenDialog,
     super.allowSnapshotting = true,
     super.barrierDismissible = false,
-    this.enableIOSGesture = true,
+    bool? enableIOSGesture,
     this.preventRebuild = true,
-  }) {
+  }) : _enableIOSGestureOverride = enableIOSGesture {
     assert(opaque);
   }
 
@@ -63,8 +63,13 @@ class AppPageRoute<T> extends PageRoute<T> with _AppRouteTransitionMixin {
   @override
   String get debugLabel => '${super.debugLabel}(${settings.name})';
 
+  /// null 時跟隨全局設置 [enableIOSBackGesture]（默認關閉）
+  bool? _enableIOSGestureOverride;
+
   @override
-  final bool enableIOSGesture;
+  bool get enableIOSGesture =>
+      _enableIOSGestureOverride ??
+      (appdata.settings['enableIOSBackGesture'] == true);
 
   @override
   final bool preventRebuild;

@@ -930,6 +930,19 @@ class _ReaderSettingsState extends State<ReaderSettings> {
               useDeviceSettings: useDeviceSpecificSettings,
             ),
             _SwitchSetting(
+              title: "Show reading progress percentage".tl,
+              subtitle: "Display percentage in the reader bottom bar".tl,
+              settingKey: "showReadingProgressPercent",
+              onChanged: () {
+                widget.onChanged?.call("showReadingProgressPercent");
+              },
+              comicId: isEnabledSpecificSettings ? widget.comicId : null,
+              comicSource: isEnabledSpecificSettings
+                  ? widget.comicSource
+                  : null,
+              useDeviceSettings: useDeviceSpecificSettings,
+            ),
+            _SwitchSetting(
               title: "Show Page Number".tl,
               settingKey: "showPageNumberInReader",
               onChanged: () {

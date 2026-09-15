@@ -651,123 +651,111 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
   Widget buildBottom() {
     // Use maxPage for display (excluding chapter comments page)
     final displayPage = context.reader.page.clamp(1, context.reader.maxPage);
-    var text = "E${context.reader.chapter} : P$displayPage";
-    if (context.reader.widget.chapters == null) {
-      text = "P$displayPage";
-    }
+    final showPercent =
+        appdata.settings.getReaderSetting(
+          context.reader.cid,
+          context.reader.type.sourceKey,
+          'showReadingProgressPercent',
+        ) !=
+        false;
+    final percentText = context.reader.maxPage <= 1
+        ? "--"
+        : "${(displayPage / context.reader.maxPage * 100).clamp(1, 100).toStringAsFixed(0)}%";
 
-    final buttons = [
-      Tooltip(
-        message: "Night mode".tl,
-        child: IconButton(
-          icon: Icon(
-            appdata.settings['readerNightMode'] == true
-                ? Icons.nightlight_round
-                : Icons.nightlight_outlined,
-          ),
-          onPressed: () {
-            // Manual toggle takes over: stop following the system theme so the
-            // user's explicit choice isn't immediately overridden.
-            if (appdata.settings['readerNightModeFollowSystem'] == true) {
-              appdata.settings['readerNightModeFollowSystem'] = false;
-            }
-            appdata.settings['readerNightMode'] =
-                !(appdata.settings['readerNightMode'] == true);
-            appdata.saveData();
-            context.reader.update();
-            update();
-          },
-        ),
+    final bool zhLocale = Localizations.localeOf(context).languageCode == 'zh';
+    String lbl(String zhText, String enText) => zhLocale ? zhText : enText;
+
+    final items = <_ReaderBottomItem>[
+      _ReaderBottomItem(
+        icon: appdata.settings['readerNightMode'] == true
+            ? Icons.nightlight_round
+            : Icons.nightlight_outlined,
+        label: lbl("夜间", "Night"),
+        onTap: () {
+          // Manual toggle takes over: stop following the system theme so the
+          // user's explicit choice isn't immediately overridden.
+          if (appdata.settings['readerNightModeFollowSystem'] == true) {
+            appdata.settings['readerNightModeFollowSystem'] = false;
+          }
+          appdata.settings['readerNightMode'] =
+              !(appdata.settings['readerNightMode'] == true);
+          appdata.saveData();
+          context.reader.update();
+          update();
+        },
       ),
-      Tooltip(
-        message: "Collect the image".tl,
-        child: IconButton(
-          icon: Icon(isLiked() ? Icons.favorite : Icons.favorite_border),
-          onPressed: addImageFavorite,
-        ),
+      _ReaderBottomItem(
+        icon: isLiked() ? Icons.favorite : Icons.favorite_border,
+        label: lbl("收藏", "Collect"),
+        onTap: addImageFavorite,
       ),
       if (App.isDesktop)
-        Tooltip(
-          message: "${"Full Screen".tl}(F12)",
-          child: IconButton(
-            icon: const Icon(Icons.fullscreen),
-            onPressed: () {
-              context.reader.fullscreen();
-            },
-          ),
+        _ReaderBottomItem(
+          icon: Icons.fullscreen,
+          label: lbl("全屏", "Full"),
+          onTap: () => context.reader.fullscreen(),
         ),
       if (App.isAndroid)
-        Tooltip(
-          message: "Screen Rotation".tl,
-          child: IconButton(
-            icon: () {
-              if (rotation == null) {
-                return const Icon(Icons.screen_rotation);
-              } else if (rotation == false) {
-                return const Icon(Icons.screen_lock_portrait);
-              } else {
-                return const Icon(Icons.screen_lock_landscape);
-              }
-            }.call(),
-            onPressed: () {
-              if (rotation == null) {
-                setState(() {
-                  rotation = false;
-                });
-                SystemChrome.setPreferredOrientations([
-                  DeviceOrientation.portraitUp,
-                  DeviceOrientation.portraitDown,
-                ]);
-              } else if (rotation == false) {
-                setState(() {
-                  rotation = true;
-                });
-                SystemChrome.setPreferredOrientations([
-                  DeviceOrientation.landscapeLeft,
-                  DeviceOrientation.landscapeRight,
-                ]);
-              } else {
-                setState(() {
-                  rotation = null;
-                });
-                SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-              }
-            },
-          ),
-        ),
-      Tooltip(
-        message: "Auto Page Turning".tl,
-        child: IconButton(
-          icon: context.reader.autoPageTurningTimer != null
-              ? const Icon(Icons.timer)
-              : const Icon(Icons.timer_sharp),
-          onPressed: () {
-            context.reader.autoPageTurning(
-              context.reader.cid,
-              context.reader.type,
-            );
-            update();
+        _ReaderBottomItem(
+          icon: rotation == null
+              ? Icons.screen_rotation
+              : rotation == false
+              ? Icons.screen_lock_portrait
+              : Icons.screen_lock_landscape,
+          label: lbl("旋转", "Rotate"),
+          onTap: () {
+            if (rotation == null) {
+              setState(() {
+                rotation = false;
+              });
+              SystemChrome.setPreferredOrientations([
+                DeviceOrientation.portraitUp,
+                DeviceOrientation.portraitDown,
+              ]);
+            } else if (rotation == false) {
+              setState(() {
+                rotation = true;
+              });
+              SystemChrome.setPreferredOrientations([
+                DeviceOrientation.landscapeLeft,
+                DeviceOrientation.landscapeRight,
+              ]);
+            } else {
+              setState(() {
+                rotation = null;
+              });
+              SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+            }
           },
         ),
+      _ReaderBottomItem(
+        icon: context.reader.autoPageTurningTimer != null
+            ? Icons.timer
+            : Icons.timer_sharp,
+        label: lbl("自动", "Auto"),
+        onTap: () {
+          context.reader.autoPageTurning(
+            context.reader.cid,
+            context.reader.type,
+          );
+          update();
+        },
       ),
       if (context.reader.widget.chapters != null)
-        Tooltip(
-          message: "Chapters".tl,
-          child: IconButton(
-            icon: const Icon(Icons.library_books),
-            onPressed: openChapterDrawer,
-          ),
+        _ReaderBottomItem(
+          icon: Icons.library_books,
+          label: lbl("目录", "Items"),
+          onTap: openChapterDrawer,
         ),
-      Tooltip(
-        message: "Save Image".tl,
-        child: IconButton(
-          icon: const Icon(Icons.download),
-          onPressed: saveCurrentImage,
-        ),
+      _ReaderBottomItem(
+        icon: Icons.download,
+        label: lbl("下载", "Save"),
+        onTap: saveCurrentImage,
       ),
-      Tooltip(
-        message: "Share".tl,
-        child: IconButton(icon: const Icon(Icons.share), onPressed: share),
+      _ReaderBottomItem(
+        icon: Icons.share,
+        label: lbl("分享", "Share"),
+        onTap: share,
       ),
     ];
 
@@ -790,23 +778,21 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                 icon: const Icon(Icons.first_page),
               ),
               Expanded(child: buildSlider()),
-              GestureDetector(
-                onTap: showPageJumpDialog,
-                child: Container(
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.tertiaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
+              // 阅读进度百分比（可在阅读设置中关闭）；点击可跳页
+              if (showPercent)
+                GestureDetector(
+                  onTap: showPageJumpDialog,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    alignment: Alignment.center,
+                    constraints: const BoxConstraints(minWidth: 52),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     child: Text(
-                      text,
+                      percentText,
                       style: const TextStyle(fontSize: 13),
                     ),
                   ),
                 ),
-              ),
               IconButton.filledTonal(
                 onPressed: () => !isReversed
                     ? context.reader.chapter < context.reader.maxChapter
@@ -820,23 +806,17 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
               const SizedBox(width: 8),
             ],
           ),
-          LayoutBuilder(
-            builder: (context, constrains) {
-              final small = (constrains.maxWidth - buttons.length * 50) < 120;
-              return Row(
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Spacer(),
-                  for (var button in buttons)
-                    if (!small)
-                      button.paddingHorizontal(4)
-                    else ...[
-                      button,
-                      const Spacer(),
-                    ],
-                  if (!small) const SizedBox(width: 4),
+                  for (var item in items)
+                    Expanded(child: _ReaderBottomLabeledButton(item: item)),
                 ],
-              );
-            },
+              ),
+            ),
           ),
         ],
       ),
@@ -1562,6 +1542,53 @@ class _SelectImageOverlayContentState
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 閱讀器底欄的一個「圖標 + 文字」按鈕項
+class _ReaderBottomItem {
+  const _ReaderBottomItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+}
+
+class _ReaderBottomLabeledButton extends StatelessWidget {
+  const _ReaderBottomLabeledButton({required this.item});
+
+  final _ReaderBottomItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: item.onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(item.icon, size: 22, color: context.colorScheme.onSurface),
+            const SizedBox(height: 4),
+            Text(
+              item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
     );

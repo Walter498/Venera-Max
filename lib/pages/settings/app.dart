@@ -67,6 +67,15 @@ class _AppSettingsState extends State<AppSettings> {
                   App.forceRebuild();
                 },
               ),
+            if (App.isIOS)
+              _SwitchSetting(
+                title: "Swipe right to go back".tl,
+                subtitle: "Allow the edge-swipe back gesture".tl,
+                settingKey: "enableIOSBackGesture",
+                onChanged: () {
+                  App.forceRebuild();
+                },
+              ),
             ListTile(
               title: Text("Home Page Layout".tl),
               subtitle: Text("Reorder or hide home sections".tl),

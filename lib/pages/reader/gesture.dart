@@ -367,6 +367,12 @@ class _ReaderGestureDetectorState
           return;
         }
       }
+      // 僅在屏幕中間三分之一區域點擊才召喚/收起工具欄
+      final screenHeight = context.height;
+      final tapY = location.dy;
+      if (tapY < screenHeight / 3 || tapY > screenHeight * 2 / 3) {
+        return;
+      }
       context.readerScaffold.openOrClose();
     }
   }
