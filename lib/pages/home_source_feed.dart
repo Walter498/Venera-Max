@@ -307,6 +307,22 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
             ),
           ),
           IconButton(
+            // 刷新首頁：清掉快取並重新抓這個源的推薦 + 周期更新
+            icon: const Icon(Icons.refresh),
+            tooltip: "Refresh".tl,
+            onPressed: () {
+              final source = _source;
+              if (source != null) {
+                _cache.remove(source.key);
+              }
+              setState(() {
+                _parts = const [];
+                _loading = true;
+              });
+              _load();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             tooltip: "Search".tl,
             onPressed: () => context.to(() => const SearchPage()),
