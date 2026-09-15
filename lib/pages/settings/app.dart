@@ -71,7 +71,7 @@ class _AppSettingsState extends State<AppSettings> {
               _SwitchSetting(
                 title: "Swipe right to go back".tl,
                 subtitle: "Allow the edge-swipe back gesture".tl,
-                settingKey: "enableIOSBackGesture",
+                settingKey: "enableIOSEdgeBack",
                 onChanged: () {
                   App.forceRebuild();
                 },

@@ -427,7 +427,7 @@ class Settings with ChangeNotifier {
     'enableClockAndBatteryInfoInReader': true,
     'showReadingProgressPercent': true,
     'chapterCoverGrid': false,
-    'enableIOSBackGesture': true,
+    'enableIOSEdgeBack': true,
     'quickCollectImage': 'No', // No, DoubleTap, Swipe
     'autoFavoriteCover': false, // 收藏图片时是否自动连带收藏该章节封面
     'authorizationRequired': false,

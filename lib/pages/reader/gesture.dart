@@ -36,6 +36,8 @@ class _ReaderGestureDetectorState
   /// 最近一次指針移動時間（用於判斷漫畫是否已停頓）
   DateTime? _lastMovement;
 
+  Offset? _pointerDownAt;
+
   void ignoreNextTap() {
     ignoreNextTag = true;
   }
@@ -71,6 +73,7 @@ class _ReaderGestureDetectorState
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: (event) {
+        _pointerDownAt = event.position;
         if (event.position == Offset.zero) {
           _previousEvent = null;
           return;
@@ -113,7 +116,11 @@ class _ReaderGestureDetectorState
         });
       },
       onPointerMove: (event) {
-        _lastMovement = DateTime.now();
+        final downAt = _pointerDownAt;
+        if (downAt != null &&
+            (event.position - downAt).distanceSquared > 12.0 * 12.0) {
+          _lastMovement = DateTime.now();
+        }
         if (event.pointer == _lastTapPointer && _lastTapMoveDistance != null) {
           _lastTapMoveDistance = event.delta + _lastTapMoveDistance!;
           // 移动越过阈值即立即判定为拖动, 无需等长按计时器 250ms, 使快速滑动
@@ -139,7 +146,7 @@ class _ReaderGestureDetectorState
         }
       },
       onPointerUp: (event) {
-        _lastMovement = DateTime.now();
+        _pointerDownAt = null;
         _decreaseFingers();
         _finishActivePointer(event.position);
       },

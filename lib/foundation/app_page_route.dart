@@ -69,7 +69,7 @@ class AppPageRoute<T> extends PageRoute<T> with _AppRouteTransitionMixin {
   @override
   bool get enableIOSGesture =>
       _enableIOSGestureOverride ??
-      (appdata.settings['enableIOSBackGesture'] == true);
+      (appdata.settings['enableIOSEdgeBack'] == true);
 
   @override
   final bool preventRebuild;
