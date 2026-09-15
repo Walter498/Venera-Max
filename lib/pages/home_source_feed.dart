@@ -83,7 +83,23 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
     for (final key in effectiveHomeDisplaySourceKeys()) {
       if (key == currentKey) continue;
       final source = ComicSource.find(key);
-      if (source == null || source.explorePages.isEmpty) continue;
+      if (source == null) continue;
+      // ① 最精準：用源自己的分類（条漫/独家）與參數直接請求
+      final loader = source.categoryComicsData?.load;
+      if (loader != null) {
+        for (final entry in _preciseCategories(source)) {
+          try {
+            final res = await loader(entry.$1, entry.$2, const <String>[], 1);
+            if (!res.success) continue;
+            for (final comic in res.data) {
+              if (seen.add('${comic.sourceKey}:${comic.id}')) {
+                merged.add(comic);
+              }
+            }
+          } catch (_) {}
+        }
+      }
+      if (source.explorePages.isEmpty) continue;
       final page = _pickPage(source);
       if (page == null) continue;
       List<ExplorePagePart> parts = const [];
@@ -113,6 +129,26 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
       }
     }
     return merged;
+  }
+
+  /// 從某個源的分類設定裡，找出「条漫 / 独家」這類分類，回傳 (分類名, param)。
+  /// 這是唯一 100% 精準的路：分類與參數由源自己定義
+  /// （例如騰訊：条漫 = tm|upt、独家 = dj|upt），用它去請求就是
+  /// 伺服器端已篩選好的結果，不靠標題猜。
+  List<(String, String?)> _preciseCategories(ComicSource source) {
+    final out = <(String, String?)>[];
+    final parts = source.categoryData?.categories ?? const [];
+    for (final part in parts) {
+      for (final item in part.categories) {
+        if (!_mergePartTitles.any((t) => item.label.contains(t))) continue;
+        final map = item.target.attributes;
+        out.add((
+          map?["category"]?.toString() ?? item.label,
+          map?["param"]?.toString(),
+        ));
+      }
+    }
+    return out;
   }
 
   /// 從某個分區裡挑 [count] 部；帶入 [_seed] 讓「换一换」選到不同的一批。
