@@ -232,6 +232,8 @@ abstract class ImageDownloader {
     }
     var retryLimit = 5;
     var netRetries = 3;
+    // 泛用修復（栗子方案的推廣）：這次載入是否已經重新向源要過頁面清單。
+    var refreshedPageList = false;
     while (true) {
       try {
         // 統一帶 UA：原本用 ??= ，只要源回傳的 headers 不是 null（例如回空 map
@@ -374,6 +376,29 @@ abstract class ImageDownloader {
           await Future.delayed(backoff(2 - netRetries, retryAfter: ra));
           continue;
         }
+        // 403/404 這類客戶端錯誤，多半是「源給的頁面清單過期」——例如舊版
+        // 探測把 CDN 占位圖當真圖而高估頁數（栗子下載 404 的根因）。
+        // 這裡給一次機會：重新向源要一次本章頁面清單，用新清單裡的同位置
+        // URL 再試一次。只做一次，避免無限重試；不影響其他錯誤的快速失敗。
+        if ((status == 403 || status == 404) &&
+            !refreshedPageList &&
+            sourceKey != null &&
+            cid != null &&
+            eid != null) {
+          refreshedPageList = true;
+          final refreshed = await _refreshComicPageUrl(
+            sourceKey!,
+            cid!,
+            eid!,
+            imageKey,
+          );
+          if (refreshed != null && refreshed != imageKey) {
+            // 只換 URL，保留源原本的 headers / hooks
+            configs = Map<String, dynamic>.from(configs)
+              ..['url'] = refreshed;
+            continue;
+          }
+        }
         // 4xx（非 429）或重试次数耗尽：重试无益，快速失败。
         rethrow;
       } finally {
@@ -476,4 +501,37 @@ class ImageDownloadProgress {
     required this.totalBytes,
     this.imageBytes,
   });
+}
+
+/// 重新向漫畫源要一次「本章頁面清單」，回傳 [imageKey] 這一頁的新 URL。
+///
+/// 用途：圖片回 403/404 時，通常是源快取下來的頁面清單已經過期（頁數被高估、
+/// 或圖片線路換了）。與其直接失敗，重新解析一次往往就能拿到正確 URL。
+/// 找不到對應頁面時回傳 null，呼叫端照原本的錯誤處理走。
+Future<String?> _refreshComicPageUrl(
+  String sourceKey,
+  String cid,
+  String eid,
+  String imageKey,
+) async {
+  try {
+    final source = ComicSource.find(sourceKey);
+    final loader = source?.loadComicPages;
+    if (loader == null) return null;
+    final res = await loader(cid, eid);
+    if (!res.success) return null;
+    final list = res.data;
+    if (list.isEmpty) return null;
+    // 先按原本的位置對應
+    final index = list.indexOf(imageKey);
+    if (index >= 0) return list[index];
+    // 位置對不上（清單長度變了）：用檔名比對
+    final name = imageKey.split('/').last;
+    for (final url in list) {
+      if (url.endsWith('/$name')) return url;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
 }
