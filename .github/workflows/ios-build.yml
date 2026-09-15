@@ -12,10 +12,18 @@ jobs:
           channel: "stable"
           flutter-version-file: pubspec.yaml
           architecture: x64
-      - run: sudo xcode-select --switch /Applications/Xcode_16.4.app
+      - run: sudo xcode-select --switch /Applications/Xcode_16.4.app || true
       - run: flutter pub get
+      - name: Disable code signing in Xcode project
+        run: |
+          cd ios
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = ""; CODE_SIGNING_REQUIRED = NO; CODE_SIGNING_ALLOWED = NO;/g' Runner.xcodeproj/project.pbxproj
       - name: Build
-        run: (flutter build ios --release --no-codesign) 2>&1 | tee ios_build.log
+        env:
+          CODE_SIGNING_ALLOWED: "NO"
+          CODE_SIGNING_REQUIRED: "NO"
+          CODE_SIGN_IDENTITY: ""
+        run: flutter build ios --release --no-codesign 2>&1 | tee ios_build.log
       - name: Package IPA
         run: |
           mkdir -p build/ios/iphoneos/Payload
