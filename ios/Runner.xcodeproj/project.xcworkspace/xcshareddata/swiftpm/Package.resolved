@@ -1,0 +1,22 @@
+{
+  "pins" : [
+    {
+      "identity" : "csqlite",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/simolus3/CSQLite.git",
+      "state" : {
+        "revision" : "1ee46d19a4f451a7aa64ffc64fc99b4748131e62"
+      }
+    },
+    {
+      "identity" : "onnxruntime-swift-package-manager",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/masicai/onnxruntime-swift-package-manager",
+      "state" : {
+        "revision" : "57f28b1fdd6fe33585370b146a46c597d6750953",
+        "version" : "1.23.1"
+      }
+    }
+  ],
+  "version" : 2
+}
