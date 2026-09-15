@@ -195,25 +195,19 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// The trailing controls of the title row when NOT selecting.
+  /// 預覽封面（切換封面網格） + 顯示全部/收起（箭頭）
   Widget buildNormalTitle(
     BuildContext context, {
     required bool reverse,
     required VoidCallback onToggleOrder,
+    required bool showAll,
+    required VoidCallback onToggleShowAll,
   }) {
     final gridMode = appdata.settings['chapterCoverGrid'] == true;
-    final collapsed = appdata.settings['chaptersCollapsed'] == true;
     return _ComicSectionHeader(
       icon: Icons.view_list_rounded,
       title: "Chapters".tl,
       horizontalPadding: 0,
-      onTap: () {
-        setState(() {
-          appdata.settings['chapterCoverGrid'] = !gridMode;
-        });
-        appdata.saveData();
-      },
-      // The list on screen came from cache/local data while the real request
-      // is still running; make the ongoing refresh visible.
       titleBadge: pageState.isDetailsLoading
           ? const _ChaptersUpdatingIndicator()
           : null,
@@ -221,26 +215,28 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Tooltip(
-            message: "Batch manage".tl,
-            child: IconButton(
-              icon: const Icon(Icons.checklist_rounded),
-              onPressed: enterSelectMode,
-            ),
-          ),
-          Tooltip(
-            message: (collapsed ? "Expand" : "Collapse").tl,
+            message: "Preview covers".tl,
             child: IconButton(
               icon: Icon(
-                collapsed
-                    ? Icons.expand_more_rounded
-                    : Icons.expand_less_rounded,
+                gridMode ? Icons.view_list_rounded : Icons.grid_view_rounded,
               ),
               onPressed: () {
                 setState(() {
-                  appdata.settings['chaptersCollapsed'] = !collapsed;
+                  appdata.settings['chapterCoverGrid'] = !gridMode;
                 });
                 appdata.saveData();
               },
+            ),
+          ),
+          Tooltip(
+            message: (showAll ? "Collapse" : "Expand").tl,
+            child: IconButton(
+              icon: Icon(
+                showAll
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+              ),
+              onPressed: onToggleShowAll,
             ),
           ),
         ],
@@ -459,7 +455,6 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
         }
 
         final gridMode = appdata.settings['chapterCoverGrid'] == true;
-        final collapsed = appdata.settings['chaptersCollapsed'] == true;
         return SliverMainAxisGroup(
           slivers: [
             SliverToBoxAdapter(
@@ -469,13 +464,15 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                       context,
                       reverse: reverse,
                       onToggleOrder: () => setState(() => reverse = !reverse),
+                      showAll: showAll,
+                      onToggleShowAll: () => setState(() => showAll = !showAll),
                     ),
             ),
-            if (!collapsed && gridMode)
+            if (gridMode)
               buildChapterCoverGrid(context, pageState.comic),
-            if (collapsed || gridMode)
+            if (gridMode)
               const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
-            if (!collapsed && !gridMode)
+            if (!gridMode)
               SliverGrid(
               delegate: SliverChildBuilderDelegate(childCount: length, (
                 context,
@@ -539,7 +536,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 itemHeight: 44,
               ),
             ).sliverPadding(EdgeInsets.zero),
-            if (!collapsed && !gridMode && !canShowAll)
+            if (!gridMode && !canShowAll)
               SliverToBoxAdapter(
                 child: Align(
                   alignment: Alignment.center,
@@ -873,6 +870,8 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
                       context,
                       reverse: reverse,
                       onToggleOrder: () => setState(() => reverse = !reverse),
+                      showAll: true,
+                      onToggleShowAll: () {},
                     ),
             ),
             SliverToBoxAdapter(

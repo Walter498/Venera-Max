@@ -33,6 +33,9 @@ class _ReaderGestureDetectorState
 
   bool ignoreNextTag = false;
 
+  /// 最近一次指針移動時間（用於判斷漫畫是否已停頓）
+  DateTime? _lastMovement;
+
   void ignoreNextTap() {
     ignoreNextTag = true;
   }
@@ -110,6 +113,7 @@ class _ReaderGestureDetectorState
         });
       },
       onPointerMove: (event) {
+        _lastMovement = DateTime.now();
         if (event.pointer == _lastTapPointer && _lastTapMoveDistance != null) {
           _lastTapMoveDistance = event.delta + _lastTapMoveDistance!;
           // 移动越过阈值即立即判定为拖动, 无需等长按计时器 250ms, 使快速滑动
@@ -135,6 +139,7 @@ class _ReaderGestureDetectorState
         }
       },
       onPointerUp: (event) {
+        _lastMovement = DateTime.now();
         _decreaseFingers();
         _finishActivePointer(event.position);
       },
@@ -363,7 +368,16 @@ class _ReaderGestureDetectorState
           return;
         }
       }
-      // 單擊不再召喚工具欄（改為雙擊召喚，見 onDoubleTap）
+      // 點擊召喚工具欄：僅限屏幕中間三分之一，且漫畫需已停頓（剛滑動完不觸發，防誤觸）
+      final screenHeight = context.height;
+      final tapY = location.dy;
+      final settled =
+          _lastMovement == null ||
+          DateTime.now().difference(_lastMovement!) >
+              const Duration(milliseconds: 350);
+      if (settled && tapY >= screenHeight / 3 && tapY <= screenHeight * 2 / 3) {
+        context.readerScaffold.openOrClose();
+      }
     }
   }
 

@@ -1308,7 +1308,8 @@
     "Copied comic title": "已复制漫画名",
     "Cover grid": "封面网格",
     "List view": "列表",
-    "Last read": "上次观看"
+    "Last read": "上次观看",
+    "Preview covers": "预览封面"
   },
   "zh_TW": {
     "Reading Statistics": "閱讀統計",
@@ -2619,6 +2620,7 @@
     "Copied comic title": "已複製漫畫名",
     "Cover grid": "封面網格",
     "List view": "列表",
-    "Last read": "上次觀看"
+    "Last read": "上次觀看",
+    "Preview covers": "預覽封面"
   }
 }
