@@ -37,6 +37,13 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
 
   static const _weekdayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
+  /// 首頁快取：整個源的探索結果（推薦 + 周一~周日）一次存一次讀，
+  /// 「全有全無」，不會只緩一半。⟳ 按鈕會清掉它並重抓。
+  static final Map<String, ({DateTime time, List<ExplorePagePart> parts})>
+  _cache = {};
+
+  static const _cacheTtl = Duration(minutes: 10);
+
   /// 「换一换」用：換個種子 = 換一批推薦（立即有變化，不依賴網路）。
   int _seed = 0;
 
@@ -113,10 +120,25 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
       if (mounted) setState(() => _parts = const []);
       return;
     }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    final cacheKey = source.key;
+    final cached = _cache[cacheKey];
+    if (cached != null && _parts.isEmpty) {
+      // 先进先出：立刻显示上次的完整结果（推荐 + 周期更新一起）
+      setState(() {
+        _parts = cached.parts;
+        _loading = false;
+        _error = null;
+      });
+      if (DateTime.now().difference(cached.time) < _cacheTtl) {
+        return;
+      }
+    }
+    if (_parts.isEmpty) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       var result = <ExplorePagePart>[];
       if (page.loadMultiPart != null) {
@@ -143,6 +165,10 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
           return;
         }
         result = [ExplorePagePart(page.title, res.data, null)];
+      }
+      // 只有拿到兩個以上分區（推薦 + 周期更新）才寫，避免緩一半
+      if (result.length >= 2) {
+        _cache[cacheKey] = (time: DateTime.now(), parts: result);
       }
       if (!mounted) return;
       setState(() {
