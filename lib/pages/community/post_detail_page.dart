@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
+import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/foundation/lizi_community.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 
@@ -164,7 +165,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 : Text(c.author,
                     maxLines: 1, overflow: TextOverflow.ellipsis),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => to(() => ComicPage(
+            onTap: () => context.to(() => ComicPage(
                   id: c.id.toString(),
                   sourceKey: 'lizimh',
                   cover: c.cover,

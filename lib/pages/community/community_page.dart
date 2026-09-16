@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
+import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/foundation/lizi_community.dart';
 import 'package:venera/pages/community/post_detail_page.dart';
 
@@ -222,7 +223,7 @@ class _PostCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 5),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => to(() => PostDetailPage(postId: post.id, initial: post)),
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
