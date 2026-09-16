@@ -77,31 +77,43 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
 
   /// 收集「其他源」的推薦內容，併進首頁推薦池，讓 ⟳ 换一换 能輪到
   /// 不同來源的作品（栗子 + 騰訊動漫 …）。
+  /// 提速：所有源的請求【並行發射】，耗時 ≈ 最慢的一個源，而不是相加。
   Future<List<Comic>> _collectCrossSourceComics(String currentKey) async {
     final merged = <Comic>[];
     final seen = <String>{};
-    for (final key in effectiveHomeDisplaySourceKeys()) {
-      if (key == currentKey) continue;
-      final source = ComicSource.find(key);
-      if (source == null) continue;
-      // ① 最精準：用源自己的分類（条漫/独家）與參數直接請求
-      final loader = source.categoryComicsData?.load;
-      if (loader != null) {
-        for (final entry in _preciseCategories(source)) {
+    await Future.wait([
+      for (final key in effectiveHomeDisplaySourceKeys())
+        if (key != currentKey) _collectFromSource(key, seen, merged),
+    ]);
+    return merged;
+  }
+
+  /// 收集單個源的「条漫 / 独家」作品。永不拋錯（一個源掛了不拖累其他）。
+  Future<void> _collectFromSource(
+      String key, Set<String> seen, List<Comic> merged) async {
+    final source = ComicSource.find(key);
+    if (source == null) return;
+    final futures = <Future<List<Comic>>>[];
+    // ① 最精準：用源自己的分類（条漫/独家）與參數直接請求
+    final loader = source.categoryComicsData?.load;
+    if (loader != null) {
+      for (final entry in _preciseCategories(source)) {
+        futures.add(() async {
           try {
             final res = await loader(entry.$1, entry.$2, const <String>[], 1);
-            if (!res.success) continue;
-            for (final comic in res.data) {
-              if (seen.add('${comic.sourceKey}:${comic.id}')) {
-                merged.add(comic);
-              }
-            }
-          } catch (_) {}
-        }
+            return res.success ? res.data : <Comic>[];
+          } catch (_) {
+            return <Comic>[];
+          }
+        }());
       }
-      if (source.explorePages.isEmpty) continue;
+    }
+    // ② 探索分區標題匹配（嚴格模式：標題沒命中就不收，
+    //    寧可少收，也不要混進跟条漫/独家無關的作品）
+    futures.add(() async {
+      if (source.explorePages.isEmpty) return <Comic>[];
       final page = _pickPage(source);
-      if (page == null) continue;
+      if (page == null) return <Comic>[];
       List<ExplorePagePart> parts = const [];
       try {
         if (page.loadMultiPart != null) {
@@ -112,23 +124,22 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
           if (res.success) parts = [ExplorePagePart(page.title, res.data, null)];
         }
       } catch (_) {
-        continue;
+        return <Comic>[];
       }
-      var picked = [
+      return [
         for (final part in parts)
-          if (_mergePartTitles.any((t) => part.title.contains(t))) part,
+          if (_mergePartTitles.any((t) => part.title.contains(t)))
+            ...part.comics,
       ];
-      // 嚴格模式：標題沒命中就「不收」，而不是退回第一個分區。
-      // 寧可少收，也不要混進跟条漫/独家無關的作品。
-      for (final part in picked) {
-        for (final comic in part.comics) {
-          if (seen.add('${comic.sourceKey}:${comic.id}')) {
-            merged.add(comic);
-          }
+    }());
+    final results = await Future.wait(futures);
+    for (final comics in results) {
+      for (final comic in comics) {
+        if (seen.add('${comic.sourceKey}:${comic.id}')) {
+          merged.add(comic);
         }
       }
     }
-    return merged;
   }
 
   /// 從某個源的分類設定裡，找出「条漫 / 独家」這類分類，回傳 (分類名, param)。
@@ -220,52 +231,41 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
       });
     }
     try {
-      var result = <ExplorePagePart>[];
-      if (page.loadMultiPart != null) {
-        final res = await page.loadMultiPart!();
-        if (!res.success) {
-          if (mounted) {
-            setState(() {
-              _error = res.errorMessage;
-              _loading = false;
-            });
-          }
-          return;
+      // 提速：主源探索 + 跨源合池【同時發射】，耗時取兩者最大值，
+      // 而不是串行相加。跨源內部已逐源並行且永不拋錯；
+      // 只有主源失敗才顯示錯誤。
+      final mainFuture = () async {
+        if (page.loadMultiPart != null) {
+          final res = await page.loadMultiPart!();
+          if (!res.success) throw res.errorMessage ?? '探索頁載入失敗';
+          return res.data;
+        } else if (page.loadPage != null) {
+          final res = await page.loadPage!(1);
+          if (!res.success) throw res.errorMessage ?? '探索頁載入失敗';
+          return [ExplorePagePart(page.title, res.data, null)];
         }
-        result = res.data;
-      } else if (page.loadPage != null) {
-        final res = await page.loadPage!(1);
-        if (!res.success) {
-          if (mounted) {
-            setState(() {
-              _error = res.errorMessage;
-              _loading = false;
-            });
-          }
-          return;
-        }
-        result = [ExplorePagePart(page.title, res.data, null)];
-      }
+        return <ExplorePagePart>[];
+      }();
+      final crossFuture = _collectCrossSourceComics(source.key);
+      var result = await mainFuture;
+      final cross = await crossFuture;
       // 併入其他源（例如騰訊動漫的「条漫」「独家」）到推薦分區
-      try {
-        final cross = await _collectCrossSourceComics(source.key);
-        if (cross.isNotEmpty && result.isNotEmpty) {
-          final recIndex = result.indexWhere((p) => _weekdayOf(p.title) == null);
-          if (recIndex >= 0) {
-            final rec = result[recIndex];
-            final ids = {for (final c in rec.comics) '${c.sourceKey}:${c.id}'};
-            result[recIndex] = ExplorePagePart(
-              rec.title,
-              [
-                ...rec.comics,
-                for (final c in cross)
-                  if (!ids.contains('${c.sourceKey}:${c.id}')) c,
-              ],
-              rec.viewMore,
-            );
-          }
+      if (cross.isNotEmpty && result.isNotEmpty) {
+        final recIndex = result.indexWhere((p) => _weekdayOf(p.title) == null);
+        if (recIndex >= 0) {
+          final rec = result[recIndex];
+          final ids = {for (final c in rec.comics) '${c.sourceKey}:${c.id}'};
+          result[recIndex] = ExplorePagePart(
+            rec.title,
+            [
+              ...rec.comics,
+              for (final c in cross)
+                if (!ids.contains('${c.sourceKey}:${c.id}')) c,
+            ],
+            rec.viewMore,
+          );
         }
-      } catch (_) {}
+      }
 
       // 只有拿到兩個以上分區（推薦 + 周期更新）才寫，避免緩一半
       if (result.length >= 2) {

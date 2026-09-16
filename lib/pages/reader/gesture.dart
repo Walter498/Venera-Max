@@ -275,11 +275,33 @@ class _ReaderGestureDetectorState
       if (reader.isOnChapterCommentsPage) {
         return;
       }
-      if (appdata.settings.getReaderSetting(
+      // 800ms 靜止判定：滾動中 / 慣性滑行中 / 剛停手 都視為「未停穩」。
+      final now = DateTime.now();
+      const settleWindow = Duration(milliseconds: 800);
+      final sinceMovement =
+          _lastMovement == null ? null : now.difference(_lastMovement!);
+      final lastStop = reader.lastScrollStop;
+      final sinceScrollStop =
+          lastStop == null ? null : now.difference(lastStop);
+      final settled = !reader.readerScrolling &&
+          (sinceMovement == null || sinceMovement > settleWindow) &&
+          (sinceScrollStop == null || sinceScrollStop > settleWindow);
+      final tapToTurn = appdata.settings.getReaderSetting(
         reader.cid,
         reader.type.sourceKey,
         'enableTapToTurnPages',
-      )) {
+      );
+      if (tapToTurn != true) {
+        // 沒開點擊翻頁：單擊的唯一用途是召喚上下欄 ——
+        // 任意位置都能召喚（不限屏幕中間），但必須停穩滿 800ms，
+        // 避免滑動 / 慣性滑行中誤觸。
+        if (settled) {
+          context.readerScaffold.openOrClose();
+        }
+        return;
+      }
+      // 開了點擊翻頁：四邊翻頁優先（使用者自己的選擇），中心區域才召喚
+      if (tapToTurn == true) {
         bool isLeft = false, isRight = false, isTop = false, isBottom = false;
         final width = context.width;
         final height = context.height;
@@ -375,23 +397,9 @@ class _ReaderGestureDetectorState
           return;
         }
       }
-      // 點擊召喚工具欄：僅限屏幕中間五分之一，且必須「停下來滿 800ms」。
-      // 剛滑完（含慣性滑行）時點擊一律忽略，避免停手瞬間的誤觸。
-      final screenHeight = context.height;
-      final tapY = location.dy;
-      final now = DateTime.now();
-      // 漫畫要「停下來滿 800ms」才允許點擊召喚上下欄（停手瞬間不觸發）
-      const settleWindow = Duration(milliseconds: 800);
-      final sinceMovement = _lastMovement == null
-          ? null
-          : now.difference(_lastMovement!);
-      final lastStop = reader.lastScrollStop;
-      final sinceScrollStop = lastStop == null ? null : now.difference(lastStop);
-      final settled =
-          !reader.readerScrolling &&
-          (sinceMovement == null || sinceMovement > settleWindow) &&
-          (sinceScrollStop == null || sinceScrollStop > settleWindow);
-      if (settled && tapY >= screenHeight * 0.4 && tapY <= screenHeight * 0.6) {
+      // 開了點擊翻頁時，走到這裡代表點在中心區域（四邊已翻頁 return）。
+      // 停穩滿 800ms 才召喚，避免滑動 / 慣性滑行中誤觸。
+      if (settled) {
         context.readerScaffold.openOrClose();
       }
     }
