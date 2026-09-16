@@ -1827,7 +1827,9 @@ class _SliverGridComics extends StatelessWidget {
               ? () => onLongPressed!(comics[index], heroIDs[index])
               : null,
           heroID: enableHero ? heroIDs[index] : null,
-          overrideDisplayMode: forceBriefMode ? 'brief' : null,
+          overrideDisplayMode: forceBriefMode
+              ? 'brief'
+              : (forceDetailedMode ? 'detailed' : null),
         );
         Widget tile = comic;
         if (selection != null) {
