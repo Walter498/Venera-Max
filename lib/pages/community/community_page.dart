@@ -37,7 +37,6 @@ class _CommunityPageState extends State<CommunityPage> {
   Widget build(BuildContext context) {
     if (_error != null) {
       return Scaffold(
-        appBar: Appbar(title: const Text('社區')),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -60,19 +59,17 @@ class _CommunityPageState extends State<CommunityPage> {
       );
     }
     if (_sections == null) {
-      return Scaffold(
-        appBar: Appbar(title: const Text('社區')),
-        body: const Center(child: CircularProgressIndicator()),
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       );
     }
     return DefaultTabController(
       length: _sections!.length,
       child: Scaffold(
-        appBar: Appbar(
-          title: const Text('社區'),
-          // 版塊 Tab 放在 AppBar 下方
-        ),
-        body: Column(
+        // 無 Appbar：底部 tab 的 chrome 已顯示「社區」標題，
+        // 這裡不再放帶返回箭頭的重複列（用戶要求刪除無用按鈕）
+        body: SafeArea(
+          child: Column(
           children: [
             TabBar(
               tabs: [for (final s in _sections!) Tab(text: s.name)],
@@ -86,6 +83,7 @@ class _CommunityPageState extends State<CommunityPage> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
