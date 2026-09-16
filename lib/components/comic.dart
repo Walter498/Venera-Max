@@ -1728,6 +1728,8 @@ class _SliverGridComicsState extends State<SliverGridComics> {
     return _SliverGridComics(
       comics: comics,
       forceBriefMode: widget.forceBriefMode,
+      forceDetailedMode: widget.forceDetailedMode,
+      forceColumns: widget.forceColumns,
       heroIDs: heroIDs,
       enableHero: widget.enableHero,
       selection: widget.selections,
@@ -1747,9 +1749,17 @@ class _SliverGridComics extends StatelessWidget {
   /// 強制三列簡潔網格（首頁 3x2 / 3x3 版面用）。
   final bool forceBriefMode;
 
+  /// 強制詳細（直落列表）模式（聚合搜索結果用）。
+  final bool forceDetailedMode;
+
+  /// 強制列數（首頁 4 列版面用）；null = 自適應。
+  final int? forceColumns;
+
   const _SliverGridComics({
     required this.comics,
     this.forceBriefMode = false,
+    this.forceDetailedMode = false,
+    this.forceColumns,
     required this.heroIDs,
     this.enableHero = true,
     this.onLastItemBuild,
