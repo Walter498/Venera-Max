@@ -75,9 +75,9 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
 /// 聚合搜索結果：所有源並行搜索，結果合併成單一直落列表（詳細模式，
 /// 卡片上會標示來源）。
 ///
-/// 去重規則：多個源出現【完全相同名字】（忽略空白、大小寫）的漫畫時
-/// 只保留一個 —— 話數多的勝出（越多話排得越前），話數從副標題/簡介
-/// 裡的「更新至N话 / 第N話 / N话」解析。
+/// 排序規則：先按搜索結果輪詢混排；同名（重名，忽略空白/大小寫）的
+/// 全部保留並收攏一處，組內按【真實話數】降序（背景 loadInfo 數章節表，
+/// 不依賴源文件；失敗退回副標題/簡介的「更新至N话」文字解析）。
 class _MergedSearchResults extends StatefulWidget {
   const _MergedSearchResults({
     super.key,
@@ -138,6 +138,51 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
       _failedSources = failed;
       _loading = false;
     });
+    // 背景校準：同名組用 loadInfo 數【真實話數】重排（不阻塞首屏）
+    _resolveChapterCounts();
+  }
+
+  /// 背景校準：對「多源同名」的組，逐一調 loadInfo 數章節表
+  /// （任何源都數得到，不依賴源在搜索結果裡寫話數），話數多的排前。
+  Future<void> _resolveChapterCounts() async {
+    final groups = <String, List<int>>{};
+    for (var i = 0; i < _merged.length; i++) {
+      groups.putIfAbsent(_normalize(_merged[i].title), () => []).add(i);
+    }
+    final dups = [for (final g in groups.values) if (g.length > 1) g];
+    if (dups.isEmpty) return;
+    var changed = false;
+    await Future.wait(dups.map((idxList) async {
+      final counts =
+          await Future.wait(idxList.map((i) => _realChapterCount(_merged[i])));
+      final order = List.generate(idxList.length, (k) => k)
+        ..sort((a, b) => counts[b].compareTo(counts[a]));
+      // 有變化才重排（避免無謂的跳動）
+      if (!List.generate(order.length, (k) => k)
+          .every((k) => order[k] == k)) {
+        final sorted = [for (final k in order) _merged[idxList[k]]];
+        for (var k = 0; k < idxList.length; k++) {
+          _merged[idxList[k]] = sorted[k];
+        }
+        changed = true;
+      }
+    }));
+    if (changed && mounted) setState(() {});
+  }
+
+  /// 真實話數：loadInfo → 章節表條目數；loadInfo 失敗退回文字解析
+  Future<int> _realChapterCount(Comic c) async {
+    try {
+      final loader = ComicSource.find(c.sourceKey)?.loadComicInfo;
+      if (loader != null) {
+        final res = await loader(c.id);
+        if (res.success) {
+          final n = res.data.chapters?.allChapters.length;
+          if (n != null && n > 0) return n;
+        }
+      }
+    } catch (_) {}
+    return _chapterCount(c);
   }
 
   /// 正規化名字：去首尾空白、去所有空格（含全形）、轉小寫
@@ -155,30 +200,45 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
     return maxN;
   }
 
-  /// 合併：輪詢交錯（每個源的第 1 名、第 2 名… 依次插入），
-  /// 把所有源當成【同一個源】一樣混排，不再整段栗子→整段騰訊→整段W。
-  /// 同名（正規化後相同）只留一個：話數多的勝出（排得越前）。
+  /// 合併規則（2026-09-16 用戶定稿）：
+  /// ① 先用搜索結果排序：輪詢交錯（每個源的第 1 名、第 2 名…），
+  ///    把所有源當【同一個源】一樣混排
+  /// ② 同名（重名）的全部保留，一本都不刪
+  /// ③ 同名的收攏到一處（第一次出現的位置），組內按話數降序；
+  ///    先按文字解析排，背景 loadInfo 校準真實話數後再重排
   List<Comic> _merge(List<List<Comic>> perSource) {
-    final out = <Comic>[];
-    final pos = <String, int>{};
+    // ① 輪詢交錯
+    final flat = <Comic>[];
     var rank = 0;
     var any = true;
     while (any) {
       any = false;
       for (final comics in perSource) {
-        if (rank >= comics.length) continue;
-        any = true;
-        final c = comics[rank];
-        final nk = _normalize(c.title);
-        final i = pos[nk];
-        if (i == null) {
-          pos[nk] = out.length;
-          out.add(c);
-        } else if (_chapterCount(c) > _chapterCount(out[i])) {
-          out[i] = c;
+        if (rank < comics.length) {
+          any = true;
+          flat.add(comics[rank]);
         }
       }
       rank++;
+    }
+    // ②③ 同名組收攏（組內先按文字話數降序）
+    final groups = <String, List<Comic>>{};
+    for (final c in flat) {
+      groups.putIfAbsent(_normalize(c.title), () => []).add(c);
+    }
+    final out = <Comic>[];
+    final emitted = <String>{};
+    for (final c in flat) {
+      final nk = _normalize(c.title);
+      final g = groups[nk]!;
+      if (g.length == 1) {
+        out.add(c);
+        continue;
+      }
+      if (emitted.add(nk)) {
+        g.sort((a, b) => _chapterCount(b).compareTo(_chapterCount(a)));
+        out.addAll(g);
+      }
     }
     return out;
   }
