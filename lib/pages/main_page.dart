@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/pages/categories_page.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
+import 'package:venera/pages/community/community_page.dart';
 import 'package:venera/pages/random_comic_draw_dialog.dart';
 import 'package:venera/pages/search_page.dart';
 import 'package:venera/pages/settings/settings_page.dart';
@@ -49,6 +50,7 @@ class _MainPageState extends State<MainPage> {
 
   final _pages = [
     const HomePage(),
+    const CommunityPage(),
     const FavoritesPage(key: PageStorageKey('favorites')),
     const CategoriesPage(key: PageStorageKey('categories')),
   ];
@@ -66,6 +68,11 @@ class _MainPageState extends State<MainPage> {
           label: 'Home'.tl,
           icon: Icons.home_outlined,
           activeIcon: Icons.home,
+        ),
+        PaneItemEntry(
+          label: '社區',
+          icon: Icons.forum_outlined,
+          activeIcon: Icons.forum,
         ),
         PaneItemEntry(
           label: 'Favorites'.tl,
