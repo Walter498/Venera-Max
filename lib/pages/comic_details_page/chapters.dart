@@ -1078,9 +1078,8 @@ class _LazyChapterCoverState extends State<_LazyChapterCover> {
         return;
       }
       final res = await loader(widget.comicId, widget.epId);
-      final first = (res.success && res.data.isNotEmpty)
-          ? res.data.first?.toString()
-          : null;
+      final first =
+          (res.success && res.data.isNotEmpty) ? res.data.first : null;
       _lazyCache[cacheKey] = first;
       if (first != null && mounted) setState(() => _url = first);
     } catch (_) {
