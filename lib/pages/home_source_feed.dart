@@ -20,14 +20,14 @@ class HomeSourceFeed extends StatefulWidget {
   State<HomeSourceFeed> createState() => _HomeSourceFeedState();
 }
 
-/// 每個分區最多顯示幾部漫畫（設計圖是 3 列 x 2 排）。
-const int kHomeFeedMaxPerSection = 6;
+/// 每個分區最多顯示幾部漫畫（4 列 x 2 排）。
+const int kHomeFeedMaxPerSection = 8;
 
-/// 周期更新：3x3。
-const int kHomeWeekdayMaxPerSection = 9;
+/// 周期更新：4 列 x 2 排。
+const int kHomeWeekdayMaxPerSection = 8;
 
-/// 「查看更多」最多列幾本。
-const int kHomeMoreMaxCount = 10;
+/// 首頁分區固定 4 列。
+const int kHomeFeedColumns = 4;
 
 class _HomeSourceFeedState extends State<HomeSourceFeed> {
   int _selected = 0;
@@ -340,11 +340,12 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
       if (recommends.isNotEmpty) {
         final first = recommends.first;
         slivers.add(SliverToBoxAdapter(child: _buildSectionTitle(first)));
-        // 3 列 x 2 排 = 6 本，固定簡潔網格（不受「漫畫顯示模式」影響）
+        // 4 列 x 2 排 = 8 本，固定簡潔網格（不受「漫畫顯示模式」影響）
         slivers.add(
           SliverGridComics(
             comics: _pick(first, kHomeFeedMaxPerSection),
             forceBriefMode: true,
+            forceColumns: kHomeFeedColumns,
           ),
         );
         slivers.add(SliverToBoxAdapter(child: _buildActions(first)));
@@ -354,6 +355,7 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
             SliverGridComics(
               comics: part.comics.take(kHomeFeedMaxPerSection).toList(),
               forceBriefMode: true,
+              forceColumns: kHomeFeedColumns,
             ),
           );
         }
@@ -376,11 +378,12 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
           (e) => e.$1 == _weekday,
           orElse: () => weeks.first,
         );
-        // 3 列 x 3 排 = 9 本
+        // 4 列 x 2 排 = 8 本
         slivers.add(
           SliverGridComics(
             comics: _pick(current.$2, kHomeWeekdayMaxPerSection),
             forceBriefMode: true,
+            forceColumns: kHomeFeedColumns,
           ),
         );
         slivers.add(SliverToBoxAdapter(child: _buildActions(current.$2)));
@@ -666,7 +669,7 @@ class _SourcePartsPageState extends State<SourcePartsPage> {
 }
 
 /// 「查看更多」頁：用 App 預設的漫畫列表樣式（詳細／簡潔跟隨設定）
-/// 直直列出該分區的漫畫，最多 [kHomeMoreMaxCount] 本。
+/// 直直列出該分區的漫畫 —— 不限量，源給多少顯示多少。
 class HomeSectionListPage extends StatelessWidget {
   const HomeSectionListPage({
     required this.title,
@@ -680,11 +683,10 @@ class HomeSectionListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final list = comics.take(kHomeMoreMaxCount).toList();
     return Scaffold(
       appBar: Appbar(title: Text(title)),
       body: SmoothCustomScrollView(
-        slivers: [SliverGridComics(comics: list)],
+        slivers: [SliverGridComics(comics: comics)],
       ),
     );
   }

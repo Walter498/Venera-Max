@@ -1,11 +1,8 @@
 import "package:flutter/material.dart";
-import 'package:shimmer_animation/shimmer_animation.dart';
 import "package:venera/components/components.dart";
 import "package:venera/foundation/app.dart";
 import "package:venera/foundation/appdata.dart";
 import "package:venera/foundation/comic_source/comic_source.dart";
-import "package:venera/foundation/favorites.dart";
-import "package:venera/pages/search_result_page.dart";
 import "package:venera/utils/translations.dart";
 
 class AggregatedSearchPage extends StatefulWidget {
@@ -64,208 +61,154 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
       scrollbarTopPadding: context.padding.top + 56,
       slivers: [
         SliverSearchBar(controller: controller),
-        SliverList(
+        // 2026-09-16 改版：所有源結果合併成單一直落列表（不再按源分行橫滑）
+        _MergedSearchResults(
           key: ValueKey(_keyword),
-          delegate: SliverChildBuilderDelegate((context, index) {
-            final source = sources[index];
-            return _SliverSearchResult(
-              key: ValueKey(source.key),
-              source: source,
-              keyword: _keyword,
-            );
-          }, childCount: sources.length),
+          sources: sources,
+          keyword: _keyword,
         ),
       ],
     );
   }
 }
 
-class _SliverSearchResult extends StatefulWidget {
-  const _SliverSearchResult({
-    required this.source,
-    required this.keyword,
+/// 聚合搜索結果：所有源並行搜索，結果合併成單一直落列表（詳細模式，
+/// 卡片上會標示來源）。
+///
+/// 去重規則：多個源出現【完全相同名字】（忽略空白、大小寫）的漫畫時
+/// 只保留一個 —— 話數多的勝出（越多話排得越前），話數從副標題/簡介
+/// 裡的「更新至N话 / 第N話 / N话」解析。
+class _MergedSearchResults extends StatefulWidget {
+  const _MergedSearchResults({
     super.key,
+    required this.sources,
+    required this.keyword,
   });
 
-  final ComicSource source;
-
+  final List<ComicSource> sources;
   final String keyword;
 
   @override
-  State<_SliverSearchResult> createState() => _SliverSearchResultState();
+  State<_MergedSearchResults> createState() => _MergedSearchResultsState();
 }
 
-class _SliverSearchResultState extends State<_SliverSearchResult>
-    with AutomaticKeepAliveClientMixin {
-  bool isLoading = true;
-
-  static const _kComicHeight = 162.0;
-
-  get _comicWidth => _kComicHeight * 0.7;
-
-  static const _kLeftPadding = 16.0;
-
-  List<Comic>? comics;
-
-  String? error;
-
-  void load() async {
-    final data = widget.source.searchPageData!;
-    var options = (data.searchOptions ?? [])
-        .map((e) => e.defaultValue)
-        .toList();
-    if (data.loadPage != null) {
-      var res = await data.loadPage!(widget.keyword, 1, options);
-      if (!mounted) return;
-      if (!res.error) {
-        setState(() {
-          comics = res.data;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          error = res.errorMessage ?? "Unknown error".tl;
-          isLoading = false;
-        });
-      }
-    } else if (data.loadNext != null) {
-      var res = await data.loadNext!(widget.keyword, null, options);
-      if (!mounted) return;
-      if (!res.error) {
-        setState(() {
-          comics = res.data;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          error = res.errorMessage ?? "Unknown error".tl;
-          isLoading = false;
-        });
-      }
-    }
-  }
+class _MergedSearchResultsState extends State<_MergedSearchResults> {
+  bool _loading = true;
+  List<Comic> _merged = const [];
+  int _failedSources = 0;
 
   @override
   void initState() {
     super.initState();
-    load();
-    LocalFavoritesManager().addListener(_onFavoriteChanged);
+    _load();
   }
 
-  @override
-  void dispose() {
-    LocalFavoritesManager().removeListener(_onFavoriteChanged);
-    super.dispose();
+  Future<List<Comic>?> _searchOne(ComicSource source) async {
+    try {
+      final data = source.searchPageData!;
+      final options =
+          (data.searchOptions ?? []).map((e) => e.defaultValue).toList();
+      if (data.loadPage != null) {
+        final res = await data.loadPage!(widget.keyword, 1, options);
+        return res.error ? null : res.data;
+      } else if (data.loadNext != null) {
+        final res = await data.loadNext!(widget.keyword, null, options);
+        return res.error ? null : res.data;
+      }
+    } catch (_) {}
+    return null;
   }
 
-  void _onFavoriteChanged() {
-    if (mounted) setState(() {});
+  Future<void> _load() async {
+    // 所有源同時開搜，耗時 = 最慢的源，而不是相加
+    final results =
+        await Future.wait([for (final s in widget.sources) _searchOne(s)]);
+    if (!mounted) return;
+    var failed = 0;
+    final perSource = <List<Comic>>[];
+    for (final r in results) {
+      if (r == null) {
+        failed++;
+      } else {
+        perSource.add(r);
+      }
+    }
+    setState(() {
+      _merged = _merge(perSource);
+      _failedSources = failed;
+      _loading = false;
+    });
   }
 
-  Widget buildPlaceHolder() {
-    return Container(
-      height: _kComicHeight,
-      width: _comicWidth,
-      margin: const EdgeInsets.only(left: _kLeftPadding),
-      decoration: BoxDecoration(
-        color: context.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
-      ),
-    );
+  /// 正規化名字：去首尾空白、去所有空格（含全形）、轉小寫
+  String _normalize(String title) =>
+      title.trim().toLowerCase().replaceAll(RegExp(r'[\s　]+'), '');
+
+  /// 從副標題 / 簡介解析話數（更新至N话、第N話、N话），取最大值；沒有 = 0
+  int _chapterCount(Comic c) {
+    final text = '${c.subtitle ?? ''} ${c.description}';
+    var maxN = 0;
+    for (final m in RegExp(r'(\d+)\s*[话話]').allMatches(text)) {
+      final n = int.tryParse(m.group(1)!) ?? 0;
+      if (n > maxN) maxN = n;
+    }
+    return maxN;
   }
 
-  Widget buildComic(Comic c) {
-    return SimpleComicTile(
-      comic: c,
-      withTitle: true,
-      showFavorite: true,
-    ).paddingLeft(_kLeftPadding).paddingBottom(2);
+  /// 合併：按各源結果原順序排列；同名（正規化後相同）只留一個，
+  /// 話數多的取代話數少的（排得越前）。
+  List<Comic> _merge(List<List<Comic>> perSource) {
+    final out = <Comic>[];
+    final pos = <String, int>{};
+    for (final comics in perSource) {
+      for (final c in comics) {
+        final nk = _normalize(c.title);
+        final i = pos[nk];
+        if (i == null) {
+          pos[nk] = out.length;
+          out.add(c);
+        } else if (_chapterCount(c) > _chapterCount(out[i])) {
+          out[i] = c;
+        }
+      }
+    }
+    return out;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (error != null && error!.startsWith("CloudflareException")) {
-      error = "Cloudflare verification required".tl;
+    if (_loading) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.all(48),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
     }
-    super.build(context);
-    return InkWell(
-      onTap: () {
-        context.to(
-          () => SearchResultPage(
-            text: widget.keyword,
-            sourceKey: widget.source.key,
-          ),
-        );
-      },
-      child: Column(
-        children: [
-          ListTile(
-            mouseCursor: SystemMouseCursors.click,
-            title: Text(widget.source.name),
-          ),
-          if (isLoading)
-            SizedBox(
-              height: _kComicHeight,
-              width: double.infinity,
-              child: Shimmer(
-                child: LayoutBuilder(
-                  builder: (context, constrains) {
-                    var itemWidth = _comicWidth + _kLeftPadding;
-                    var items = (constrains.maxWidth / itemWidth).ceil();
-                    return Stack(
-                      children: [
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          bottom: 0,
-                          child: Row(
-                            children: List.generate(
-                              items,
-                              (index) => buildPlaceHolder(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            )
-          else if (error != null || comics == null || comics!.isEmpty)
-            SizedBox(
-              height: _kComicHeight,
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.error_outline),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          error ?? "No search results found".tl,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                ],
-              ).paddingHorizontal(16),
-            )
-          else
-            SizedBox(
-              height: _kComicHeight,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [for (var c in comics!) buildComic(c)],
+    if (_merged.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(child: Text("No search results found".tl)),
+        ),
+      );
+    }
+    return SliverMainAxisGroup(
+      slivers: [
+        if (_failedSources > 0)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                '$_failedSources 個源搜索失敗',
+                style: TextStyle(
+                    fontSize: 12, color: context.colorScheme.outline),
               ),
             ),
-        ],
-      ).paddingBottom(16),
+          ),
+        // 詳細模式直落列表（與單源搜索結果同一種卡片，含來源標示）
+        SliverGridComics(comics: _merged, forceDetailedMode: true),
+      ],
     );
   }
-
-  @override
-  bool get wantKeepAlive => true;
 }

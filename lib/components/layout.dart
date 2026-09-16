@@ -76,10 +76,13 @@ class SliverGridDelegateWithFixedHeight extends SliverGridDelegate {
 }
 
 class SliverGridDelegateWithComics extends SliverGridDelegate {
-  SliverGridDelegateWithComics({this.overrideBrief});
+  SliverGridDelegateWithComics({this.overrideBrief, this.forceColumns});
 
   /// 強制簡潔(網格)或詳細(列表)模式；null = 跟隨全域設定。
   final bool? overrideBrief;
+
+  /// 強制列數（首頁 4x2 版面用）；null = 按寬度自適應。
+  final int? forceColumns;
 
   bool get useBriefMode =>
       overrideBrief ?? (appdata.settings['comicDisplayMode'] == 'brief');
@@ -124,6 +127,10 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
     int crossAxisCount =
         (constraints.crossAxisExtent / (maxCrossAxisExtent + crossAxisSpacing))
             .ceil();
+    // 指定列數時直接用（首頁 4 列版面）
+    if (forceColumns != null && forceColumns! >= 1) {
+      crossAxisCount = forceColumns!;
+    }
     // Ensure a minimum count of 1, can be zero and result in an infinite extent
     // below when the window size is 0.
     crossAxisCount = math.max(1, crossAxisCount);

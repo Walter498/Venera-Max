@@ -1619,6 +1619,8 @@ class SliverGridComics extends StatefulWidget {
     this.enableHero = true,
     this.swipeActionBuilder,
     this.forceBriefMode = false,
+    this.forceDetailedMode = false,
+    this.forceColumns,
   });
 
   final List<Comic> comics;
@@ -1649,6 +1651,13 @@ class SliverGridComics extends StatefulWidget {
   /// 強制用「簡潔模式」的三列網格（首頁的 3x2 / 3x3 版面需要），
   /// 不受使用者「漫畫顯示模式」設定影響。
   final bool forceBriefMode;
+
+  /// 強制用「詳細模式」的直落列表（聚合搜索結果需要），
+  /// 不受使用者「漫畫顯示模式」設定影響。
+  final bool forceDetailedMode;
+
+  /// 強制列數（首頁 4x2 版面用）；null = 按寬度自適應。
+  final int? forceColumns;
 
   @override
   State<SliverGridComics> createState() => _SliverGridComicsState();
@@ -1842,7 +1851,9 @@ class _SliverGridComics extends StatelessWidget {
         return tile;
       }, childCount: comics.length),
       gridDelegate: SliverGridDelegateWithComics(
-        overrideBrief: forceBriefMode ? true : null,
+        overrideBrief:
+            forceBriefMode ? true : (forceDetailedMode ? false : null),
+        forceColumns: forceColumns,
       ),
     );
   }

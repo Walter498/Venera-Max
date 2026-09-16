@@ -346,7 +346,10 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
   /// 章節封面網格（詳情頁「封面預覽」模式）
   Widget buildChapterCoverGrid(BuildContext context, ComicDetails details) {
     final covers = details.chapterCovers ?? const <String, String>{};
-    final cross = context.width >= 840 ? 5 : 3;
+    // 後備：源若提供 thumbnails（每章一張縮圖，順序與章節一致）就用它
+    final thumbs = details.thumbnails ?? const <String>[];
+    // 章節封面固定 5 個一行（用戶指定 2026-09-16）
+    const cross = 5;
     return SliverGrid(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: cross,
@@ -364,8 +367,15 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
         var value = chapters[key]!;
         var epKey = (i + 1).toString();
         bool visited = (_history?.readEpisode ?? const {}).contains(epKey);
-        // 只用源提供的真章節封面；沒有就顯示章節序號佔位（不要用漫畫封面充數）
-        final coverUrl = (covers[key]?.isNotEmpty == true) ? covers[key] : null;
+        // 封面優先級：chapterCovers → thumbnails → 惰性向源要該話第一頁
+        // （都沒有才顯示章節序號佔位；不要用漫畫封面充數）
+        String? coverUrl =
+            (covers[key]?.isNotEmpty == true) ? covers[key] : null;
+        if ((coverUrl == null || coverUrl.isEmpty) &&
+            i < thumbs.length &&
+            thumbs[i].isNotEmpty) {
+          coverUrl = thumbs[i];
+        }
         return InkWell(
           onTap: () => selectMode ? toggleSelect(epKey) : state.read(i + 1),
           borderRadius: BorderRadius.circular(10),
@@ -378,36 +388,16 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: (coverUrl == null || coverUrl.isEmpty)
-                          ? Container(
-                              color: context.colorScheme.surfaceContainerHighest,
-                              child: Center(
-                                child: Text(
-                                  "${i + 1}",
-                                  style: TextStyle(
-                                    color: context.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            )
-                          // 必須走 App 的圖片載入器：它會套用源的 onImageLoad
-                          // headers（帶 UA）。Image.network 是 Flutter 原生 HTTP，
-                          // 不帶 UA → 栗子圖床回 403 → 封面永遠顯示佔位圖。
-                          : Image(
-                              image: CachedImageProvider(
-                                coverUrl,
-                                sourceKey: details.sourceKey,
-                                cid: details.id,
-                              ),
-                              fit: BoxFit.cover,
-                              errorBuilder: (c, e, st) => Container(
-                                color: context.colorScheme.surfaceContainerHighest,
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: context.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
+                      // 必須走 App 的圖片載入器：它會套用源的 onImageLoad
+                  // headers（帶 UA）。Image.network 是 Flutter 原生 HTTP，
+                  // 不帶 UA → 栗子圖床回 403 → 封面永遠顯示佔位圖。
+                  child: _LazyChapterCover(
+                    coverUrl: coverUrl,
+                    placeholderIndex: i + 1,
+                    sourceKey: details.sourceKey,
+                    comicId: details.id,
+                    epId: key,
+                  ),
                     ),
                     if (visited)
                       Positioned(
@@ -1030,6 +1020,102 @@ class _ChaptersUpdatingIndicator extends StatelessWidget {
           style: ts.s12.withColor(context.colorScheme.outline),
         ),
       ],
+    );
+  }
+}
+
+/// 章節封面圖：優先用源提供的封面 / 縮圖；都沒有就惰性地向源要
+/// 該話的第一頁當封面（解決非栗子源沒有 chapterCovers 時整片灰格）。
+/// 只有格子可見時才會觸發（SliverGrid 惰性構建），結果在記憶體快取，
+/// 同一話不重複請求；失敗則維持序號佔位。
+class _LazyChapterCover extends StatefulWidget {
+  const _LazyChapterCover({
+    required this.coverUrl,
+    required this.placeholderIndex,
+    required this.sourceKey,
+    required this.comicId,
+    required this.epId,
+  });
+
+  final String? coverUrl;
+  final int placeholderIndex;
+  final String sourceKey;
+  final String comicId;
+  final String epId;
+
+  @override
+  State<_LazyChapterCover> createState() => _LazyChapterCoverState();
+}
+
+class _LazyChapterCoverState extends State<_LazyChapterCover> {
+  /// 'sourceKey:comicId:epId' -> 第一頁圖片 URL（null = 已試過但沒有）
+  static final Map<String, String?> _lazyCache = {};
+
+  String? _url;
+
+  @override
+  void initState() {
+    super.initState();
+    _url =
+        (widget.coverUrl != null && widget.coverUrl!.isNotEmpty)
+            ? widget.coverUrl
+            : null;
+    if (_url == null) _lazyLoad();
+  }
+
+  Future<void> _lazyLoad() async {
+    final cacheKey = '${widget.sourceKey}:${widget.comicId}:${widget.epId}';
+    if (_lazyCache.containsKey(cacheKey)) {
+      final v = _lazyCache[cacheKey];
+      if (v != null && mounted) setState(() => _url = v);
+      return;
+    }
+    try {
+      final source = ComicSource.find(widget.sourceKey);
+      final loader = source?.loadComicPages;
+      if (loader == null) {
+        _lazyCache[cacheKey] = null;
+        return;
+      }
+      final res = await loader(widget.comicId, widget.epId);
+      final first = (res.success && res.data.isNotEmpty)
+          ? res.data.first?.toString()
+          : null;
+      _lazyCache[cacheKey] = first;
+      if (first != null && mounted) setState(() => _url = first);
+    } catch (_) {
+      _lazyCache[cacheKey] = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final url = _url;
+    if (url == null || url.isEmpty) {
+      return Container(
+        color: context.colorScheme.surfaceContainerHighest,
+        child: Center(
+          child: Text(
+            "${widget.placeholderIndex}",
+            style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+          ),
+        ),
+      );
+    }
+    return Image(
+      image: CachedImageProvider(
+        url,
+        sourceKey: widget.sourceKey,
+        cid: widget.comicId,
+      ),
+      fit: BoxFit.cover,
+      errorBuilder: (c, e, st) => Container(
+        color: context.colorScheme.surfaceContainerHighest,
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: context.colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }
