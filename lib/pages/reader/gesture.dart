@@ -398,11 +398,12 @@ class _ReaderGestureDetectorState
   }
 
   void onDoubleTap(Offset location) {
+    // 雙擊召喚上下欄已取消（2026-09-16）：整個閱讀器統一走
+    // 「單擊 + 靜止 800ms」機制（見上方 onTap 的 settleWindow）。
+    // 雙擊只在開啟「雙擊縮放」時用於縮放；否則雙擊不做任何事，
+    // 避免快速點兩下時上下欄亂跳。
     if (_enableDoubleTapToZoom) {
       context.reader._imageViewController?.handleDoubleTap(location);
-    } else {
-      // 雙擊召喚 / 收起上下工具欄
-      context.readerScaffold.openOrClose();
     }
   }
 
