@@ -30,6 +30,9 @@ class _FilterRow {
 }
 
 class _CategoriesPageState extends State<CategoriesPage> {
+  /// 可切換的源（有分類資料 + 分類載入器）：首頁顯示源排前面
+  List<ComicSource> _availableSources = [];
+  int _sourceIndex = 0;
   ComicSource? _source;
   List<_FilterRow> _rows = const [];
   final Map<String, String?> _selected = {}; // rowTitle -> param
@@ -60,22 +63,42 @@ class _CategoriesPageState extends State<CategoriesPage> {
   }
 
   void _initSource() {
-    // 優先用「首頁顯示源」裡第一個支援分類載入的源（栗子）
-    ComicSource? found;
+    // 首頁顯示源裡支援分類的排前面，其餘支援分類的源排在後面
+    final list = <ComicSource>[];
+    final seen = <String>{};
     for (final key in effectiveHomeDisplaySourceKeys()) {
       final s = ComicSource.find(key);
       if (s != null &&
           s.categoryComicsData != null &&
-          s.categoryData != null) {
-        found = s;
-        break;
+          s.categoryData != null &&
+          seen.add(s.key)) {
+        list.add(s);
       }
     }
-    found ??= ComicSource.all().firstWhere(
-      (s) => s.categoryComicsData != null && s.categoryData != null,
-      orElse: () => ComicSource.all().first,
-    );
-    _source = found;
+    for (final s in ComicSource.all()) {
+      if (s.categoryComicsData != null &&
+          s.categoryData != null &&
+          seen.add(s.key)) {
+        list.add(s);
+      }
+    }
+    _availableSources = list;
+    _sourceIndex = 0;
+    _source = list.isNotEmpty ? list.first : null;
+    _buildRows();
+    _reload();
+  }
+
+  /// 切換源：篩選 chips 換成新源的分類，每行都保留「全部」，然後重載
+  void _switchSource(int index) {
+    if (index == _sourceIndex || index >= _availableSources.length) return;
+    setState(() {
+      _sourceIndex = index;
+      _source = _availableSources[index];
+      _selected.clear();
+      _expanded = false;
+      _rows = const [];
+    });
     _buildRows();
     _reload();
   }
@@ -167,6 +190,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
       child: SmoothCustomScrollView(
         controller: _scroll,
         slivers: [
+          if (_availableSources.length > 1)
+            SliverToBoxAdapter(child: _buildSourceTabs()),
           SliverToBoxAdapter(child: _buildSearchBar()),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
           const SliverToBoxAdapter(child: Divider(height: 24)),
@@ -174,6 +199,46 @@ class _CategoriesPageState extends State<CategoriesPage> {
             SliverGridComics(comics: _comics, forceBriefMode: true),
           SliverToBoxAdapter(child: _buildFooter()),
         ],
+      ),
+    );
+  }
+
+  /// 源切換列：橫向 chips，切換後下方篩選 chips 跟著換
+  Widget _buildSourceTabs() {
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        itemCount: _availableSources.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final selected = i == _sourceIndex;
+          return InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () => _switchSource(i),
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: selected
+                    ? context.colorScheme.primaryContainer
+                    : context.colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Text(
+                _availableSources[i].name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  color: selected
+                      ? context.colorScheme.primary
+                      : context.colorScheme.onSurface,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -155,13 +155,20 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
     return maxN;
   }
 
-  /// 合併：按各源結果原順序排列；同名（正規化後相同）只留一個，
-  /// 話數多的取代話數少的（排得越前）。
+  /// 合併：輪詢交錯（每個源的第 1 名、第 2 名… 依次插入），
+  /// 把所有源當成【同一個源】一樣混排，不再整段栗子→整段騰訊→整段W。
+  /// 同名（正規化後相同）只留一個：話數多的勝出（排得越前）。
   List<Comic> _merge(List<List<Comic>> perSource) {
     final out = <Comic>[];
     final pos = <String, int>{};
-    for (final comics in perSource) {
-      for (final c in comics) {
+    var rank = 0;
+    var any = true;
+    while (any) {
+      any = false;
+      for (final comics in perSource) {
+        if (rank >= comics.length) continue;
+        any = true;
+        final c = comics[rank];
         final nk = _normalize(c.title);
         final i = pos[nk];
         if (i == null) {
@@ -171,6 +178,7 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
           out[i] = c;
         }
       }
+      rank++;
     }
     return out;
   }

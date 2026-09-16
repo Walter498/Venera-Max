@@ -45,7 +45,9 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
   static const _cacheTtl = Duration(minutes: 10);
 
   /// 「换一换」用：換個種子 = 換一批推薦（立即有變化，不依賴網路）。
-  int _seed = 0;
+  /// 每個分區【獨立種子】：點推荐的换一换不會連動刷新周期更新。
+  final Map<String, int> _seeds = {};
+  int _seedFor(String partTitle) => _seeds[partTitle] ?? 0;
 
   /// 周期更新目前選中的星期（0 = 周一）。
   int _weekday = 0;
@@ -166,7 +168,7 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
   List<Comic> _pick(ExplorePagePart part, int count) {
     final list = List<Comic>.from(part.comics);
     if (list.length <= count || count <= 0) return list;
-    list.shuffle(Random(_seed * 31 + part.title.hashCode));
+    list.shuffle(Random(_seedFor(part.title) * 31 + part.title.hashCode));
     return list.take(count).toList();
   }
 
@@ -540,8 +542,9 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              // 换一换：立即換一批推薦（種子變化 → 立刻看得到效果）
-              onPressed: () => setState(() => _seed++),
+              // 换一换：只換【這個分區】的一批（各分區種子獨立，互不連動）
+              onPressed: () => setState(() =>
+                  _seeds[part.title] = (_seeds[part.title] ?? 0) + 1),
               icon: const Icon(Icons.refresh, size: 18),
               label: Text("Shuffle".tl),
             ),
