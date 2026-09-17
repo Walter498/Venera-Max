@@ -120,7 +120,9 @@ class _AppSearchFieldState extends State<AppSearchField> {
     }
 
     return Material(
-      color: context.colorScheme.surfaceContainerHigh,
+      color: appdata.settings['ui_style'] == 'glass'
+          ? context.colorScheme.surfaceContainerHigh.withOpacity(0.55)
+          : context.colorScheme.surfaceContainerHigh,
       borderRadius: radius,
       clipBehavior: Clip.antiAlias,
       child: SizedBox(height: height, child: content),

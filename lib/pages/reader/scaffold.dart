@@ -251,10 +251,15 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       child: Container(
         padding: EdgeInsets.only(top: context.padding.top),
         decoration: BoxDecoration(
-          color: context.colorScheme.surface.toOpacity(0.92),
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.toOpacity(0.5), width: 0.5),
-          ),
+          // Liquid Glass：更通透（0.92 → 0.55）
+          color: context.colorScheme.surface.toOpacity(
+              appdata.settings['ui_style'] == 'glass' ? 0.55 : 0.92),
+          border: appdata.settings['ui_style'] == 'glass'
+              ? null
+              : Border(
+                  bottom:
+                      BorderSide(color: Colors.grey.toOpacity(0.5), width: 0.5),
+                ),
         ),
         child: Padding(
           padding: EdgeInsets.only(
@@ -915,8 +920,10 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     return BlurEffect(
       child: Container(
         decoration: BoxDecoration(
-          color: context.colorScheme.surface.toOpacity(0.92),
-          border: isOpen
+          // Liquid Glass：更通透（0.92 → 0.55）
+          color: context.colorScheme.surface.toOpacity(
+              appdata.settings['ui_style'] == 'glass' ? 0.55 : 0.92),
+          border: (isOpen && appdata.settings['ui_style'] != 'glass')
               ? Border(
                   top: BorderSide(
                     color: Colors.grey.toOpacity(0.5),
