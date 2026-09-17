@@ -298,6 +298,54 @@ class NaviPaneState extends State<NaviPane>
   }
 
   Widget buildBottom() {
+    // Liquid Glass：浮起來的毛玻璃圓角條（內容會透到模糊層底下）
+    if (appdata.settings['ui_style'] == 'glass') {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              height: _kBottomBarHeight,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHigh
+                    .withOpacity(0.55),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outlineVariant
+                      .withOpacity(0.4),
+                  width: 0.6,
+                ),
+              ),
+              child: Material(
+                type: MaterialType.transparency,
+                textStyle: Theme.of(context).textTheme.labelSmall,
+                child: Row(
+                  children:
+                      List<Widget>.generate(widget.paneItems.length, (index) {
+                    return Expanded(
+                      child: _SingleBottomNaviWidget(
+                        enabled: currentPage == index,
+                        entry: widget.paneItems[index],
+                        onTap: () {
+                          updatePage(index);
+                        },
+                        key: ValueKey(index),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Material(
       textStyle: Theme.of(context).textTheme.labelSmall,
       elevation: 0,

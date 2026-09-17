@@ -42,6 +42,17 @@ class _AppSettingsState extends State<AppSettings> {
               },
             ),
             SelectSetting(
+              title: '界面風格',
+              settingKey: "ui_style",
+              optionTranslation: const {
+                "material": "Material 3（預設）",
+                "glass": "Liquid Glass（液態玻璃）",
+              },
+              onChanged: () async {
+                App.forceRebuild();
+              },
+            ),
+            SelectSetting(
               title: "Theme Color".tl,
               settingKey: "color",
               optionTranslation: {

@@ -212,6 +212,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         'sans-serif'
       ];
     }
+    // Liquid Glass（液態玻璃，iOS 26 風格）開關：設定 → 外觀 → 界面風格
+    final isGlass = appdata.settings['ui_style'] == 'glass';
     return ThemeData(
       colorScheme: SeedColorScheme.fromSeeds(
         primaryKey: primary,
@@ -220,6 +222,30 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         brightness: brightness,
         tones: FlexTones.vividBackground(brightness),
       ),
+      // 玻璃風格：更大圓角 + 去陰影（通透感）
+      cardTheme: isGlass
+          ? CardThemeData(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            )
+          : null,
+      dialogTheme: isGlass
+          ? DialogThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+              ),
+            )
+          : null,
+      bottomSheetTheme: isGlass
+          ? const BottomSheetThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(26)),
+              ),
+            )
+          : null,
       fontFamily: font,
       fontFamilyFallback: fallback,
       // ExpansionTile shows top/bottom divider lines when expanded by default.
