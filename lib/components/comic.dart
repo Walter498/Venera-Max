@@ -1777,6 +1777,7 @@ class _SliverGridComics extends StatelessWidget {
     this.forceBriefMode = false,
     this.forceDetailedMode = false,
     this.forceColumns,
+    this.chapterCountBuilder,
     required this.heroIDs,
     this.enableHero = true,
     this.onLastItemBuild,
