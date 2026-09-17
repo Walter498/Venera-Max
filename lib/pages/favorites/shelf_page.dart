@@ -143,13 +143,14 @@ class _ShelfFavTab extends StatefulWidget {
 
 class _ShelfFavTabState extends State<_ShelfFavTab> {
   // 資料夾選擇持久化：離開/退出 App 都保留（用戶要求 2026-09-17）
-  String? get _folder => appdata.settings['shelf_folder'] as String?;
+  String? get _folder {
+    final v = appdata.settings['shelf_folder'];
+    return (v is String && v.isNotEmpty) ? v : null;
+  }
+
   set _folder(String? v) {
-    if (v == null) {
-      appdata.settings.remove('shelf_folder');
-    } else {
-      appdata.settings['shelf_folder'] = v;
-    }
+    // Settings 類沒有 remove 方法：空字串 = 全部
+    appdata.settings['shelf_folder'] = v ?? '';
     appdata.saveData();
   }
 
