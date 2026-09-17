@@ -3,7 +3,7 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/read_later.dart';
-import 'package:venera/pages/favorites/favorites_page.dart';
+import 'package:venera/pages/favorites/favorite_actions.dart';
 import 'package:venera/utils/translations.dart';
 
 class ReadLaterPage extends StatefulWidget {

@@ -39,7 +39,6 @@ import 'package:venera/pages/aggregated_search_page.dart';
 import 'package:venera/pages/comic_collection_edit_page.dart';
 import 'package:venera/pages/comic_details_page/glossary_editor.dart';
 import 'package:venera/pages/comic_details_page/related_sources_section.dart';
-import 'package:venera/pages/favorites/favorites_page.dart';
 import 'package:venera/pages/reader/reader.dart';
 import 'package:venera/pages/webdav_migration_dialog.dart';
 import 'package:venera/pages/search_result_page.dart';

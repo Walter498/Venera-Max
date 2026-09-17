@@ -9,7 +9,7 @@ import 'package:venera/foundation/log.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/webdav_migration_dialog.dart';
 import 'package:venera/pages/downloading_page.dart';
-import 'package:venera/pages/favorites/favorites_page.dart';
+import 'package:venera/pages/favorites/favorite_actions.dart';
 import 'package:venera/utils/io.dart';
 import 'package:venera/utils/translations.dart';
 import 'package:venera/pages/home_page.dart';

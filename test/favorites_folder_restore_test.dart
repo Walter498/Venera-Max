@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:venera/pages/favorites/favorites_page.dart';
+import 'package:venera/pages/favorites/favorite_actions.dart';
 
 /// Regression guard: selecting the local "All" folder, then leaving the
 /// favorites tab (its state is disposed — the nav pane builds only the current

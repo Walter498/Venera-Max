@@ -1,4 +1,64 @@
-part of 'favorites_page.dart';
+import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_reorderable_grid_view/entities/reorderable_animation_config.dart';
+import 'package:flutter_reorderable_grid_view/widgets/reorderable_builder.dart';
+import 'package:venera/components/components.dart';
+import 'package:venera/foundation/app.dart';
+import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/comic_collection_store.dart';
+import 'package:venera/foundation/comic_source/comic_source.dart';
+import 'package:venera/foundation/comic_type.dart';
+import 'package:venera/foundation/consts.dart';
+import 'package:venera/foundation/favorites.dart';
+import 'package:venera/foundation/favorites_meta.dart';
+import 'package:venera/foundation/history.dart';
+import 'package:venera/foundation/local.dart';
+import 'package:venera/foundation/log.dart';
+import 'package:venera/foundation/related_source_tasks.dart';
+import 'package:venera/foundation/res.dart';
+import 'package:venera/network/download.dart';
+import 'package:venera/network/cache.dart';
+import 'package:venera/pages/comic_details_page/comic_page.dart';
+import 'package:venera/pages/reader/reader.dart';
+import 'package:venera/pages/settings/settings_page.dart';
+import 'package:venera/utils/ext.dart';
+import 'package:venera/utils/io.dart';
+import 'package:venera/utils/opencc.dart';
+import 'package:venera/utils/tags_translation.dart';
+import 'package:venera/utils/translations.dart';
+
+const _localAllFolderLabel = '^_^[%local_all%]^_^';
+
+/// The local "All" entry, exposed for tests.
+@visibleForTesting
+const localAllFolderLabel = _localAllFolderLabel;
+
+/// Restores the persisted favorites selection.
+///
+/// A stale local folder (deleted on this or another device) falls back to
+/// "unselected", but the "All" entry is a sentinel rather than a real folder
+/// table, so it never appears in [LocalFavoritesManager.folderNames] and must
+/// be exempt from that check.
+@visibleForTesting
+({String? folder, bool isNetwork}) restoreFavoriteFolder(
+  dynamic persisted,
+  bool Function(String folder) localFolderExists,
+) {
+  if (persisted is! Map) return (folder: null, isNetwork: false);
+  var name = persisted['name'];
+  var folder = name is String ? name : null;
+  var isNetwork = persisted['isNetwork'] == true;
+  if (folder != null &&
+      !isNetwork &&
+      folder != _localAllFolderLabel &&
+      !localFolderExists(folder)) {
+    return (folder: null, isNetwork: false);
+  }
+  return (folder: folder, isNetwork: isNetwork);
+}
+
 
 /// Open a dialog to create a new favorite folder.
 Future<void> newFolder() async {
