@@ -68,8 +68,7 @@ class _CommunityPageState extends State<CommunityPage> {
       child: Scaffold(
         // 無 Appbar：底部 tab 的 chrome 已顯示「社區」標題，
         // 這裡不再放帶返回箭頭的重複列（用戶要求刪除無用按鈕）
-        body: SafeArea(
-          child: Column(
+        body: Column(
           children: [
             TabBar(
               tabs: [for (final s in _sections!) Tab(text: s.name)],
@@ -83,7 +82,6 @@ class _CommunityPageState extends State<CommunityPage> {
               ),
             ),
           ],
-          ),
         ),
       ),
     );

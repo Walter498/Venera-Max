@@ -500,17 +500,48 @@ class _ShelfUpdatesPageState extends State<ShelfUpdatesPage> {
     );
   }
 
-  void _continueReading(BuildContext context, History h) {
-    context.to(() => Reader(
-          type: ComicType.fromKey(h.sourceKey),
-          cid: h.id,
-          name: h.title,
-          chapters: null,
-          history: h,
-          initialChapter: h.ep,
-          initialPage: h.page,
-          author: '',
-          tags: const [],
-        ));
+  Future<void> _continueReading(BuildContext context, History h) async {
+    final nav = context;
+    final source = ComicSource.find(h.sourceKey);
+    final loader = source?.loadComicInfo;
+    if (loader == null) {
+      nav.to(() => ComicPage(
+          id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
+      return;
+    }
+    // 取章節表期間顯示進度
+    showDialog(
+      context: nav,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final res = await loader(h.id);
+      if (nav.mounted) Navigator.of(nav).pop(); // 關進度
+      if (res.success && res.data.chapters != null) {
+        nav.to(() => Reader(
+              type: ComicType.fromKey(h.sourceKey),
+              cid: h.id,
+              name: h.title,
+              chapters: res.data.chapters,
+              history: h,
+              initialChapter: h.ep,
+              initialPage: h.page,
+              author: h.subtitle,
+              tags: const [],
+            ));
+      } else {
+        nav.to(() => ComicPage(
+            id: h.id,
+            sourceKey: h.sourceKey,
+            cover: h.cover,
+            title: h.title));
+      }
+    } catch (_) {
+      if (nav.mounted) Navigator.of(nav).pop();
+      nav.to(() => ComicPage(
+          id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
+    }
   }
+
 }

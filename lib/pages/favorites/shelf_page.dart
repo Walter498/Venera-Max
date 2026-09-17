@@ -3,6 +3,7 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/comic_collection_store.dart';
+import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/history.dart';
@@ -30,11 +31,10 @@ class _ShelfPageState extends State<ShelfPage> {
     return DefaultTabController(
       length: 2,
       child: Material(
-        child: SafeArea(
-          child: Column(
-            children: [
-              SizedBox(
-                height: 48,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 48,
                 child: Row(
                   children: [
                     const Expanded(
@@ -81,10 +81,9 @@ class _ShelfPageState extends State<ShelfPage> {
                     _ShelfFavTab(),
                     _ShelfHistoryTab(),
                   ],
-                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -264,40 +263,36 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
             ],
           ),
         ),
-        // 直列詳情卡（一列一個，顯示作者/更新/來源/標籤）
+        // 直列詳情卡（一列一個）：用 SliverGridComics 的詳細模式，
+        // 它自帶正確高度（ListView 裡 ComicTile 會因無限高度而不可見）
         Expanded(
           child: items.isEmpty
               ? Center(
                   child: Text('還沒有收藏，去首頁逛逛吧',
                       style:
                           TextStyle(color: context.colorScheme.outline)))
-              : ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, i) {
-                    final c = items[i];
-                    final key = '${c.sourceKey}:${c.id}';
-                    final selected = _selected.contains(key);
-                    return Container(
-                      decoration: BoxDecoration(
-                        border: selected
-                            ? Border.all(
-                                color: context.colorScheme.primary, width: 2)
-                            : null,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: ComicTile(
-                        comic: c,
-                        overrideDisplayMode: 'detailed',
-                        onTap: _editMode
-                            ? () => setState(() {
-                                  _selected.contains(key)
-                                      ? _selected.remove(key)
-                                      : _selected.add(key);
-                                })
-                            : null,
-                      ),
-                    );
-                  },
+              : CustomScrollView(
+                  slivers: [
+                    SliverGridComics(
+                      comics: items,
+                      forceDetailedMode: true,
+                      selections: _editMode
+                          ? {
+                              for (final c in items)
+                                c: _selected
+                                    .contains('${c.sourceKey}:${c.id}')
+                            }
+                          : null,
+                      onTapWithIndex: _editMode
+                          ? (c, heroID, i) => setState(() {
+                                final key = '${c.sourceKey}:${c.id}';
+                                _selected.contains(key)
+                                    ? _selected.remove(key)
+                                    : _selected.add(key);
+                              })
+                          : null,
+                    ),
+                  ],
                 ),
         ),
         if (_editMode)
@@ -504,18 +499,50 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
         id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
   }
 
-  /// 繼續觀看：直達閱讀器的上次位置（不經詳情頁）
-  void _continue(History h) {
-    context.to(() => Reader(
-          type: ComicType.fromKey(h.sourceKey),
-          cid: h.id,
-          name: h.title,
-          chapters: null,
-          history: h,
-          initialChapter: h.ep,
-          initialPage: h.page,
-          author: '',
-          tags: const [],
-        ));
+  /// 繼續觀看：先向源取章節表（閱讀器需要章節 ID 才能要圖），
+  /// 成功才直達上次位置；失敗退回詳情頁。
+  Future<void> _continue(History h) async {
+    final nav = context;
+    final source = ComicSource.find(h.sourceKey);
+    final loader = source?.loadComicInfo;
+    if (loader == null) {
+      nav.to(() => ComicPage(
+          id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
+      return;
+    }
+    // 取章節表期間顯示進度
+    showDialog(
+      context: nav,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final res = await loader(h.id);
+      if (nav.mounted) Navigator.of(nav).pop(); // 關進度
+      if (res.success && res.data.chapters != null) {
+        nav.to(() => Reader(
+              type: ComicType.fromKey(h.sourceKey),
+              cid: h.id,
+              name: h.title,
+              chapters: res.data.chapters,
+              history: h,
+              initialChapter: h.ep,
+              initialPage: h.page,
+              author: h.subtitle,
+              tags: const [],
+            ));
+      } else {
+        nav.to(() => ComicPage(
+            id: h.id,
+            sourceKey: h.sourceKey,
+            cover: h.cover,
+            title: h.title));
+      }
+    } catch (_) {
+      if (nav.mounted) Navigator.of(nav).pop();
+      nav.to(() => ComicPage(
+          id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
+    }
   }
+
 }

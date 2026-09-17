@@ -284,7 +284,10 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
     if (sources.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
-    final slivers = <Widget>[SliverToBoxAdapter(child: _buildTabs(sources))];
+    final slivers = <Widget>[
+      SliverToBoxAdapter(child: _buildTopTabs()),
+      SliverToBoxAdapter(child: _buildTabs(sources)),
+    ];
     if (_loading) {
       slivers.add(
         const SliverToBoxAdapter(
@@ -376,6 +379,50 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
     return SliverMainAxisGroup(slivers: slivers);
   }
 
+  /// 首頁頂部 Tab 條（仿青漫：首頁｜更新｜排行）
+  Widget _buildTopTabs() {
+    Widget tab(String text, {required bool active, VoidCallback? onTap}) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(right: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? context.colorScheme.primaryContainer : null,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              color: active
+                  ? context.colorScheme.onPrimaryContainer
+                  : context.colorScheme.onSurface,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 40,
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          tab('首頁', active: true),
+          tab('更新',
+              active: false,
+              onTap: () => context.to(() => const ShelfUpdatesPage())),
+          tab('排行',
+              active: false,
+              onTap: () => context.to(() => const ShelfRankPage())),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTabs(List<ComicSource> sources) {
     return SizedBox(
       height: 52,
@@ -420,19 +467,7 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
               },
             ),
           ),
-          // 排行 / 更新 入口（從頂欄搬下來，解決圖標擁擠）
-          IconButton(
-            icon: const Icon(Icons.leaderboard_outlined),
-            tooltip: '排行',
-            onPressed: () =>
-                context.to(() => const ShelfRankPage()),
-          ),
-          IconButton(
-            icon: const Icon(Icons.new_releases_outlined),
-            tooltip: '更新',
-            onPressed: () =>
-                context.to(() => const ShelfUpdatesPage()),
-          ),
+          // 排行/更新入口已改到首頁頂部 Tab 條（用戶指定位置）
           IconButton(
             // 刷新首頁：清掉快取並重新抓這個源的推薦 + 周期更新
             icon: const Icon(Icons.refresh),
