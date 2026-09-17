@@ -299,11 +299,13 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                             for (final c in _comics())
                               '${c.sourceKey}:${c.id}'
                           };
-                          _selected.length == all.length
-                              ? _selected.clear()
-                              : _selected
+                          if (_selected.length == all.length) {
+                            _selected.clear();
+                          } else {
+                            _selected
                               ..clear()
                               ..addAll(all);
+                          }
                         });
                       },
                       child: Text(_selected.length == _comics().length
@@ -614,7 +616,8 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
   }
 
   Future<void> _removeOne(History h) async {
-    await HistoryManager().remove(h.id, ComicType.fromKey(h.sourceKey));
+    // remove 是 void async（不回傳 Future），直接調用即可
+    HistoryManager().remove(h.id, ComicType.fromKey(h.sourceKey));
   }
 
   @override
