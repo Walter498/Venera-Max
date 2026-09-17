@@ -84,6 +84,22 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
   Object? _lastException;
   ImageStreamCompleterHandle? _completerHandle;
 
+  /// 圖片載入看門狗：請求掛住（不報錯也不回應）時，超過時限就當失敗，
+  /// 顯示錯誤 + 重試（用戶反饋：某些頁一直轉圈卡死）
+  Timer? _loadWatchdog;
+  static const _kLoadTimeout = Duration(seconds: 15);
+
+  void _armWatchdog() {
+    _loadWatchdog?.cancel();
+    _loadWatchdog = Timer(_kLoadTimeout, () {
+      if (!mounted || _imageInfo != null || _lastException != null) return;
+      setState(() {
+        _loadingProgress = null;
+        _lastException = '載入超時（網絡無回應），點擊重試';
+      });
+    });
+  }
+
   static final Map<int, Size> _cache = {};
 
   static clear() => _cache.clear();
@@ -99,6 +115,7 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
   @override
   void dispose() {
     assert(_imageStream != null);
+    _loadWatchdog?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _stopListeningToStream();
     _completerHandle?.dispose();
@@ -159,6 +176,7 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
   }
 
   void _resolveImage() {
+    _armWatchdog();
     final ScrollAwareImageProvider provider = ScrollAwareImageProvider<Object>(
       context: _scrollAwareContext,
       imageProvider: widget.image,
@@ -182,6 +200,7 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
         _handleImageFrame,
         onChunk: _handleImageChunk,
         onError: (Object error, StackTrace? stackTrace) {
+          _loadWatchdog?.cancel();
           setState(() {
             _lastException = error;
           });
@@ -192,6 +211,7 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
   }
 
   void _handleImageFrame(ImageInfo imageInfo, bool synchronousCall) {
+    _loadWatchdog?.cancel();
     setState(() {
       _replaceImage(info: imageInfo);
       _loadingProgress = null;

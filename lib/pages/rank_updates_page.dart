@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
-import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/network/app_dio.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
-import 'package:venera/pages/reader/reader.dart';
 
 /// 排行 + 更新 頁（2026-09-17 v2，仿青漫圖九/圖十）。
 /// 排行：直接調栗子 /app/api/rank/list（日漫/国漫/韩漫 分組 Tab，
@@ -397,7 +395,11 @@ class _ShelfUpdatesPageState extends State<ShelfUpdatesPage> {
               final c = Comic(h.title, h.cover, h.id, null, null, '',
                   h.sourceKey, null, null);
               return (c, _agoText(h.time.millisecondsSinceEpoch ~/ 1000),
-                  () => _continueReading(context, h));
+                  () => context.to(() => ComicPage(
+                      id: h.id,
+                      sourceKey: h.sourceKey,
+                      cover: h.cover,
+                      title: h.title)));
             },
           ),
         const SizedBox(height: 16),
@@ -501,50 +503,6 @@ class _ShelfUpdatesPageState extends State<ShelfUpdatesPage> {
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
       ]),
     );
-  }
-
-  Future<void> _continueReading(BuildContext context, History h) async {
-    final nav = context;
-    final source = ComicSource.find(h.sourceKey);
-    final loader = source?.loadComicInfo;
-    if (loader == null) {
-      nav.to(() => ComicPage(
-          id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
-      return;
-    }
-    // 取章節表期間顯示進度
-    showDialog(
-      context: nav,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-    try {
-      final res = await loader(h.id);
-      if (nav.mounted) Navigator.of(nav).pop(); // 關進度
-      if (res.success && res.data.chapters != null) {
-        nav.to(() => Reader(
-              type: ComicType.fromKey(h.sourceKey),
-              cid: h.id,
-              name: h.title,
-              chapters: res.data.chapters,
-              history: h,
-              initialChapter: h.ep,
-              initialPage: h.page,
-              author: h.subtitle,
-              tags: const [],
-            ));
-      } else {
-        nav.to(() => ComicPage(
-            id: h.id,
-            sourceKey: h.sourceKey,
-            cover: h.cover,
-            title: h.title));
-      }
-    } catch (_) {
-      if (nav.mounted) Navigator.of(nav).pop();
-      nav.to(() => ComicPage(
-          id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
-    }
   }
 
 }
