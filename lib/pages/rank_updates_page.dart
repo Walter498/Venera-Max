@@ -1,47 +1,122 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/history.dart';
-import 'package:venera/foundation/home_layout.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
+import 'package:venera/network/app_dio.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/reader/reader.dart';
 
-/// 首頁頂欄的兩個入口頁（2026-09-17）：排行 + 更新。
-/// 排行：真實調源的「熱門排行」分類載入器（栗子源 param=rank → rank/list）。
-/// 更新：最近觀看（HistoryManager 真數據）+ 最新更新（源分類總列表）。
-/// 全部真數據，無空殼。
+/// 排行 + 更新 頁（2026-09-17 v2，仿青漫圖九/圖十）。
+/// 排行：直接調栗子 /app/api/rank/list（日漫/国漫/韩漫 分組 Tab，
+///       前三名大封面，其餘直列帶「更新至N話」）。
+/// 更新：最近觀看（HistoryManager，封面帶「上次閱讀」時間徽章）+
+///       最新更新（/app/api/category/list，封面帶「更新於多久前」徽章）。
+/// 全部真數據。
 
-/// 取第一個支援分類載入的首頁顯示源（栗子）
-ComicSource? _rankSource() {
-  for (final key in effectiveHomeDisplaySourceKeys()) {
-    final s = ComicSource.find(key);
-    if (s != null && s.categoryComicsData != null) return s;
-  }
-  for (final s in ComicSource.all()) {
-    if (s.categoryComicsData != null) return s;
-  }
-  return null;
+const _kApi = 'http://ai.qsmm.fun';
+const _kImg = 'https://cdn.lzimg.xyz';
+
+Future<Map<String, dynamic>> _getJson(String path) async {
+  final dio = AppDio(
+      BaseOptions(responseType: ResponseType.json), const Duration(seconds: 15));
+  final res = await dio.get('$_kApi$path');
+  var raw = res.data;
+  if (raw is String) raw = raw.isEmpty ? {} : raw;
+  final map = Map<String, dynamic>.from(raw is Map ? raw : {});
+  final data = map['data'];
+  return data is Map ? Map<String, dynamic>.from(data) : {};
 }
 
-/// 直達閱讀器上次位置（與書架足跡同一邏輯）
-void _continueReading(BuildContext context, History h) {
-  context.to(() => Reader(
-        type: ComicType.fromKey(h.sourceKey),
-        cid: h.id,
-        name: h.title,
-        chapters: null,
-        history: h,
-        initialChapter: h.ep,
-        initialPage: h.page,
-        author: '',
-        tags: const [],
-      ));
+/// API 漫畫 → Comic（話數 nums、最新話 sub、更新時間 updatedAt 都保留進 description）
+Comic _comicFromApi(Map<String, dynamic> m) {
+  var cover = (m['picY'] ?? m['picX'] ?? '').toString();
+  if (cover.isNotEmpty && !cover.startsWith('http')) cover = _kImg + cover;
+  final nums = (m['nums'] as num?)?.toInt() ?? 0;
+  final sub = m['sub']?.toString() ?? '';
+  final upd = (m['updatedAt'] as num?)?.toInt() ?? 0;
+  return Comic(
+    m['name']?.toString() ?? '',
+    cover,
+    (m['id'] as num?)?.toInt().toString() ?? '',
+    m['author']?.toString() ?? '',
+    (m['tags']?.toString() ?? '').split(',').where((e) => e.isNotEmpty).toList(),
+    // description 帶機讀欄位：upd@秒|nums@話數|sub@最新話
+    'upd@$upd|nums@$nums|sub@$sub\n${m['content']?.toString() ?? ''}',
+    'lizimh',
+    null,
+    null,
+  );
 }
 
-/// ==================== 排行 ====================
+int _apiUpd(Comic c) {
+  final m = RegExp(r'upd@(\d+)').firstMatch(c.description);
+  return m != null ? int.tryParse(m.group(1)!) ?? 0 : 0;
+}
+
+int _apiNums(Comic c) {
+  final m = RegExp(r'nums@(\d+)').firstMatch(c.description);
+  return m != null ? int.tryParse(m.group(1)!) ?? 0 : 0;
+}
+
+String _apiSub(Comic c) {
+  final m = RegExp(r'sub@([^\n]*)').firstMatch(c.description);
+  return m?.group(1) ?? '';
+}
+
+/// 「多久前」徽章文字（10分钟前/1小时前/2天前/日期）
+String _agoText(int epochSec) {
+  if (epochSec <= 0) return '';
+  final t = DateTime.fromMillisecondsSinceEpoch(epochSec * 1000);
+  final diff = DateTime.now().difference(t);
+  if (diff.inMinutes < 1) return '剛剛';
+  if (diff.inHours < 1) return '${diff.inMinutes}分鐘前';
+  if (diff.inDays < 1) return '${diff.inHours}小時前';
+  if (diff.inDays < 30) return '${diff.inDays}天前';
+  return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
+}
+
+Widget _coverWithBadge(BuildContext context, Comic c, String badge,
+    {double? w, double? h}) {
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(8),
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        Image(
+          image: CachedImageProvider(c.cover, sourceKey: c.sourceKey, cid: c.id),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: context.colorScheme.surfaceContainerHighest,
+            child: const Icon(Icons.book_outlined),
+          ),
+        ),
+        if (badge.isNotEmpty)
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: context.colorScheme.primary,
+                borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    bottomRight: Radius.circular(8)),
+              ),
+              child: Text(badge,
+                  style: TextStyle(
+                      fontSize: 10, color: context.colorScheme.onPrimary)),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// ==================== 排行（仿圖九：地區 Tab + 前三甲大封面 + 直列） ====================
 class ShelfRankPage extends StatefulWidget {
   const ShelfRankPage({super.key});
 
@@ -50,7 +125,7 @@ class ShelfRankPage extends StatefulWidget {
 }
 
 class _ShelfRankPageState extends State<ShelfRankPage> {
-  List<Comic>? _comics;
+  List<(String, List<Comic>)>? _groups;
   String? _error;
 
   @override
@@ -60,23 +135,25 @@ class _ShelfRankPageState extends State<ShelfRankPage> {
   }
 
   Future<void> _load() async {
-    final source = _rankSource();
-    final loader = source?.categoryComicsData?.load;
-    if (loader == null) {
-      setState(() => _error = '當前源不支持排行');
-      return;
-    }
     try {
-      // 栗子源：category「热门排行」param=rank → /app/api/rank/list
-      final res = await loader('热门排行', 'rank', const <String>[], 1);
-      if (!mounted) return;
-      setState(() {
-        if (res.success) {
-          _comics = res.data;
-        } else {
-          _error = res.errorMessage ?? '載入失敗';
+      final data = await _getJson('/app/api/rank/list');
+      final groups = <(String, List<Comic>)>[];
+      for (final g in (data['rank_list'] as List? ?? const [])) {
+        final gm = Map<String, dynamic>.from(g as Map);
+        final comics = [
+          for (final c in (gm['comic_list'] as List? ?? const []))
+            _comicFromApi(Map<String, dynamic>.from(c as Map))
+        ];
+        if (comics.isNotEmpty) {
+          groups.add((gm['name']?.toString() ?? '榜單', comics));
         }
-      });
+      }
+      if (!mounted) return;
+      if (groups.isEmpty) {
+        setState(() => _error = '榜單為空');
+      } else {
+        setState(() => _groups = groups);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     }
@@ -84,104 +161,154 @@ class _ShelfRankPageState extends State<ShelfRankPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: Appbar(title: const Text('排行')),
-      body: _comics == null
-          ? Center(
-              child: _error != null
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_error!),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                            onPressed: () {
-                              setState(() => _error = null);
-                              _load();
-                            },
-                            child: const Text('重試')),
-                      ],
-                    )
-                  : const CircularProgressIndicator(),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _comics!.length,
-              itemBuilder: (context, i) => _rankRow(context, i, _comics![i]),
-            ),
+    if (_error != null) {
+      return Scaffold(
+        appBar: Appbar(title: const Text('排行榜')),
+        body: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('載入失敗：$_error'),
+            const SizedBox(height: 12),
+            FilledButton(
+                onPressed: () {
+                  setState(() => _error = null);
+                  _load();
+                },
+                child: const Text('重試')),
+          ]),
+        ),
+      );
+    }
+    final groups = _groups;
+    if (groups == null) {
+      return Scaffold(
+        appBar: Appbar(title: const Text('排行榜')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    return DefaultTabController(
+      length: groups.length,
+      child: Scaffold(
+        appBar: Appbar(title: const Text('排行榜')),
+        body: Column(children: [
+          TabBar(tabs: [for (final g in groups) Tab(text: g.$1)]),
+          Expanded(
+            child: TabBarView(children: [
+              for (final g in groups) _RegionRankList(comics: g.$2),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _RegionRankList extends StatelessWidget {
+  const _RegionRankList({required this.comics});
+  final List<Comic> comics;
+
+  @override
+  Widget build(BuildContext context) {
+    final top3 = comics.take(3).toList();
+    final rest = comics.skip(3).toList();
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        // 前三甲：大封面橫排（仿圖九）
+        SizedBox(
+          height: 190,
+          child: Row(children: [
+            for (var i = 0; i < top3.length; i++) ...[
+              Expanded(child: _topCard(context, i, top3[i])),
+              if (i < top3.length - 1) const SizedBox(width: 8),
+            ],
+          ]),
+        ),
+        const SizedBox(height: 12),
+        // 其餘直列
+        for (var i = 0; i < rest.length; i++) _row(context, i + 4, rest[i]),
+      ],
     );
   }
 
-  Widget _rankRow(BuildContext context, int index, Comic c) {
-    final rank = index + 1;
-    // 前三名特殊色
-    final badgeColor = switch (rank) {
-      1 => const Color(0xFFFFB300),
-      2 => const Color(0xFF90A4AE),
-      3 => const Color(0xFFCD7F32),
-      _ => context.colorScheme.primary,
-    };
+  Widget _topCard(BuildContext context, int rank, Comic c) {
+    final colors = [
+      const Color(0xFFFFB300),
+      const Color(0xFF90A4AE),
+      const Color(0xFFCD7F32),
+    ];
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => context.to(() => ComicPage(
+          id: c.id, sourceKey: c.sourceKey, cover: c.cover, title: c.title)),
+      child: Column(children: [
+        Expanded(
+          child: Stack(fit: StackFit.expand, children: [
+            _coverWithBadge(context, c, ''),
+            Positioned(
+              left: 0, top: 0,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: colors[rank - 1],
+                  borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      bottomRight: Radius.circular(8)),
+                ),
+                child: Text('TOP·$rank',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 4),
+        Text(c.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style:
+                const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      ]),
+    );
+  }
+
+  Widget _row(BuildContext context, int rank, Comic c) {
+    final nums = _apiNums(c);
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => context.to(() => ComicPage(
             id: c.id, sourceKey: c.sourceKey, cover: c.cover, title: c.title)),
         child: Padding(
           padding: const EdgeInsets.all(10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image(
-                      image: CachedImageProvider(c.cover,
-                          sourceKey: c.sourceKey, cid: c.id),
-                      width: 72,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 72,
-                        height: 96,
-                        color: context.colorScheme.surfaceContainerHighest,
-                        child: const Icon(Icons.book_outlined),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: badgeColor,
-                        borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(8),
-                            bottomRight: Radius.circular(8)),
-                      ),
-                      child: Text('TOP·$rank',
-                          style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+          child: Row(children: [
+            SizedBox(
+              width: 28,
+              child: Text('$rank',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: context.colorScheme.outline)),
+            ),
+            SizedBox(
+                width: 56,
+                height: 76,
+                child: _coverWithBadge(context, c, '')),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(c.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
                     if (c.subtitle?.isNotEmpty == true)
                       Text(c.subtitle!,
                           maxLines: 1,
@@ -189,25 +316,21 @@ class _ShelfRankPageState extends State<ShelfRankPage> {
                           style: TextStyle(
                               fontSize: 12,
                               color: context.colorScheme.outline)),
-                    const SizedBox(height: 4),
-                    Text(c.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: context.colorScheme.outline)),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                    if (nums > 0)
+                      Text('更新至$nums話',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: context.colorScheme.primary)),
+                  ]),
+            ),
+          ]),
         ),
       ),
     );
   }
 }
 
-/// ==================== 更新 ====================
+/// ==================== 更新（仿圖十：最近觀看 + 最新更新，封面帶時間徽章） ====================
 class ShelfUpdatesPage extends StatefulWidget {
   const ShelfUpdatesPage({super.key});
 
@@ -237,22 +360,14 @@ class _ShelfUpdatesPageState extends State<ShelfUpdatesPage> {
   }
 
   Future<void> _loadLatest() async {
-    final source = _rankSource();
-    final loader = source?.categoryComicsData?.load;
-    if (loader == null) {
-      setState(() => _latestError = '當前源不支持');
-      return;
-    }
     try {
-      // 無篩選的分類總列表（伺服器按更新時間排，最新在前）
-      final res = await loader('', null, const <String>[], 1);
+      final data = await _getJson('/app/api/category/list?page=1');
       if (!mounted) return;
       setState(() {
-        if (res.success) {
-          _latest = res.data;
-        } else {
-          _latestError = res.errorMessage ?? '載入失敗';
-        }
+        _latest = [
+          for (final c in (data['category_list'] as List? ?? const []))
+            _comicFromApi(Map<String, dynamic>.from(c as Map))
+        ];
       });
     } catch (e) {
       if (mounted) setState(() => _latestError = e.toString());
@@ -266,150 +381,103 @@ class _ShelfUpdatesPageState extends State<ShelfUpdatesPage> {
     final recentTop = recent.take(6).toList();
     return Scaffold(
       appBar: Appbar(title: const Text('更新')),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
-          _sectionTitle(context, '最近觀看'),
-          if (recentTop.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Text('還沒有閱讀記錄',
-                    style: TextStyle(color: context.colorScheme.outline)),
-              ),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.55,
-              ),
-              itemCount: recentTop.length,
-              itemBuilder: (context, i) {
-                final h = recentTop[i];
-                return InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  // 點了直達上次閱讀位置
-                  onTap: () => _continueReading(context, h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image(
-                            image: CachedImageProvider(h.cover,
-                                sourceKey: h.sourceKey, cid: h.id),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color:
-                                  context.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.book_outlined),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(h.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w600)),
-                      Text('閱至第${h.ep}話',
-                          maxLines: 1,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: context.colorScheme.outline)),
-                    ],
-                  ),
-                );
-              },
-            ),
-          const SizedBox(height: 16),
-          _sectionTitle(context, '最新更新'),
-          if (_latest == null)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: _latestError != null
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_latestError!),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                              onPressed: () {
-                                setState(() => _latestError = null);
-                                _loadLatest();
-                              },
-                              child: const Text('重試')),
-                        ],
-                      )
-                    : const CircularProgressIndicator(),
-              ),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.52,
-              ),
-              itemCount: _latest!.length,
-              itemBuilder: (context, i) {
-                final c = _latest![i];
-                return InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => context.to(() => ComicPage(
-                      id: c.id,
-                      sourceKey: c.sourceKey,
-                      cover: c.cover,
-                      title: c.title)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image(
-                            image: CachedImageProvider(c.cover,
-                                sourceKey: c.sourceKey, cid: c.id),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color:
-                                  context.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.book_outlined),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(c.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w600)),
-                      if (c.subtitle?.isNotEmpty == true)
-                        Text(c.subtitle!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: context.colorScheme.outline)),
-                    ],
-                  ),
-                );
-              },
-            ),
-        ],
+      body: ListView(padding: const EdgeInsets.all(12), children: [
+        _sectionTitle(context, '最近觀看'),
+        if (recentTop.isEmpty)
+          _emptyBox(context, '還沒有閱讀記錄')
+        else
+          _coverGrid(
+            context,
+            recentTop.length,
+            (i) {
+              final h = recentTop[i];
+              final c = Comic(h.title, h.cover, h.id, null, null, '',
+                  h.sourceKey, null, null);
+              return (c, _agoText(h.time.millisecondsSinceEpoch ~/ 1000),
+                  () => _continueReading(context, h));
+            },
+          ),
+        const SizedBox(height: 16),
+        _sectionTitle(context, '最新更新'),
+        if (_latest == null)
+          _latestError != null
+              ? _emptyBox(context, '載入失敗：$_latestError')
+              : const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+        else
+          _coverGrid(
+            context,
+            _latest!.length,
+            (i) {
+              final c = _latest![i];
+              return (c, _agoText(_apiUpd(c)), () {
+                context.to(() => ComicPage(
+                    id: c.id,
+                    sourceKey: c.sourceKey,
+                    cover: c.cover,
+                    title: c.title));
+              });
+            },
+            subOf: (i) {
+              final s = _apiSub(_latest![i]);
+              return s.isNotEmpty ? s : null;
+            },
+          ),
+      ]),
+    );
+  }
+
+  Widget _emptyBox(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+          child: Text(text,
+              style: TextStyle(color: context.colorScheme.outline))),
+    );
+  }
+
+  /// 封面網格（帶時間徽章）：item 回傳 (comic, 徽章文字, onTap)
+  Widget _coverGrid(BuildContext context, int count,
+      (Comic, String, VoidCallback) Function(int) item,
+      {String? Function(int)? subOf}) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.52,
       ),
+      itemCount: count,
+      itemBuilder: (context, i) {
+        final (c, badge, onTap) = item(i);
+        final sub = subOf?.call(i);
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _coverWithBadge(context, c, badge)),
+              const SizedBox(height: 4),
+              Text(c.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600)),
+              if (sub != null)
+                Text(sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 11, color: context.colorScheme.outline)),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -427,9 +495,22 @@ class _ShelfUpdatesPageState extends State<ShelfUpdatesPage> {
         ),
         const SizedBox(width: 8),
         Text(title,
-            style:
-                const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
       ]),
     );
+  }
+
+  void _continueReading(BuildContext context, History h) {
+    context.to(() => Reader(
+          type: ComicType.fromKey(h.sourceKey),
+          cid: h.id,
+          name: h.title,
+          chapters: null,
+          history: h,
+          initialChapter: h.ep,
+          initialPage: h.page,
+          author: '',
+          tags: const [],
+        ));
   }
 }

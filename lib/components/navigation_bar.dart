@@ -298,48 +298,50 @@ class NaviPaneState extends State<NaviPane>
   }
 
   Widget buildBottom() {
-    // Liquid Glass：浮起來的毛玻璃圓角條（內容會透到模糊層底下）
+    // Liquid Glass：全寬毛玻璃條（含底部安全區，不留黑色空隙）
     if (appdata.settings['ui_style'] == 'glass') {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              height: _kBottomBarHeight,
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHigh
-                    .withOpacity(0.55),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            // 高度含安全區，由本組件自己吃（外層不再 paddingBottom）
+            height: _kBottomBarHeight + context.padding.bottom,
+            padding: EdgeInsets.only(bottom: context.padding.bottom),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHigh
+                  .withOpacity(0.55),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(22)),
+              border: Border(
+                top: BorderSide(
                   color: Theme.of(context)
                       .colorScheme
                       .outlineVariant
-                      .withOpacity(0.4),
+                      .withOpacity(0.35),
                   width: 0.6,
                 ),
               ),
-              child: Material(
-                type: MaterialType.transparency,
-                textStyle: Theme.of(context).textTheme.labelSmall,
-                child: Row(
-                  children:
-                      List<Widget>.generate(widget.paneItems.length, (index) {
-                    return Expanded(
-                      child: _SingleBottomNaviWidget(
-                        enabled: currentPage == index,
-                        entry: widget.paneItems[index],
-                        onTap: () {
-                          updatePage(index);
-                        },
-                        key: ValueKey(index),
-                      ),
-                    );
-                  }),
-                ),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              textStyle: Theme.of(context).textTheme.labelSmall,
+              child: Row(
+                children:
+                    List<Widget>.generate(widget.paneItems.length, (index) {
+                  return Expanded(
+                    child: _SingleBottomNaviWidget(
+                      enabled: currentPage == index,
+                      entry: widget.paneItems[index],
+                      onTap: () {
+                        updatePage(index);
+                      },
+                      key: ValueKey(index),
+                    ),
+                  );
+                }),
               ),
             ),
           ),
@@ -844,7 +846,9 @@ class _NaviMainViewState extends State<_NaviMainView> {
           ),
         ),
         if (shouldShowAppBar)
-          state.buildBottom().paddingBottom(context.padding.bottom),
+          appdata.settings['ui_style'] == 'glass'
+              ? state.buildBottom()
+              : state.buildBottom().paddingBottom(context.padding.bottom),
       ],
     );
   }

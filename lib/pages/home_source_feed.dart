@@ -5,6 +5,7 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/home_layout.dart';
+import 'package:venera/pages/rank_updates_page.dart';
 import 'package:venera/pages/search_page.dart';
 import 'package:venera/utils/ext.dart';
 import 'package:venera/utils/translations.dart';
@@ -418,6 +419,19 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
                 );
               },
             ),
+          ),
+          // 排行 / 更新 入口（從頂欄搬下來，解決圖標擁擠）
+          IconButton(
+            icon: const Icon(Icons.leaderboard_outlined),
+            tooltip: '排行',
+            onPressed: () =>
+                context.to(() => const ShelfRankPage()),
+          ),
+          IconButton(
+            icon: const Icon(Icons.new_releases_outlined),
+            tooltip: '更新',
+            onPressed: () =>
+                context.to(() => const ShelfUpdatesPage()),
           ),
           IconButton(
             // 刷新首頁：清掉快取並重新抓這個源的推薦 + 周期更新

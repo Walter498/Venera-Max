@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
+import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/comic_collection_store.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/favorites.dart';
@@ -27,7 +28,7 @@ class _ShelfPageState extends State<ShelfPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Material(
         child: SafeArea(
           child: Column(
@@ -40,7 +41,6 @@ class _ShelfPageState extends State<ShelfPage> {
                       child: TabBar(
                         tabs: [
                           Tab(text: '收藏'),
-                          Tab(text: '書單'),
                           Tab(text: '足跡'),
                         ],
                       ),
@@ -79,7 +79,6 @@ class _ShelfPageState extends State<ShelfPage> {
                 child: TabBarView(
                   children: [
                     _ShelfFavTab(),
-                    _ShelfCollectionsTab(),
                     _ShelfHistoryTab(),
                   ],
                 ),
@@ -143,9 +142,17 @@ class _ShelfFavTab extends StatefulWidget {
 }
 
 class _ShelfFavTabState extends State<_ShelfFavTab> {
-  String? _folder; // null = 全部
-  // 0=更新排序 1=收藏排序 2=最近閱讀排序
-  int _sortMode = 0;
+  // 資料夾選擇持久化：離開/退出 App 都保留（用戶要求 2026-09-17）
+  String? get _folder => appdata.settings['shelf_folder'] as String?;
+  set _folder(String? v) {
+    if (v == null) {
+      appdata.settings.remove('shelf_folder');
+    } else {
+      appdata.settings['shelf_folder'] = v;
+    }
+    appdata.saveData();
+  }
+
   bool _editMode = false;
   final Set<String> _selected = {};
 
@@ -195,58 +202,15 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
     super.dispose();
   }
 
-  /// 健壯時間解析：支援 ISO 字串 / 毫秒 / 秒級 epoch
-  static DateTime _parseTime(String? s) {
-    if (s == null || s.isEmpty) return DateTime.fromMillisecondsSinceEpoch(0);
-    final asInt = int.tryParse(s);
-    if (asInt != null) {
-      return DateTime.fromMillisecondsSinceEpoch(
-          asInt > 100000000000 ? asInt : asInt * 1000);
-    }
-    try {
-      return DateTime.parse(s);
-    } catch (_) {
-      return DateTime.fromMillisecondsSinceEpoch(0);
-    }
-  }
-
-  List<FavoriteItem> _comics(Map<String, History> history) {
+  List<FavoriteItem> _comics() {
     final fav = LocalFavoritesManager();
-    final list =
-        _folder == null ? fav.getAllComics() : fav.getFolderComics(_folder!);
-    final out = List<FavoriteItem>.from(list);
-    out.sort((a, b) {
-      DateTime ta, tb;
-      switch (_sortMode) {
-        case 1: // 收藏排序
-          ta = _parseTime(a.time);
-          tb = _parseTime(b.time);
-        case 2: // 最近閱讀排序（沒讀過的排最後）
-          ta = history['${a.sourceKey}:${a.id}']?.time ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          tb = history['${b.sourceKey}:${b.id}']?.time ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-        default: // 更新排序
-          ta = _parseTime(a.lastUpdateTime ?? a.time);
-          tb = _parseTime(b.lastUpdateTime ?? b.time);
-      }
-      return tb.compareTo(ta); // 新的在前
-    });
-    return out;
-  }
-
-  /// 閱讀進度 map：'sourceKey:id' -> History
-  Map<String, History> _historyMap() {
-    final m = <String, History>{};
-    for (final h in HistoryManager().getAll()) {
-      m['${h.sourceKey}:${h.id}'] = h;
-    }
-    return m;
+    // 不排序：用資料庫原序（排序選單已按用戶要求刪除）
+    return _folder == null ? fav.getAllComics() : fav.getFolderComics(_folder!);
   }
 
   Future<void> _deleteSelected() async {
     final fav = LocalFavoritesManager();
-    final items = _comics(_historyMap());
+    final items = _comics();
     for (final c in items) {
       if (!_selected.contains('${c.sourceKey}:${c.id}')) continue;
       final type = ComicType.fromKey(c.sourceKey);
@@ -264,8 +228,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
   Widget build(BuildContext context) {
     final fav = LocalFavoritesManager();
     final folders = fav.folderNames;
-    final history = _historyMap();
-    final items = _comics(history);
+    final items = _comics();
     return Column(
       children: [
         SizedBox(
@@ -287,23 +250,6 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                 ),
               ),
               const Spacer(),
-              // 排序切換（真排序：更新時間/收藏時間）
-              PopupMenuButton<int>(
-                onSelected: (v) => setState(() => _sortMode = v),
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 0, child: Text('更新排序')),
-                  const PopupMenuItem(value: 1, child: Text('收藏排序')),
-                  const PopupMenuItem(value: 2, child: Text('最近閱讀排序')),
-                ],
-                child: Row(children: [
-                  Text(const ['更新排序', '收藏排序', '最近閱讀排序'][_sortMode],
-                      style: TextStyle(
-                          fontSize: 13, color: context.colorScheme.primary)),
-                  Icon(Icons.expand_more,
-                      size: 18, color: context.colorScheme.primary),
-                ]),
-              ),
-              const SizedBox(width: 12),
               InkWell(
                 onTap: () => setState(() {
                   _editMode = !_editMode;
@@ -317,28 +263,39 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
             ],
           ),
         ),
+        // 直列詳情卡（一列一個，顯示作者/更新/來源/標籤）
         Expanded(
           child: items.isEmpty
               ? Center(
                   child: Text('還沒有收藏，去首頁逛逛吧',
                       style:
                           TextStyle(color: context.colorScheme.outline)))
-              : GridView.builder(
-                  padding: const EdgeInsets.all(10),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.52,
-                  ),
+              : ListView.builder(
                   itemCount: items.length,
                   itemBuilder: (context, i) {
                     final c = items[i];
                     final key = '${c.sourceKey}:${c.id}';
-                    final h = history[key];
                     final selected = _selected.contains(key);
-                    return _favCard(context, c, h, selected);
+                    return Container(
+                      decoration: BoxDecoration(
+                        border: selected
+                            ? Border.all(
+                                color: context.colorScheme.primary, width: 2)
+                            : null,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: ComicTile(
+                        comic: c,
+                        overrideDisplayMode: 'detailed',
+                        onTap: _editMode
+                            ? () => setState(() {
+                                  _selected.contains(key)
+                                      ? _selected.remove(key)
+                                      : _selected.add(key);
+                                })
+                            : null,
+                      ),
+                    );
                   },
                 ),
         ),
@@ -353,7 +310,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                       onPressed: () {
                         setState(() {
                           final all = {
-                            for (final c in _comics(history))
+                            for (final c in _comics())
                               '${c.sourceKey}:${c.id}'
                           };
                           if (_selected.length == all.length) {
@@ -365,7 +322,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                           }
                         });
                       },
-                      child: Text(_selected.length == _comics(history).length
+                      child: Text(_selected.length == _comics().length
                           ? '全不選'
                           : '全選'),
                     ),
@@ -382,263 +339,6 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
               ),
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _favCard(
-      BuildContext context, FavoriteItem c, History? h, bool selected) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () {
-        if (_editMode) {
-          setState(() {
-            final key = '${c.sourceKey}:${c.id}';
-            _selected.contains(key)
-                ? _selected.remove(key)
-                : _selected.add(key);
-          });
-        } else {
-          context.to(() => ComicPage(
-              id: c.id,
-              sourceKey: c.sourceKey,
-              cover: c.cover,
-              title: c.title));
-        }
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: selected
-                          ? context.colorScheme.primary
-                          : context.colorScheme.outlineVariant,
-                      width: selected ? 2.5 : 1,
-                    ),
-                  ),
-                  child: _shelfCover(
-                      context, c.cover, c.sourceKey, c.id, 400, 600),
-                ),
-                if ((_shelfTimeBadge(c.lastUpdateTime)).isNotEmpty)
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.primary,
-                        borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(8),
-                            bottomRight: Radius.circular(8)),
-                      ),
-                      child: Text(_shelfTimeBadge(c.lastUpdateTime),
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: context.colorScheme.onPrimary)),
-                    ),
-                  ),
-                if (selected)
-                  Positioned(
-                    right: 4,
-                    top: 4,
-                    child: Icon(Icons.check_circle,
-                        size: 20, color: context.colorScheme.primary),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(c.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600)),
-          Text(
-            h != null ? '閱至第${h.ep}話' : '未開始閱讀',
-            maxLines: 1,
-            style: TextStyle(
-                fontSize: 11, color: context.colorScheme.outline),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// ==================== Tab 2: 書單（真數據：ComicCollectionStore） ====================
-class _ShelfCollectionsTab extends StatefulWidget {
-  const _ShelfCollectionsTab();
-
-  @override
-  State<_ShelfCollectionsTab> createState() => _ShelfCollectionsTabState();
-}
-
-class _ShelfCollectionsTabState extends State<_ShelfCollectionsTab> {
-  Future<void> _createCollection() async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('創建書單'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '書單名稱'),
-          onSubmitted: (v) => Navigator.pop(context, v),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context), child: Text('取消'.tl)),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text),
-              child: Text('創建'.tl)),
-        ],
-      ),
-    );
-    if (name != null && name.trim().isNotEmpty) {
-      ComicCollectionStore.create(name: name.trim());
-      if (mounted) setState(() {});
-    }
-  }
-
-  Future<void> _removeCollection(ComicCollection c) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('移除書單「${c.displayName}」？'),
-        content: const Text('書單內的漫畫不會被刪除，只是解散這個書單。'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('取消'.tl)),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('移除'.tl)),
-        ],
-      ),
-    );
-    if (ok == true) {
-      ComicCollectionStore.remove(c.id);
-      if (mounted) setState(() {});
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final collections = ComicCollectionStore.all();
-    return Column(
-      children: [
-        SizedBox(
-          height: 44,
-          child: Row(
-            children: [
-              const SizedBox(width: 16),
-              const Text('漫畫',
-                  style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              const Spacer(),
-              InkWell(
-                onTap: _createCollection,
-                child: Text('+創建書單',
-                    style: TextStyle(
-                        fontSize: 13, color: context.colorScheme.primary)),
-              ),
-              const SizedBox(width: 16),
-            ],
-          ),
-        ),
-        Expanded(
-          child: collections.isEmpty
-              ? Center(
-                  child: Text(
-                      '還沒有書單，點右上角「+創建書單」\n加書方法：長按任何漫畫 → 加入書單',
-                      textAlign: TextAlign.center,
-                      style:
-                          TextStyle(color: context.colorScheme.outline)))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(10),
-                  itemCount: collections.length,
-                  itemBuilder: (context, i) {
-                    final c = collections[i];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        // 進書單詳情（沿用現有合集頁面機制）
-                        onTap: () => context.to(() => ComicPage(
-                            id: c.id,
-                            sourceKey: c.sourceKey,
-                            cover: c.displayCover,
-                            title: c.displayName)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              _shelfCover(context, c.displayCover,
-                                  c.sourceKey, c.id, 56, 76),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                        c.name.trim().isEmpty
-                                            ? '未命名書單'
-                                            : c.displayName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight:
-                                                FontWeight.w600)),
-                                    const SizedBox(height: 4),
-                                    Text('共${c.members.length}本',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: context
-                                                .colorScheme.outline)),
-                                    Text(
-                                      '創建於 ${c.createdAt.year}-${c.createdAt.month.toString().padLeft(2, '0')}-${c.createdAt.day.toString().padLeft(2, '0')}',
-                                      style: TextStyle(
-                                          fontSize: 11,
-                                          color:
-                                              context.colorScheme.outline),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                children: [
-                                  OutlinedButton(
-                                    // 去搜索頁找漫畫 → 長按漫畫 → 加入書單
-                                    onPressed: () => context
-                                        .to(() => const SearchPage()),
-                                    child: const Text('安利漫畫'),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  OutlinedButton(
-                                    onPressed: () => _removeCollection(c),
-                                    child: const Text('移除書單'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
       ],
     );
   }
