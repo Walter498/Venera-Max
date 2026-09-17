@@ -4,6 +4,7 @@ import 'package:venera/pages/categories_page.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/community/community_page.dart';
 import 'package:venera/pages/random_comic_draw_dialog.dart';
+import 'package:venera/pages/rank_updates_page.dart';
 import 'package:venera/pages/search_page.dart';
 import 'package:venera/pages/settings/settings_page.dart';
 import 'package:venera/pages/tasks_page.dart';
@@ -91,6 +92,21 @@ class _MainPageState extends State<MainPage> {
         });
       },
       paneActions: [
+        // 首頁頂欄入口：排行 + 更新（用戶指定放在首頁標題右側）
+        PaneActionEntry(
+          icon: Icons.leaderboard_outlined,
+          label: '排行',
+          onTap: () {
+            to(() => const ShelfRankPage(), preventDuplicate: true);
+          },
+        ),
+        PaneActionEntry(
+          icon: Icons.new_releases_outlined,
+          label: '更新',
+          onTap: () {
+            to(() => const ShelfUpdatesPage(), preventDuplicate: true);
+          },
+        ),
         if (index != 0)
           PaneActionEntry(
             icon: Icons.search,

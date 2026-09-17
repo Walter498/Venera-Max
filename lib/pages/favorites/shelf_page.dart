@@ -7,7 +7,9 @@ import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
-import 'package:venera/pages/downloading_page.dart';
+import 'package:venera/pages/local_comics_page.dart';
+import 'package:venera/pages/reader/reader.dart';
+import 'package:venera/pages/search_page.dart';
 import 'package:venera/utils/translations.dart';
 
 /// 書架頁（2026-09-17 改版，仿青漫書架佈局）：
@@ -47,7 +49,7 @@ class _ShelfPageState extends State<ShelfPage> {
                     InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () =>
-                          context.to(() => const DownloadingPage()),
+                          context.to(() => const LocalComicsPage()),
                       child: Container(
                         margin: const EdgeInsets.only(right: 12),
                         padding: const EdgeInsets.symmetric(
@@ -142,12 +144,43 @@ class _ShelfFavTab extends StatefulWidget {
 
 class _ShelfFavTabState extends State<_ShelfFavTab> {
   String? _folder; // null = 全部
-  bool _sortByUpdate = true; // true=更新時間 false=收藏時間
+  // 0=更新排序 1=收藏排序 2=最近閱讀排序
+  int _sortMode = 0;
   bool _editMode = false;
   final Set<String> _selected = {};
 
   void _onChanged() {
     if (mounted) setState(() {});
+  }
+
+  void _pickFolder(List<String> folders) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              title: const Text('全部漫畫'),
+              trailing: _folder == null ? const Icon(Icons.check) : null,
+              onTap: () {
+                setState(() => _folder = null);
+                Navigator.pop(sheetContext);
+              },
+            ),
+            for (final f in folders)
+              ListTile(
+                title: Text(f),
+                trailing: _folder == f ? const Icon(Icons.check) : null,
+                onTap: () {
+                  setState(() => _folder = f);
+                  Navigator.pop(sheetContext);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -162,15 +195,42 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
     super.dispose();
   }
 
-  List<FavoriteItem> _comics() {
+  /// 健壯時間解析：支援 ISO 字串 / 毫秒 / 秒級 epoch
+  static DateTime _parseTime(String? s) {
+    if (s == null || s.isEmpty) return DateTime.fromMillisecondsSinceEpoch(0);
+    final asInt = int.tryParse(s);
+    if (asInt != null) {
+      return DateTime.fromMillisecondsSinceEpoch(
+          asInt > 100000000000 ? asInt : asInt * 1000);
+    }
+    try {
+      return DateTime.parse(s);
+    } catch (_) {
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+  }
+
+  List<FavoriteItem> _comics(Map<String, History> history) {
     final fav = LocalFavoritesManager();
     final list =
         _folder == null ? fav.getAllComics() : fav.getFolderComics(_folder!);
     final out = List<FavoriteItem>.from(list);
     out.sort((a, b) {
-      final ka = _sortByUpdate ? (a.lastUpdateTime ?? a.time) : a.time;
-      final kb = _sortByUpdate ? (b.lastUpdateTime ?? b.time) : b.time;
-      return kb.compareTo(ka); // 新的在前
+      DateTime ta, tb;
+      switch (_sortMode) {
+        case 1: // 收藏排序
+          ta = _parseTime(a.time);
+          tb = _parseTime(b.time);
+        case 2: // 最近閱讀排序（沒讀過的排最後）
+          ta = history['${a.sourceKey}:${a.id}']?.time ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          tb = history['${b.sourceKey}:${b.id}']?.time ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+        default: // 更新排序
+          ta = _parseTime(a.lastUpdateTime ?? a.time);
+          tb = _parseTime(b.lastUpdateTime ?? b.time);
+      }
+      return tb.compareTo(ta); // 新的在前
     });
     return out;
   }
@@ -186,7 +246,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
 
   Future<void> _deleteSelected() async {
     final fav = LocalFavoritesManager();
-    final items = _comics();
+    final items = _comics(_historyMap());
     for (final c in items) {
       if (!_selected.contains('${c.sourceKey}:${c.id}')) continue;
       final type = ComicType.fromKey(c.sourceKey);
@@ -204,8 +264,8 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
   Widget build(BuildContext context) {
     final fav = LocalFavoritesManager();
     final folders = fav.folderNames;
-    final items = _comics();
     final history = _historyMap();
+    final items = _comics(history);
     return Column(
       children: [
         SizedBox(
@@ -213,14 +273,10 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
           child: Row(
             children: [
               const SizedBox(width: 16),
-              // 資料夾選擇（保留原收藏夾功能）
-              PopupMenuButton<String?>(
-                onSelected: (v) => setState(() => _folder = v),
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: null, child: Text('全部漫畫')),
-                  for (final f in folders)
-                    PopupMenuItem(value: f, child: Text(f)),
-                ],
+              // 資料夾選擇（保留原收藏夾功能）——
+              // PopupMenu 在這個頁面層級點不動，改用底部彈層
+              InkWell(
+                onTap: () => _pickFolder(folders),
                 child: Row(
                   children: [
                     Text(_folder ?? '漫畫',
@@ -232,14 +288,15 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
               ),
               const Spacer(),
               // 排序切換（真排序：更新時間/收藏時間）
-              PopupMenuButton<bool>(
-                onSelected: (v) => setState(() => _sortByUpdate = v),
+              PopupMenuButton<int>(
+                onSelected: (v) => setState(() => _sortMode = v),
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: true, child: Text('更新排序')),
-                  const PopupMenuItem(value: false, child: Text('收藏排序')),
+                  const PopupMenuItem(value: 0, child: Text('更新排序')),
+                  const PopupMenuItem(value: 1, child: Text('收藏排序')),
+                  const PopupMenuItem(value: 2, child: Text('最近閱讀排序')),
                 ],
                 child: Row(children: [
-                  Text(_sortByUpdate ? '更新排序' : '收藏排序',
+                  Text(const ['更新排序', '收藏排序', '最近閱讀排序'][_sortMode],
                       style: TextStyle(
                           fontSize: 13, color: context.colorScheme.primary)),
                   Icon(Icons.expand_more,
@@ -296,7 +353,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                       onPressed: () {
                         setState(() {
                           final all = {
-                            for (final c in _comics())
+                            for (final c in _comics(history))
                               '${c.sourceKey}:${c.id}'
                           };
                           if (_selected.length == all.length) {
@@ -308,7 +365,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                           }
                         });
                       },
-                      child: Text(_selected.length == _comics().length
+                      child: Text(_selected.length == _comics(history).length
                           ? '全不選'
                           : '全選'),
                     ),
@@ -501,7 +558,9 @@ class _ShelfCollectionsTabState extends State<_ShelfCollectionsTab> {
         Expanded(
           child: collections.isEmpty
               ? Center(
-                  child: Text('還沒有書單，點右上角「+創建書單」',
+                  child: Text(
+                      '還沒有書單，點右上角「+創建書單」\n加書方法：長按任何漫畫 → 加入書單',
+                      textAlign: TextAlign.center,
                       style:
                           TextStyle(color: context.colorScheme.outline)))
               : ListView.builder(
@@ -531,7 +590,10 @@ class _ShelfCollectionsTabState extends State<_ShelfCollectionsTab> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   children: [
-                                    Text(c.displayName,
+                                    Text(
+                                        c.name.trim().isEmpty
+                                            ? '未命名書單'
+                                            : c.displayName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
@@ -554,9 +616,20 @@ class _ShelfCollectionsTabState extends State<_ShelfCollectionsTab> {
                                   ],
                                 ),
                               ),
-                              OutlinedButton(
-                                onPressed: () => _removeCollection(c),
-                                child: const Text('移除書單'),
+                              Column(
+                                children: [
+                                  OutlinedButton(
+                                    // 去搜索頁找漫畫 → 長按漫畫 → 加入書單
+                                    onPressed: () => context
+                                        .to(() => const SearchPage()),
+                                    child: const Text('安利漫畫'),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  OutlinedButton(
+                                    onPressed: () => _removeCollection(c),
+                                    child: const Text('移除書單'),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -704,7 +777,7 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
                             Column(
                               children: [
                                 OutlinedButton(
-                                  onPressed: () => _open(h),
+                                  onPressed: () => _continue(h),
                                   child: const Text('繼續觀看'),
                                 ),
                                 const SizedBox(height: 6),
@@ -728,5 +801,20 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
   void _open(History h) {
     context.to(() => ComicPage(
         id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
+  }
+
+  /// 繼續觀看：直達閱讀器的上次位置（不經詳情頁）
+  void _continue(History h) {
+    context.to(() => Reader(
+          type: ComicType.fromKey(h.sourceKey),
+          cid: h.id,
+          name: h.title,
+          chapters: null,
+          history: h,
+          initialChapter: h.ep,
+          initialPage: h.page,
+          author: '',
+          tags: const [],
+        ));
   }
 }
