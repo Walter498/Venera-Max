@@ -12,7 +12,7 @@ import 'package:venera/utils/translations.dart';
 import '../components/components.dart';
 import '../foundation/app.dart';
 import 'explore_page.dart';
-import 'favorites/favorites_page.dart';
+import 'favorites/shelf_page.dart';
 import 'home_page.dart';
 
 class MainPage extends StatefulWidget {
@@ -51,7 +51,7 @@ class _MainPageState extends State<MainPage> {
   final _pages = [
     const HomePage(),
     const CommunityPage(),
-    const FavoritesPage(key: PageStorageKey('favorites')),
+    const ShelfPage(key: PageStorageKey('favorites')),
     const CategoriesPage(key: PageStorageKey('categories')),
   ];
 
