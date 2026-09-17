@@ -218,7 +218,7 @@ class _RegionRankList extends StatelessWidget {
           height: 190,
           child: Row(children: [
             for (var i = 0; i < top3.length; i++) ...[
-              Expanded(child: _topCard(context, i, top3[i])),
+              Expanded(child: _topCard(context, i + 1, top3[i])),  // 名次從 1 開始
               if (i < top3.length - 1) const SizedBox(width: 8),
             ],
           ]),
@@ -231,11 +231,14 @@ class _RegionRankList extends StatelessWidget {
   }
 
   Widget _topCard(BuildContext context, int rank, Comic c) {
-    final colors = [
-      const Color(0xFFFFB300),
-      const Color(0xFF90A4AE),
-      const Color(0xFFCD7F32),
+    const colors = [
+      Color(0xFFFFB300),
+      Color(0xFF90A4AE),
+      Color(0xFFCD7F32),
     ];
+    final badgeColor = (rank >= 1 && rank <= colors.length)
+        ? colors[rank - 1]
+        : colors.last;
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: () => context.to(() => ComicPage(
@@ -250,7 +253,7 @@ class _RegionRankList extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: colors[rank - 1],
+                  color: badgeColor,
                   borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(8),
                       bottomRight: Radius.circular(8)),
