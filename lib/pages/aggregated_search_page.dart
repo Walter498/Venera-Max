@@ -97,6 +97,9 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
   List<Comic> _merged = const [];
   int _failedSources = 0;
 
+  /// 同名組成員的【真實話數】（loadInfo 數出來的）：'sourceKey:id' -> 話數
+  final Map<String, int> _chapterCounts = {};
+
   @override
   void initState() {
     super.initState();
@@ -155,6 +158,11 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
     await Future.wait(dups.map((idxList) async {
       final counts =
           await Future.wait(idxList.map((i) => _realChapterCount(_merged[i])));
+      // 存起來給卡片顯示（同名組每張卡標自己的話數）
+      for (var k = 0; k < idxList.length; k++) {
+        final c = _merged[idxList[k]];
+        if (counts[k] > 0) _chapterCounts['${c.sourceKey}:${c.id}'] = counts[k];
+      }
       final order = List.generate(idxList.length, (k) => k)
         ..sort((a, b) => counts[b].compareTo(counts[a]));
       // 有變化才重排（避免無謂的跳動）
@@ -274,8 +282,16 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
               ),
             ),
           ),
-        // 詳細模式直落列表（與單源搜索結果同一種卡片，含來源標示）
-        SliverGridComics(comics: _merged, forceDetailedMode: true),
+        // 詳細模式直落列表（與單源搜索結果同一種卡片，含來源標示）；
+        // 同名組的卡片額外顯示【真實話數】行
+        SliverGridComics(
+          comics: _merged,
+          forceDetailedMode: true,
+          chapterCountBuilder: (c) {
+            final n = _chapterCounts['${c.sourceKey}:${c.id}'];
+            return n != null ? '$n' : null;
+          },
+        ),
       ],
     );
   }

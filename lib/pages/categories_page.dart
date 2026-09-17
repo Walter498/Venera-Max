@@ -35,7 +35,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
   int _sourceIndex = 0;
   ComicSource? _source;
   List<_FilterRow> _rows = const [];
-  final Map<String, String?> _selected = {}; // rowTitle -> param
+  final Map<String, String?> _selected = {}; // rowTitle -> param（單選行用）
+  /// 題材行（tag:）多選集合（2026-09-17 用戶要求：標籤可多選）
+  final Set<String> _selectedTags = {};
+  String? _tagRowTitle;
   bool _expanded = false;
 
   List<Comic> _comics = [];
@@ -121,15 +124,25 @@ class _CategoriesPageState extends State<CategoriesPage> {
       if (hasRealParam && options.length > 1) {
         rows.add(_FilterRow(part.title, options));
         _selected[part.title] = null;
+        // 題材行（參數是 tag: 開頭的）支持多選
+        if (_tagRowTitle == null &&
+            options.any((o) => o.param?.startsWith('tag:') == true)) {
+          _tagRowTitle = part.title;
+        }
       }
     }
     setState(() => _rows = rows);
   }
 
   /// 組合所有篩選行的參數：tag:格斗|class:3|isend:0
+  /// （題材行單選時才進這裡；多選走 _loadMultiTags 交集）
   String? get _combinedParam {
     final segs = <String>[];
     for (final row in _rows) {
+      if (row.title == _tagRowTitle) {
+        if (_selectedTags.length == 1) segs.add(_selectedTags.first);
+        continue;
+      }
       final p = _selected[row.title];
       if (p != null && p.isNotEmpty) segs.add(p);
     }
@@ -144,7 +157,50 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _hasMore = true;
       _error = null;
     });
-    await _loadMore();
+    if (_selectedTags.length >= 2) {
+      await _loadMultiTags();
+    } else {
+      await _loadMore();
+    }
+  }
+
+  /// 題材多選：每個標籤並行抓一頁，取【交集】（同時帶全部選中標籤的漫畫）
+  Future<void> _loadMultiTags() async {
+    final loader = _source?.categoryComicsData?.load;
+    if (loader == null) return;
+    setState(() => _loading = true);
+    try {
+      // 非題材條件照樣組合進每個請求
+      final base = <String>[
+        for (final row in _rows)
+          if (row.title != _tagRowTitle &&
+              _selected[row.title] != null &&
+              _selected[row.title]!.isNotEmpty)
+            _selected[row.title]!,
+      ].join('|');
+      final results = await Future.wait([
+        for (final t in _selectedTags)
+          loader('', base.isEmpty ? t : '$t|$base', const <String>[], 1),
+      ]);
+      if (!mounted) return;
+      Map<String, Comic>? inter;
+      for (final r in results) {
+        if (!r.success) continue; // 失敗的標籤跳過（寬鬆處理）
+        final m = {for (final c in r.data) c.id: c};
+        inter = inter == null
+            ? m
+            : (Map.fromEntries(
+                inter.entries.where((e) => m.containsKey(e.key))));
+      }
+      setState(() {
+        _comics = inter?.values.toList() ?? [];
+        _hasMore = false; // 多選交集模式不分頁
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
   }
 
   Future<void> _loadMore() async {
@@ -299,9 +355,24 @@ class _CategoriesPageState extends State<CategoriesPage> {
           for (final opt in visible)
             _chip(
               opt.label,
-              selected: opt.param == selectedParam,
+              selected: row.title == _tagRowTitle
+                  ? (opt.param == null
+                      ? _selectedTags.isEmpty
+                      : _selectedTags.contains(opt.param))
+                  : opt.param == selectedParam,
               onTap: () {
-                setState(() => _selected[row.title] = opt.param);
+                if (row.title == _tagRowTitle) {
+                  // 題材行：多選切換；「全部」= 清空選擇
+                  if (opt.param == null) {
+                    _selectedTags.clear();
+                  } else if (!_selectedTags.remove(opt.param)) {
+                    _selectedTags.add(opt.param!);
+                  }
+                  _selected[row.title] = null;
+                } else {
+                  _selected[row.title] = opt.param;
+                }
+                setState(() {});
                 _reload();
               },
             ),

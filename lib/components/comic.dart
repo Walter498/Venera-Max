@@ -105,12 +105,16 @@ class ComicTile extends StatelessWidget {
     this.onLongPressed,
     this.heroID,
     this.overrideDisplayMode,
+    this.chaptersText,
   });
 
   final Comic comic;
 
   /// 覆寫全域的漫畫顯示模式（'brief' / 'detailed'）；null = 跟隨設定。
   final String? overrideDisplayMode;
+
+  /// 話數文字（聚合搜索同名組用）；null = 不顯示。
+  final String? chaptersText;
 
   final bool enableLongPressed;
 
@@ -616,6 +620,7 @@ class ComicTile extends StatelessWidget {
                         statusText: displayInfo.status,
                         progressText: chapterProgress.currentTitle,
                         pagesText: displayInfo.pagesText,
+                        chaptersText: chaptersText,
                       ),
                     ),
                   ],
@@ -979,6 +984,7 @@ class ComicDescription extends StatelessWidget {
     this.statusText,
     this.progressText,
     this.pagesText,
+    this.chaptersText,
     this.showTitle = true,
     this.onTapAuthor,
     this.onTapTag,
@@ -997,6 +1003,7 @@ class ComicDescription extends StatelessWidget {
   final String? statusText;
   final String? progressText;
   final String? pagesText;
+  final String? chaptersText;
   final bool showTitle;
   final void Function(String author, String? namespace)? onTapAuthor;
   final void Function(String tag, String namespace)? onTapTag;
@@ -1043,6 +1050,8 @@ class ComicDescription extends StatelessWidget {
       else if (authors != null)
         _infoRow(context, "Authors".tl, authors, Colors.lightBlue),
       if (update != null) _infoRow(context, "Update".tl, update, Colors.cyan),
+      if (chaptersText != null)
+        _infoRow(context, '話數', chaptersText!, Colors.amber),
       if (source != null) _infoRow(context, "Source".tl, source, Colors.cyan),
       if (tagItems.isNotEmpty && onTapTag != null)
         _actionRow(
@@ -1621,6 +1630,7 @@ class SliverGridComics extends StatefulWidget {
     this.forceBriefMode = false,
     this.forceDetailedMode = false,
     this.forceColumns,
+    this.chapterCountBuilder,
   });
 
   final List<Comic> comics;
@@ -1658,6 +1668,9 @@ class SliverGridComics extends StatefulWidget {
 
   /// 強制列數（首頁 4x2 版面用）；null = 按寬度自適應。
   final int? forceColumns;
+
+  /// 每張卡的話數文字（聚合搜索同名組用）；null = 不顯示。
+  final String? Function(Comic)? chapterCountBuilder;
 
   @override
   State<SliverGridComics> createState() => _SliverGridComicsState();
@@ -1730,6 +1743,7 @@ class _SliverGridComicsState extends State<SliverGridComics> {
       forceBriefMode: widget.forceBriefMode,
       forceDetailedMode: widget.forceDetailedMode,
       forceColumns: widget.forceColumns,
+      chapterCountBuilder: widget.chapterCountBuilder,
       heroIDs: heroIDs,
       enableHero: widget.enableHero,
       selection: widget.selections,
@@ -1751,6 +1765,9 @@ class _SliverGridComics extends StatelessWidget {
 
   /// 強制詳細（直落列表）模式（聚合搜索結果用）。
   final bool forceDetailedMode;
+
+  /// 每張卡的話數文字（聚合搜索同名組用）；null = 不顯示。
+  final String? Function(Comic)? chapterCountBuilder;
 
   /// 強制列數（首頁 4 列版面用）；null = 自適應。
   final int? forceColumns;
@@ -1811,6 +1828,7 @@ class _SliverGridComics extends StatelessWidget {
         var comic = ComicTile(
           comic: comics[index],
           badge: badge,
+          chaptersText: chapterCountBuilder?.call(comics[index]),
           menuOptions: menuBuilder?.call(comics[index]),
           onTap: onTapWithIndex != null
               ? () => onTapWithIndex!(comics[index], heroIDs[index], index)

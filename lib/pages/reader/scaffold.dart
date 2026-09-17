@@ -875,16 +875,8 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           Row(
             children: [
               const SizedBox(width: 8),
-              IconButton.filledTonal(
-                onPressed: () => !isReversed
-                    ? context.reader.chapter > 1
-                          ? context.reader.toPrevChapter()
-                          : context.reader.toPage(1)
-                    : context.reader.chapter < context.reader.maxChapter
-                    ? context.reader.toNextChapter()
-                    : context.reader.toPage(context.reader.maxPage),
-                icon: const Icon(Icons.first_page),
-              ),
+              // 兩端大按鈕（first_page/last_page）已按用戶要求刪除（2026-09-17），
+              // 只留進度條 + 百分比；上下話用下方文字按鈕。
               Expanded(child: buildSlider()),
               // 阅读进度百分比（可在阅读设置中关闭）；点击可跳页
               if (showPercent)
@@ -901,16 +893,6 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                     ),
                   ),
                 ),
-              IconButton.filledTonal(
-                onPressed: () => !isReversed
-                    ? context.reader.chapter < context.reader.maxChapter
-                          ? context.reader.toNextChapter()
-                          : context.reader.toPage(context.reader.maxPage)
-                    : context.reader.chapter > 1
-                    ? context.reader.toPrevChapter()
-                    : context.reader.toPage(1),
-                icon: const Icon(Icons.last_page),
-              ),
               const SizedBox(width: 8),
             ],
           ),

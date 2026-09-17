@@ -986,9 +986,9 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         ),
       );
     }
-    // With reading history: "Start" (from the beginning) sits on top and
-    // "Continue" (resume progress) below it. Continue keeps the filled/primary
-    // emphasis despite being the lower button.
+    // With reading history: "Continue" (resume progress) sits on top and
+    // "Start" (from the beginning) below it.（2026-09-17 用戶要求互換位置）
+    // Continue keeps the filled/primary emphasis despite being the upper button.
     final startButton = OutlinedButton.icon(
       onPressed: read,
       style: outlinedStyle,
@@ -1008,9 +1008,9 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: startButton),
-            const SizedBox(height: 10),
             Expanded(child: continueButton),
+            const SizedBox(height: 10),
+            Expanded(child: startButton),
           ],
         ),
       );
@@ -1018,9 +1018,9 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(height: 52, child: startButton),
-        const SizedBox(height: 10),
         SizedBox(height: 52, child: continueButton),
+        const SizedBox(height: 10),
+        SizedBox(height: 52, child: startButton),
       ],
     );
   }

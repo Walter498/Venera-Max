@@ -233,9 +233,8 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
       });
     }
     try {
-      // 提速：主源探索 + 跨源合池【同時發射】，耗時取兩者最大值，
-      // 而不是串行相加。跨源內部已逐源並行且永不拋錯；
-      // 只有主源失敗才顯示錯誤。
+      // 提速：主源探索並行發射；只有主源失敗才顯示錯誤。
+      // （跨源合池已按用戶要求移除：推荐池只留主源）
       final mainFuture = () async {
         if (page.loadMultiPart != null) {
           final res = await page.loadMultiPart!();
@@ -248,26 +247,8 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
         }
         return <ExplorePagePart>[];
       }();
-      final crossFuture = _collectCrossSourceComics(source.key);
+      // 2026-09-17 用戶要求：首頁推荐【只顯示主源】，不再併入騰訊等其他源
       var result = await mainFuture;
-      final cross = await crossFuture;
-      // 併入其他源（例如騰訊動漫的「条漫」「独家」）到推薦分區
-      if (cross.isNotEmpty && result.isNotEmpty) {
-        final recIndex = result.indexWhere((p) => _weekdayOf(p.title) == null);
-        if (recIndex >= 0) {
-          final rec = result[recIndex];
-          final ids = {for (final c in rec.comics) '${c.sourceKey}:${c.id}'};
-          result[recIndex] = ExplorePagePart(
-            rec.title,
-            [
-              ...rec.comics,
-              for (final c in cross)
-                if (!ids.contains('${c.sourceKey}:${c.id}')) c,
-            ],
-            rec.viewMore,
-          );
-        }
-      }
 
       // 只有拿到兩個以上分區（推薦 + 周期更新）才寫，避免緩一半
       if (result.length >= 2) {
