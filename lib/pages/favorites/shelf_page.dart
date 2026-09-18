@@ -211,6 +211,9 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
   Future<void> _deleteSelected() async {
     final fav = LocalFavoritesManager();
     final items = _comics();
+    final histMap = <String, History>{
+      for (final h in HistoryManager().getAll()) '${h.sourceKey}:${h.id}': h,
+    };
     for (final c in items) {
       if (!_selected.contains('${c.sourceKey}:${c.id}')) continue;
       final type = ComicType.fromKey(c.sourceKey);
@@ -276,6 +279,14 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                     SliverGridComics(
                       comics: items,
                       forceDetailedMode: true,
+                      // 最後閱讀時間（用戶要求：收藏卡片也顯示）
+                      lastReadTimeBuilder: (c) {
+                        final h = histMap['${c.sourceKey}:${c.id}'];
+                        if (h == null) return null;
+                        final t = h.time;
+                        return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')} '
+                            '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+                      },
                       selections: _editMode
                           ? {
                               for (final c in items)

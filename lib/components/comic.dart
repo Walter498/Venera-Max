@@ -106,6 +106,7 @@ class ComicTile extends StatelessWidget {
     this.heroID,
     this.overrideDisplayMode,
     this.chaptersText,
+    this.lastReadTimeText,
   });
 
   final Comic comic;
@@ -115,6 +116,9 @@ class ComicTile extends StatelessWidget {
 
   /// 話數文字（聚合搜索同名組用）；null = 不顯示。
   final String? chaptersText;
+
+  /// 上次閱讀時間（收藏頁用）；null = 不顯示。
+  final String? lastReadTimeText;
 
   final bool enableLongPressed;
 
@@ -621,6 +625,7 @@ class ComicTile extends StatelessWidget {
                         progressText: chapterProgress.currentTitle,
                         pagesText: displayInfo.pagesText,
                         chaptersText: chaptersText,
+                        lastReadTimeText: lastReadTimeText,
                       ),
                     ),
                   ],
@@ -1635,6 +1640,7 @@ class SliverGridComics extends StatefulWidget {
     this.forceDetailedMode = false,
     this.forceColumns,
     this.chapterCountBuilder,
+    this.lastReadTimeBuilder,
   });
 
   final List<Comic> comics;
@@ -1675,6 +1681,9 @@ class SliverGridComics extends StatefulWidget {
 
   /// 每張卡的話數文字（聚合搜索同名組用）；null = 不顯示。
   final String? Function(Comic)? chapterCountBuilder;
+
+  /// 每張卡的上次閱讀時間（收藏頁用）；null = 不顯示。
+  final String? Function(Comic)? lastReadTimeBuilder;
 
   @override
   State<SliverGridComics> createState() => _SliverGridComicsState();
@@ -1748,6 +1757,7 @@ class _SliverGridComicsState extends State<SliverGridComics> {
       forceDetailedMode: widget.forceDetailedMode,
       forceColumns: widget.forceColumns,
       chapterCountBuilder: widget.chapterCountBuilder,
+      lastReadTimeBuilder: widget.lastReadTimeBuilder,
       heroIDs: heroIDs,
       enableHero: widget.enableHero,
       selection: widget.selections,
@@ -1773,6 +1783,9 @@ class _SliverGridComics extends StatelessWidget {
   /// 每張卡的話數文字（聚合搜索同名組用）；null = 不顯示。
   final String? Function(Comic)? chapterCountBuilder;
 
+  /// 每張卡的上次閱讀時間（收藏頁用）；null = 不顯示。
+  final String? Function(Comic)? lastReadTimeBuilder;
+
   /// 強制列數（首頁 4 列版面用）；null = 自適應。
   final int? forceColumns;
 
@@ -1782,6 +1795,7 @@ class _SliverGridComics extends StatelessWidget {
     this.forceDetailedMode = false,
     this.forceColumns,
     this.chapterCountBuilder,
+    this.lastReadTimeBuilder,
     required this.heroIDs,
     this.enableHero = true,
     this.onLastItemBuild,
@@ -1834,6 +1848,7 @@ class _SliverGridComics extends StatelessWidget {
           comic: comics[index],
           badge: badge,
           chaptersText: chapterCountBuilder?.call(comics[index]),
+          lastReadTimeText: lastReadTimeBuilder?.call(comics[index]),
           menuOptions: menuBuilder?.call(comics[index]),
           onTap: onTapWithIndex != null
               ? () => onTapWithIndex!(comics[index], heroIDs[index], index)

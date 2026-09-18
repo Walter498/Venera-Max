@@ -1153,17 +1153,37 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     final group = history!.group;
     final text = "${"Last Reading".tl}: ${_positionText(ep, page, group)}";
 
-    // 之前的閱讀位置（用戶要求：上上次、上上上次都顯示）
-    final prevTexts = <String>[];
+    // 之前的閱讀位置：只列【兩筆】—— 加上當前那行，共三行
+    // （用戶要求：上次閱讀 / 上上次 / 上上上次；按時間倒序，最近在前）
     final prevs = HistoryManager()
-        .previousPositions(comic.id, ComicType.fromKey(comic.sourceKey));
-    const labels = ['上上次', '上上上次', '上上上上次'];
+        .previousPositions(comic.id, ComicType.fromKey(comic.sourceKey))
+      ..sort((a, b) =>
+          (b['time']?.toString() ?? '').compareTo(a['time']?.toString() ?? ''));
+    final prevRows = <Widget>[];
+    const labels = ['上上次', '上上上次'];
     for (var i = 0; i < prevs.length && i < labels.length; i++) {
       final pep = (prevs[i]['ep'] as num?)?.toInt();
       final ppage = (prevs[i]['page'] as num?)?.toInt();
       if (pep == null || ppage == null) continue;
-      prevTexts.add(
-          "${labels[i]}: ${_positionText(pep, ppage, (prevs[i]['group'] as num?)?.toInt())}");
+      final pgroup = (prevs[i]['group'] as num?)?.toInt();
+      prevRows.add(
+        // 點了直接跳到那一話那一頁觀看
+        InkWell(
+          onTap: () => read(pep, ppage, pgroup),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(
+              "${labels[i]}: ${_positionText(pep, ppage, pgroup)}",
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.outline,
+                    decoration: TextDecoration.underline,
+                  ),
+            ),
+          ),
+        ),
+      );
     }
 
     return Container(
@@ -1186,21 +1206,16 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  text,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                for (final pt in prevTexts)
-                  Text(
-                    pt,
-                    maxLines: 1,
+                InkWell(
+                  onTap: () => read(ep, page, group),
+                  child: Text(
+                    text,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.outline,
-                        ),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
+                ),
+                ...prevRows,
               ],
             ),
           ),
