@@ -581,6 +581,7 @@ class HistoryManager with ChangeNotifier {
 
   /// Create a isolate to add history to prevent blocking the UI thread.
   Future<void> addHistoryAsync(History newItem) async {
+    _recordPreviousPosition(newItem); // 閱讀器走的是異步路徑
     if (!isInitialized) return;
     while (_haveAsyncTask) {
       await Future.delayed(Duration(milliseconds: 20));
@@ -607,8 +608,9 @@ class HistoryManager with ChangeNotifier {
       );
       if (old.isEmpty) return;
       final prev = old.first;
-      // 位置沒變（只是翻頁更新時間）不覆蓋「上上次」
-      if (prev.ep == newItem.ep && prev.page == newItem.page) return;
+      // 同一話內翻頁不覆蓋「上上次」——只有【換話】才算新的一次閱讀
+      //（否則上上次會變成「上一頁」，沒有意義）
+      if (prev.ep == newItem.ep) return;
       final store = appdata.implicitData['prevReadPos'];
       final map = store is Map ? Map<String, dynamic>.from(store) : <String, dynamic>{};
       map[key] = {
