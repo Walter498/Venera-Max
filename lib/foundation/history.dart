@@ -597,8 +597,48 @@ class HistoryManager with ChangeNotifier {
   /// add history. if exists, update time.
   ///
   /// This function would be called when user start reading.
+  /// 記錄「上上次閱讀」位置：寫入新進度前，把舊記錄存起來。
+  /// 存在 appdata.implicitData['prevReadPos']，key = 'typeValue:id'。
+  void _recordPreviousPosition(History newItem) {
+    try {
+      final key = '${newItem.type.value}:${newItem.id}';
+      final old = getAll().where(
+        (h) => h.id == newItem.id && h.type == newItem.type,
+      );
+      if (old.isEmpty) return;
+      final prev = old.first;
+      // 位置沒變（只是翻頁更新時間）不覆蓋「上上次」
+      if (prev.ep == newItem.ep && prev.page == newItem.page) return;
+      final store = appdata.implicitData['prevReadPos'];
+      final map = store is Map ? Map<String, dynamic>.from(store) : <String, dynamic>{};
+      map[key] = {
+        'ep': prev.ep,
+        'page': prev.page,
+        'group': prev.group,
+        'time': prev.time.toIso8601String(),
+      };
+      appdata.implicitData['prevReadPos'] = map;
+      appdata.writeImplicitData();
+    } catch (_) {
+      // 純附加功能，失敗不影響主流程
+    }
+  }
+
+  /// 取得某部漫畫的「上上次閱讀」位置（沒有則 null）
+  Map<String, dynamic>? previousPosition(String id, ComicType type) {
+    try {
+      final store = appdata.implicitData['prevReadPos'];
+      if (store is! Map) return null;
+      final v = store['${type.value}:$id'];
+      return v is Map ? Map<String, dynamic>.from(v) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   void addHistory(History newItem) {
     if (!isInitialized) return;
+    _recordPreviousPosition(newItem);
     _writeLocalHistory(newItem);
     _mirrorToDomain(newItem);
     _cacheAddedHistory(newItem);

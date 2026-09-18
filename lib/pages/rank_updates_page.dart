@@ -4,35 +4,51 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/history.dart';
+import 'package:venera/foundation/home_layout.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/network/app_dio.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
+import 'package:venera/pages/home_source_feed.dart';
 
-/// 排行 + 更新 頁（2026-09-17 v2，仿青漫圖九/圖十）。
-/// 排行：直接調栗子 /app/api/rank/list（日漫/国漫/韩漫 分組 Tab，
-///       前三名大封面，其餘直列帶「更新至N話」）。
-/// 更新：最近觀看（HistoryManager，封面帶「上次閱讀」時間徽章）+
-///       最新更新（/app/api/category/list，封面帶「更新於多久前」徽章）。
-/// 全部真數據。
+/// 首頁「更新」「排行」兩個頁籤的內聯視圖（2026-09-18）。
+/// 不跳頁：直接嵌在首頁，跟首頁一樣是第一層級。
+/// 適配所有源：跟著首頁當前選中的源（HomeSourceScope.currentKey）；
+/// 栗子源額外用官方 API 拿「更新時間」做徽章、排行榜分地區。
+/// 其他源走源的通用分類接口（有榜單分類就用，沒有就提示）。
 
-const _kApi = 'http://ai.qsmm.fun';
-const _kImg = 'https://cdn.lzimg.xyz';
+const _kLiziApi = 'http://ai.qsmm.fun';
+const _kLiziImg = 'https://cdn.lzimg.xyz';
+
+/// 當前首頁選中的源（找不到就退回第一個首頁顯示源）
+ComicSource? _currentSource() {
+  final key = HomeSourceScope.currentKey;
+  if (key != null) {
+    final s = ComicSource.find(key);
+    if (s != null) return s;
+  }
+  for (final k in effectiveHomeDisplaySourceKeys()) {
+    final s = ComicSource.find(k);
+    if (s != null) return s;
+  }
+  return ComicSource.all().isEmpty ? null : ComicSource.all().first;
+}
+
+bool _isLizi(ComicSource? s) => s?.key == 'lizimh';
 
 Future<Map<String, dynamic>> _getJson(String path) async {
   final dio = AppDio(
       BaseOptions(responseType: ResponseType.json), const Duration(seconds: 15));
-  final res = await dio.get('$_kApi$path');
-  var raw = res.data;
-  if (raw is String) raw = raw.isEmpty ? {} : raw;
+  final res = await dio.get('$_kLiziApi$path');
+  final raw = res.data;
   final map = Map<String, dynamic>.from(raw is Map ? raw : {});
   final data = map['data'];
   return data is Map ? Map<String, dynamic>.from(data) : {};
 }
 
-/// API 漫畫 → Comic（話數 nums、最新話 sub、更新時間 updatedAt 都保留進 description）
+/// 栗子 API 漫畫 → Comic（機讀欄位塞進 description）
 Comic _comicFromApi(Map<String, dynamic> m) {
   var cover = (m['picY'] ?? m['picX'] ?? '').toString();
-  if (cover.isNotEmpty && !cover.startsWith('http')) cover = _kImg + cover;
+  if (cover.isNotEmpty && !cover.startsWith('http')) cover = _kLiziImg + cover;
   final nums = (m['nums'] as num?)?.toInt() ?? 0;
   final sub = m['sub']?.toString() ?? '';
   final upd = (m['updatedAt'] as num?)?.toInt() ?? 0;
@@ -42,7 +58,6 @@ Comic _comicFromApi(Map<String, dynamic> m) {
     (m['id'] as num?)?.toInt().toString() ?? '',
     m['author']?.toString() ?? '',
     (m['tags']?.toString() ?? '').split(',').where((e) => e.isNotEmpty).toList(),
-    // description 帶機讀欄位：upd@秒|nums@話數|sub@最新話
     'upd@$upd|nums@$nums|sub@$sub\n${m['content']?.toString() ?? ''}',
     'lizimh',
     null,
@@ -65,7 +80,7 @@ String _apiSub(Comic c) {
   return m?.group(1) ?? '';
 }
 
-/// 「多久前」徽章文字（10分钟前/1小时前/2天前/日期）
+/// 「多久前」
 String _agoText(int epochSec) {
   if (epochSec <= 0) return '';
   final t = DateTime.fromMillisecondsSinceEpoch(epochSec * 1000);
@@ -77,8 +92,7 @@ String _agoText(int epochSec) {
   return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
 }
 
-Widget _coverWithBadge(BuildContext context, Comic c, String badge,
-    {double? w, double? h}) {
+Widget _coverBadge(BuildContext context, Comic c, String badge) {
   return ClipRRect(
     borderRadius: BorderRadius.circular(8),
     child: Stack(
@@ -114,16 +128,220 @@ Widget _coverWithBadge(BuildContext context, Comic c, String badge,
   );
 }
 
-/// ==================== 排行（仿圖九：地區 Tab + 前三甲大封面 + 直列） ====================
-class ShelfRankPage extends StatefulWidget {
-  const ShelfRankPage({super.key});
-
-  @override
-  State<ShelfRankPage> createState() => _ShelfRankPageState();
+Widget _sectionTitle(BuildContext context, String title) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(children: [
+      Container(
+        width: 4,
+        height: 18,
+        decoration: BoxDecoration(
+          color: context.colorScheme.primary,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Text(title,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+    ]),
+  );
 }
 
-class _ShelfRankPageState extends State<ShelfRankPage> {
-  List<(String, List<Comic>)>? _groups;
+Widget _hint(BuildContext context, String text) {
+  return Padding(
+    padding: const EdgeInsets.all(24),
+    child: Center(
+      child: Text(text,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: context.colorScheme.outline)),
+    ),
+  );
+}
+
+/// 封面網格（3 欄，帶徽章）
+Widget _coverGrid(
+    BuildContext context, int count, (Comic, String, VoidCallback) Function(int) item,
+    {String? Function(int)? subOf}) {
+  return GridView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 3,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 0.52,
+    ),
+    itemCount: count,
+    itemBuilder: (context, i) {
+      final (c, badge, onTap) = item(i);
+      final sub = subOf?.call(i);
+      return InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _coverBadge(context, c, badge)),
+            const SizedBox(height: 4),
+            Text(c.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            if (sub != null && sub.isNotEmpty)
+              Text(sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 11, color: context.colorScheme.outline)),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+void _openComic(BuildContext context, String id, String sourceKey, String cover,
+    String title) {
+  context.to(() => ComicPage(
+      id: id, sourceKey: sourceKey, cover: cover, title: title));
+}
+
+/// ==================== 更新（首頁頁籤，內聯） ====================
+class HomeUpdatesView extends StatefulWidget {
+  const HomeUpdatesView({super.key});
+
+  @override
+  State<HomeUpdatesView> createState() => _HomeUpdatesViewState();
+}
+
+class _HomeUpdatesViewState extends State<HomeUpdatesView> {
+  List<Comic>? _latest;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    HistoryManager().addListener(_onChange);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    HistoryManager().removeListener(_onChange);
+    super.dispose();
+  }
+
+  void _onChange() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _load() async {
+    final source = _currentSource();
+    if (source == null) {
+      setState(() => _error = '沒有可用的源');
+      return;
+    }
+    // 栗子：直調官方 API（帶更新時間，可做「N分鐘前」徽章）
+    if (_isLizi(source)) {
+      try {
+        final data = await _getJson('/app/api/category/list?page=1');
+        if (!mounted) return;
+        setState(() {
+          _latest = [
+            for (final c in (data['category_list'] as List? ?? const []))
+              _comicFromApi(Map<String, dynamic>.from(c as Map))
+          ];
+        });
+      } catch (e) {
+        if (mounted) setState(() => _error = e.toString());
+      }
+      return;
+    }
+    // 其他源：走源的通用分類接口（無篩選 = 站的默認/最新列表）
+    final loader = source.categoryComicsData?.load;
+    if (loader == null) {
+      setState(() => _error = '此源不支持更新列表');
+      return;
+    }
+    try {
+      final res = await loader('', null, const <String>[], 1);
+      if (!mounted) return;
+      setState(() {
+        if (res.success) {
+          _latest = res.data;
+        } else {
+          _error = res.errorMessage ?? '載入失敗';
+        }
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recent = List<History>.from(HistoryManager().getAll())
+      ..sort((a, b) => b.time.compareTo(a.time));
+    final recentTop = recent.take(6).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _sectionTitle(context, '最近觀看'),
+        if (recentTop.isEmpty)
+          _hint(context, '還沒有閱讀記錄')
+        else
+          _coverGrid(context, recentTop.length, (i) {
+            final h = recentTop[i];
+            return (
+              Comic(h.title, h.cover, h.id, null, null, '', h.sourceKey, null,
+                  null),
+              _agoText(h.time.millisecondsSinceEpoch ~/ 1000),
+              () => _openComic(context, h.id, h.sourceKey, h.cover, h.title),
+            );
+          }),
+        const SizedBox(height: 16),
+        _sectionTitle(context, '最新更新'),
+        if (_latest == null)
+          _error != null
+              ? _hint(context, _error!)
+              : const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+        else
+          _coverGrid(context, _latest!.length, (i) {
+            final c = _latest![i];
+            final nums = _apiNums(c);
+            return (
+              c,
+              _agoText(_apiUpd(c)),
+              () => _openComic(context, c.id, c.sourceKey, c.cover, c.title),
+            );
+          }, subOf: (i) {
+            final c = _latest![i];
+            final sub = _apiSub(c);
+            if (sub.isNotEmpty) return sub;
+            final nums = _apiNums(c);
+            return nums > 0 ? '更新至$nums話' : (c.subtitle ?? '');
+          }),
+      ],
+    );
+  }
+}
+
+/// ==================== 排行（首頁頁籤，內聯） ====================
+/// 栗子：官方 API（日漫/国漫/韩漫 分組）；其他源：找源的榜單分類，
+/// 沒有就提示（不假造數據）。
+class HomeRankView extends StatefulWidget {
+  const HomeRankView({super.key});
+
+  @override
+  State<HomeRankView> createState() => _HomeRankViewState();
+}
+
+class _HomeRankViewState extends State<HomeRankView> {
+  List<(String, List<Comic>)>? _groups; // (分組名, 漫畫)
   String? _error;
 
   @override
@@ -132,26 +350,79 @@ class _ShelfRankPageState extends State<ShelfRankPage> {
     _load();
   }
 
+  /// 在源的分類設定裡找榜單類分類（param == rank 或名稱含 榜/排行）
+  List<(String, String?)> _rankCategories(ComicSource source) {
+    final out = <(String, String?)>[];
+    for (final part in source.categoryData?.categories ?? const []) {
+      for (final item in part.categories) {
+        final param = item.target.attributes?['param']?.toString();
+        if (param == 'rank' ||
+            item.label.contains('榜') ||
+            item.label.contains('排行')) {
+          out.add((item.label, param));
+        }
+      }
+    }
+    return out;
+  }
+
   Future<void> _load() async {
+    final source = _currentSource();
+    if (source == null) {
+      setState(() => _error = '沒有可用的源');
+      return;
+    }
+    // 栗子：官方 API，帶地區分組
+    if (_isLizi(source)) {
+      try {
+        final data = await _getJson('/app/api/rank/list');
+        final groups = <(String, List<Comic>)>[];
+        for (final g in (data['rank_list'] as List? ?? const [])) {
+          final gm = Map<String, dynamic>.from(g as Map);
+          final comics = [
+            for (final c in (gm['comic_list'] as List? ?? const []))
+              _comicFromApi(Map<String, dynamic>.from(c as Map))
+          ];
+          if (comics.isNotEmpty) {
+            groups.add((gm['name']?.toString() ?? '榜單', comics));
+          }
+        }
+        if (!mounted) return;
+        setState(() {
+          if (groups.isEmpty) {
+            _error = '榜單為空';
+          } else {
+            _groups = groups;
+          }
+        });
+      } catch (e) {
+        if (mounted) setState(() => _error = e.toString());
+      }
+      return;
+    }
+    // 其他源：用源自己的榜單分類
+    final loader = source.categoryComicsData?.load;
+    final cats = _rankCategories(source);
+    if (loader == null || cats.isEmpty) {
+      setState(() => _error = '此源沒有排行榜\n（可切回栗子漫畫查看）');
+      return;
+    }
     try {
-      final data = await _getJson('/app/api/rank/list');
       final groups = <(String, List<Comic>)>[];
-      for (final g in (data['rank_list'] as List? ?? const [])) {
-        final gm = Map<String, dynamic>.from(g as Map);
-        final comics = [
-          for (final c in (gm['comic_list'] as List? ?? const []))
-            _comicFromApi(Map<String, dynamic>.from(c as Map))
-        ];
-        if (comics.isNotEmpty) {
-          groups.add((gm['name']?.toString() ?? '榜單', comics));
+      for (final (label, param) in cats) {
+        final res = await loader(label, param, const <String>[], 1);
+        if (res.success && res.data.isNotEmpty) {
+          groups.add((label, res.data));
         }
       }
       if (!mounted) return;
-      if (groups.isEmpty) {
-        setState(() => _error = '榜單為空');
-      } else {
-        setState(() => _groups = groups);
-      }
+      setState(() {
+        if (groups.isEmpty) {
+          _error = '榜單為空';
+        } else {
+          _groups = groups;
+        }
+      });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     }
@@ -159,43 +430,35 @@ class _ShelfRankPageState extends State<ShelfRankPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_error != null) {
-      return Scaffold(
-        appBar: Appbar(title: const Text('排行榜')),
-        body: Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('載入失敗：$_error'),
-            const SizedBox(height: 12),
-            FilledButton(
-                onPressed: () {
-                  setState(() => _error = null);
-                  _load();
-                },
-                child: const Text('重試')),
-          ]),
-        ),
-      );
-    }
+    if (_error != null) return _hint(context, _error!);
     final groups = _groups;
     if (groups == null) {
-      return Scaffold(
-        appBar: Appbar(title: const Text('排行榜')),
-        body: const Center(child: CircularProgressIndicator()),
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
-    return DefaultTabController(
-      length: groups.length,
-      child: Scaffold(
-        appBar: Appbar(title: const Text('排行榜')),
-        body: Column(children: [
-          TabBar(tabs: [for (final g in groups) Tab(text: g.$1)]),
-          Expanded(
-            child: TabBarView(children: [
-              for (final g in groups) _RegionRankList(comics: g.$2),
-            ]),
-          ),
-        ]),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DefaultTabController(
+          length: groups.length,
+          child: Column(children: [
+            TabBar(
+              isScrollable: groups.length > 3,
+              tabs: [for (final g in groups) Tab(text: g.$1)],
+            ),
+            SizedBox(
+              height: 620,
+              child: TabBarView(
+                children: [
+                  for (final g in groups) _RegionRankList(comics: g.$2),
+                ],
+              ),
+            ),
+          ]),
+        ),
+      ],
     );
   }
 }
@@ -211,18 +474,16 @@ class _RegionRankList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        // 前三甲：大封面橫排（仿圖九）
         SizedBox(
           height: 190,
           child: Row(children: [
             for (var i = 0; i < top3.length; i++) ...[
-              Expanded(child: _topCard(context, i + 1, top3[i])),  // 名次從 1 開始
+              Expanded(child: _topCard(context, i + 1, top3[i])),
               if (i < top3.length - 1) const SizedBox(width: 8),
             ],
           ]),
         ),
         const SizedBox(height: 12),
-        // 其餘直列
         for (var i = 0; i < rest.length; i++) _row(context, i + 4, rest[i]),
       ],
     );
@@ -239,14 +500,14 @@ class _RegionRankList extends StatelessWidget {
         : colors.last;
     return InkWell(
       borderRadius: BorderRadius.circular(10),
-      onTap: () => context.to(() => ComicPage(
-          id: c.id, sourceKey: c.sourceKey, cover: c.cover, title: c.title)),
+      onTap: () => _openComic(context, c.id, c.sourceKey, c.cover, c.title),
       child: Column(children: [
         Expanded(
           child: Stack(fit: StackFit.expand, children: [
-            _coverWithBadge(context, c, ''),
+            _coverBadge(context, c, ''),
             Positioned(
-              left: 0, top: 0,
+              left: 0,
+              top: 0,
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -281,8 +542,7 @@ class _RegionRankList extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.to(() => ComicPage(
-            id: c.id, sourceKey: c.sourceKey, cover: c.cover, title: c.title)),
+        onTap: () => _openComic(context, c.id, c.sourceKey, c.cover, c.title),
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Row(children: [
@@ -296,9 +556,7 @@ class _RegionRankList extends StatelessWidget {
                       color: context.colorScheme.outline)),
             ),
             SizedBox(
-                width: 56,
-                height: 76,
-                child: _coverWithBadge(context, c, '')),
+                width: 56, height: 76, child: _coverBadge(context, c, '')),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -329,180 +587,4 @@ class _RegionRankList extends StatelessWidget {
       ),
     );
   }
-}
-
-/// ==================== 更新（仿圖十：最近觀看 + 最新更新，封面帶時間徽章） ====================
-class ShelfUpdatesPage extends StatefulWidget {
-  const ShelfUpdatesPage({super.key});
-
-  @override
-  State<ShelfUpdatesPage> createState() => _ShelfUpdatesPageState();
-}
-
-class _ShelfUpdatesPageState extends State<ShelfUpdatesPage> {
-  List<Comic>? _latest;
-  String? _latestError;
-
-  @override
-  void initState() {
-    super.initState();
-    HistoryManager().addListener(_onHistory);
-    _loadLatest();
-  }
-
-  @override
-  void dispose() {
-    HistoryManager().removeListener(_onHistory);
-    super.dispose();
-  }
-
-  void _onHistory() {
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _loadLatest() async {
-    try {
-      final data = await _getJson('/app/api/category/list?page=1');
-      if (!mounted) return;
-      setState(() {
-        _latest = [
-          for (final c in (data['category_list'] as List? ?? const []))
-            _comicFromApi(Map<String, dynamic>.from(c as Map))
-        ];
-      });
-    } catch (e) {
-      if (mounted) setState(() => _latestError = e.toString());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final recent = List<History>.from(HistoryManager().getAll())
-      ..sort((a, b) => b.time.compareTo(a.time));
-    final recentTop = recent.take(6).toList();
-    return Scaffold(
-      appBar: Appbar(title: const Text('更新')),
-      body: ListView(padding: const EdgeInsets.all(12), children: [
-        _sectionTitle(context, '最近觀看'),
-        if (recentTop.isEmpty)
-          _emptyBox(context, '還沒有閱讀記錄')
-        else
-          _coverGrid(
-            context,
-            recentTop.length,
-            (i) {
-              final h = recentTop[i];
-              final c = Comic(h.title, h.cover, h.id, null, null, '',
-                  h.sourceKey, null, null);
-              return (c, _agoText(h.time.millisecondsSinceEpoch ~/ 1000),
-                  () => context.to(() => ComicPage(
-                      id: h.id,
-                      sourceKey: h.sourceKey,
-                      cover: h.cover,
-                      title: h.title)));
-            },
-          ),
-        const SizedBox(height: 16),
-        _sectionTitle(context, '最新更新'),
-        if (_latest == null)
-          _latestError != null
-              ? _emptyBox(context, '載入失敗：$_latestError')
-              : const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-        else
-          _coverGrid(
-            context,
-            _latest!.length,
-            (i) {
-              final c = _latest![i];
-              return (c, _agoText(_apiUpd(c)), () {
-                context.to(() => ComicPage(
-                    id: c.id,
-                    sourceKey: c.sourceKey,
-                    cover: c.cover,
-                    title: c.title));
-              });
-            },
-            subOf: (i) {
-              final s = _apiSub(_latest![i]);
-              return s.isNotEmpty ? s : null;
-            },
-          ),
-      ]),
-    );
-  }
-
-  Widget _emptyBox(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-          child: Text(text,
-              style: TextStyle(color: context.colorScheme.outline))),
-    );
-  }
-
-  /// 封面網格（帶時間徽章）：item 回傳 (comic, 徽章文字, onTap)
-  Widget _coverGrid(BuildContext context, int count,
-      (Comic, String, VoidCallback) Function(int) item,
-      {String? Function(int)? subOf}) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.52,
-      ),
-      itemCount: count,
-      itemBuilder: (context, i) {
-        final (c, badge, onTap) = item(i);
-        final sub = subOf?.call(i);
-        return InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: _coverWithBadge(context, c, badge)),
-              const SizedBox(height: 4),
-              Text(c.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600)),
-              if (sub != null)
-                Text(sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11, color: context.colorScheme.outline)),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _sectionTitle(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(children: [
-        Container(
-          width: 4,
-          height: 18,
-          decoration: BoxDecoration(
-            color: context.colorScheme.primary,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(title,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-      ]),
-    );
-  }
-
 }

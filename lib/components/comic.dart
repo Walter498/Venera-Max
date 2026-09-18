@@ -985,6 +985,7 @@ class ComicDescription extends StatelessWidget {
     this.progressText,
     this.pagesText,
     this.chaptersText,
+    this.lastReadTimeText,
     this.showTitle = true,
     this.onTapAuthor,
     this.onTapTag,
@@ -1004,6 +1005,7 @@ class ComicDescription extends StatelessWidget {
   final String? progressText;
   final String? pagesText;
   final String? chaptersText;
+  final String? lastReadTimeText;
   final bool showTitle;
   final void Function(String author, String? namespace)? onTapAuthor;
   final void Function(String tag, String namespace)? onTapTag;
@@ -1052,6 +1054,8 @@ class ComicDescription extends StatelessWidget {
       if (update != null) _infoRow(context, "Update".tl, update, Colors.cyan),
       if (chaptersText != null)
         _infoRow(context, '話數', chaptersText!, Colors.amber),
+      if (lastReadTimeText != null)
+        _infoRow(context, '上次閱讀', lastReadTimeText!, Colors.deepPurple),
       if (source != null) _infoRow(context, "Source".tl, source, Colors.cyan),
       if (tagItems.isNotEmpty && onTapTag != null)
         _actionRow(

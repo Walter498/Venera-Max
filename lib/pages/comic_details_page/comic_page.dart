@@ -938,6 +938,11 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
           rating: comic.stars,
           updateText: comic.findUpdateTime() ?? comic.updateTime,
           progressText: chapterProgress.currentTitle ?? history?.description,
+          // 最後閱讀時間（圖一位置：標籤行下面）
+          lastReadTimeText: history == null
+              ? null
+              : '${history!.time.year}-${history!.time.month.toString().padLeft(2, '0')}-${history!.time.day.toString().padLeft(2, '0')} '
+                  '${history!.time.hour.toString().padLeft(2, '0')}:${history!.time.minute.toString().padLeft(2, '0')}',
           pagesText: comic.maxPage?.toString(),
           showTitle: false,
           onTapAuthor: (author, namespace) {
@@ -1128,22 +1133,36 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     );
   }
 
+  /// 把 (ep, page, group) 轉成可讀文字
+  String _positionText(int ep, int page, int? group) {
+    if (comic.chapters != null) {
+      final groupName =
+          group == null ? null : comic.chapters!.groupTitleAt(group);
+      final chapterTitle = comic.chapters!.titleAt(ep, group: group);
+      final epName = chapterTitle?.isNotEmpty == true ? chapterTitle! : "E$ep";
+      return groupName == null
+          ? "$epName P$page"
+          : "$groupName $epName P$page";
+    }
+    return "P$page";
+  }
+
   Widget _buildHistorySummary() {
     final page = history!.page;
     final ep = history!.ep;
     final group = history!.group;
-    String text;
-    if (comic.chapters != null) {
-      final groupName = group == null
-          ? null
-          : comic.chapters!.groupTitleAt(group);
-      final chapterTitle = comic.chapters!.titleAt(ep, group: group);
-      final epName = chapterTitle?.isNotEmpty == true ? chapterTitle! : "E$ep";
-      text = groupName == null
-          ? "${"Last Reading".tl}: $epName P$page"
-          : "${"Last Reading".tl}: $groupName $epName P$page";
-    } else {
-      text = "${"Last Reading".tl}: P$page";
+    final text = "${"Last Reading".tl}: ${_positionText(ep, page, group)}";
+
+    // 上上次閱讀（用戶要求：兩個都顯示）
+    String? prevText;
+    final prev = HistoryManager()
+        .previousPosition(comic.id, ComicType.fromKey(comic.sourceKey));
+    if (prev != null) {
+      final pep = (prev['ep'] as num?)?.toInt();
+      final ppage = (prev['page'] as num?)?.toInt();
+      if (pep != null && ppage != null) {
+        prevText = "上上次: ${_positionText(pep, ppage, (prev['group'] as num?)?.toInt())}";
+      }
     }
 
     return Container(
@@ -1162,11 +1181,26 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
           ),
           const SizedBox(width: 8),
           Flexible(
-            child: Text(
-              text,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (prevText != null)
+                  Text(
+                    prevText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.outline,
+                        ),
+                  ),
+              ],
             ),
           ),
         ],
