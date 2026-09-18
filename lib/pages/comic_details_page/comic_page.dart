@@ -1153,16 +1153,17 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     final group = history!.group;
     final text = "${"Last Reading".tl}: ${_positionText(ep, page, group)}";
 
-    // 上上次閱讀（用戶要求：兩個都顯示）
-    String? prevText;
-    final prev = HistoryManager()
-        .previousPosition(comic.id, ComicType.fromKey(comic.sourceKey));
-    if (prev != null) {
-      final pep = (prev['ep'] as num?)?.toInt();
-      final ppage = (prev['page'] as num?)?.toInt();
-      if (pep != null && ppage != null) {
-        prevText = "上上次: ${_positionText(pep, ppage, (prev['group'] as num?)?.toInt())}";
-      }
+    // 之前的閱讀位置（用戶要求：上上次、上上上次都顯示）
+    final prevTexts = <String>[];
+    final prevs = HistoryManager()
+        .previousPositions(comic.id, ComicType.fromKey(comic.sourceKey));
+    const labels = ['上上次', '上上上次', '上上上上次'];
+    for (var i = 0; i < prevs.length && i < labels.length; i++) {
+      final pep = (prevs[i]['ep'] as num?)?.toInt();
+      final ppage = (prevs[i]['page'] as num?)?.toInt();
+      if (pep == null || ppage == null) continue;
+      prevTexts.add(
+          "${labels[i]}: ${_positionText(pep, ppage, (prevs[i]['group'] as num?)?.toInt())}");
     }
 
     return Container(
@@ -1191,9 +1192,9 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                if (prevText != null)
+                for (final pt in prevTexts)
                   Text(
-                    prevText,
+                    pt,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(

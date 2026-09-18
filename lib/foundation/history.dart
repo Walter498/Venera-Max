@@ -613,12 +613,23 @@ class HistoryManager with ChangeNotifier {
       if (prev.ep == newItem.ep) return;
       final store = appdata.implicitData['prevReadPos'];
       final map = store is Map ? Map<String, dynamic>.from(store) : <String, dynamic>{};
-      map[key] = {
+      // 舊格式（單筆 Map）兼容 → 統一成 List（最近在前，最多 3 筆）
+      final existing = map[key];
+      final list = existing is List
+          ? List<dynamic>.from(existing)
+          : (existing is Map ? [Map<String, dynamic>.from(existing)] : <dynamic>[]);
+      final entry = {
         'ep': prev.ep,
         'page': prev.page,
         'group': prev.group,
         'time': prev.time.toIso8601String(),
       };
+      // 去重：同話同頁不重複記
+      final dup = list.any((e) =>
+          e is Map && e['ep'] == entry['ep'] && e['page'] == entry['page']);
+      if (!dup) list.insert(0, entry);
+      if (list.length > 3) list.removeRange(3, list.length);
+      map[key] = list;
       appdata.implicitData['prevReadPos'] = map;
       appdata.writeImplicitData();
     } catch (_) {
@@ -626,15 +637,23 @@ class HistoryManager with ChangeNotifier {
     }
   }
 
-  /// 取得某部漫畫的「上上次閱讀」位置（沒有則 null）
-  Map<String, dynamic>? previousPosition(String id, ComicType type) {
+  /// 取得某部漫畫的「之前的閱讀位置」列表（最近在前，最多 3 筆）：
+  /// [0] = 上上次、[1] = 上上上次 …
+  List<Map<String, dynamic>> previousPositions(String id, ComicType type) {
     try {
       final store = appdata.implicitData['prevReadPos'];
-      if (store is! Map) return null;
+      if (store is! Map) return const [];
       final v = store['${type.value}:$id'];
-      return v is Map ? Map<String, dynamic>.from(v) : null;
+      if (v is List) {
+        return [
+          for (final e in v)
+            if (e is Map) Map<String, dynamic>.from(e),
+        ];
+      }
+      if (v is Map) return [Map<String, dynamic>.from(v)];
+      return const [];
     } catch (_) {
-      return null;
+      return const [];
     }
   }
 
