@@ -142,6 +142,12 @@ class _ShelfFavTab extends StatefulWidget {
 
 class _ShelfFavTabState extends State<_ShelfFavTab> {
   // 資料夾選擇持久化：離開/退出 App 都保留（用戶要求 2026-09-17）
+  /// 歷史記錄 map：'sourceKey:id' → History（給卡片顯示最後閱讀時間）
+  Map<String, History> get _histMap => {
+        for (final h in HistoryManager().getAll())
+          '${h.sourceKey}:${h.id}': h,
+      };
+
   String? get _folder {
     final v = appdata.settings['shelf_folder'];
     return (v is String && v.isNotEmpty) ? v : null;
@@ -211,9 +217,6 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
   Future<void> _deleteSelected() async {
     final fav = LocalFavoritesManager();
     final items = _comics();
-    final histMap = <String, History>{
-      for (final h in HistoryManager().getAll()) '${h.sourceKey}:${h.id}': h,
-    };
     for (final c in items) {
       if (!_selected.contains('${c.sourceKey}:${c.id}')) continue;
       final type = ComicType.fromKey(c.sourceKey);
@@ -281,7 +284,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                       forceDetailedMode: true,
                       // 最後閱讀時間（用戶要求：收藏卡片也顯示）
                       lastReadTimeBuilder: (c) {
-                        final h = histMap['${c.sourceKey}:${c.id}'];
+                        final h = _histMap['${c.sourceKey}:${c.id}'];
                         if (h == null) return null;
                         final t = h.time;
                         return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')} '
