@@ -70,3 +70,8 @@ app_chapters_raw.json
 
 # Icon generation scratch dir (scripts, source images, build log)
 .icon_work/
+
+# 構建產物不入庫
+result/
+*.ipa
+build/

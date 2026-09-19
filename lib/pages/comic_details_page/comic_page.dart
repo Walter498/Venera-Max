@@ -1173,10 +1173,13 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
     // 之前的閱讀位置：只列【兩筆】—— 加上當前那行，共三行
     // （用戶要求：上次閱讀 / 上上次 / 上上上次；按時間倒序，最近在前）
-    final prevs = HistoryManager()
-        .previousPositions(comic.id, ComicType.fromKey(comic.sourceKey))
-      ..sort((a, b) =>
-          (b['time']?.toString() ?? '').compareTo(a['time']?.toString() ?? ''));
+    // 必須先複製：previousPositions 可能回傳不可變列表，
+    // 直接 ..sort() 會拋 "Cannot modify an unmodifiable list"
+    final prevs = List<Map<String, dynamic>>.from(
+      HistoryManager()
+          .previousPositions(comic.id, ComicType.fromKey(comic.sourceKey)),
+    )..sort((a, b) =>
+        (b['time']?.toString() ?? '').compareTo(a['time']?.toString() ?? ''));
     final prevRows = <Widget>[];
     const labels = ['上上次', '上上上次'];
     for (var i = 0; i < prevs.length && i < labels.length; i++) {

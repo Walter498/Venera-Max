@@ -679,9 +679,9 @@ class HistoryManager with ChangeNotifier {
         ];
       }
       if (v is Map) return [Map<String, dynamic>.from(v)];
-      return const [];
+      return <Map<String, dynamic>>[];
     } catch (_) {
-      return const [];
+      return <Map<String, dynamic>>[];
     }
   }
 

@@ -34,6 +34,8 @@ jobs:
       - name: Rename with version
         run: |
           APP_VERSION=$(grep "version:" pubspec.yaml | cut -d':' -f2 | tr -d ' ')
+          # 清空 result，避免把舊版 ipa 一起發佈（每次只出當前版本）
+          rm -rf result
           mkdir -p result
           mv build/ios/iphoneos/VeneraX-ios.ipa result/VeneraX-ios-$APP_VERSION.ipa
       - name: Publish build log on failure
@@ -48,13 +50,16 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: VeneraX iOS build ${{ github.run_number }}
-          files: result/*.ipa
+          # 只發佈本次構建的 ipa（result 已在打包前清空）
+          files: result/VeneraX-ios-*.ipa
       - name: Commit build log
         if: always()
         run: |
           git config user.email 'actions@github.com'
           git config user.name 'github-actions'
-          git add -A
+          # 只提交構建日誌，絕不提交 ipa/中間產物
+          git add ios_build.log
+          git reset -- result build 2>/dev/null || true
           git commit -m 'ios build log [skip ci]' || echo 'no changes'
           git pull --rebase origin main || true
           git push || true
