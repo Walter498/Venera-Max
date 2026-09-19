@@ -3176,6 +3176,24 @@ class SimpleComicTile extends StatelessWidget {
           ),
         ],
       );
+
+    } else if (appdata.settings['showCollectionStatusOnTile'] == true) {
+      // 「已在本合集」紫角標（簡潔卡）
+      cover = Stack(
+        fit: StackFit.expand,
+        children: [
+          cover,
+          Positioned(
+            right: 3,
+            top: 3,
+            child: CollectionMemberMarker(
+              sourceKey: comic.sourceKey,
+              comicId: comic.id,
+              size: 12,
+            ),
+          ),
+        ],
+      );
     }
 
     Widget child = Container(
