@@ -9,6 +9,7 @@ import 'package:venera/foundation/js_engine.dart';
 import 'package:venera/foundation/consts.dart';
 import 'package:venera/utils/translations.dart';
 import 'package:venera/utils/image.dart';
+import 'package:venera/foundation/image_provider/avif_fallback.dart';
 
 import 'app_dio.dart';
 
@@ -168,6 +169,8 @@ abstract class ImageDownloader {
     String eid, {
     void Function(Duration? retryAfter)? onRateLimited,
   }) {
+    // AVIF 曾解碼失敗 → 自動改用 WebP
+    imageKey = AvifFallbackRegistry.instance.applyFallback(imageKey);
     final cacheKey = imageCacheKey(imageKey, sourceKey, cid, eid);
     if (_loadingImages.containsKey(cacheKey)) {
       return _loadingImages[cacheKey]!.stream;
@@ -201,6 +204,8 @@ abstract class ImageDownloader {
     bool forDownload = false,
     void Function(Duration? retryAfter)? onRateLimited,
   ]) async* {
+    // AVIF 曾解碼失敗 → 自動改用 WebP
+    imageKey = AvifFallbackRegistry.instance.applyFallback(imageKey);
     final cacheKey = imageCacheKey(imageKey, sourceKey, cid, eid);
     final cache = await CacheManager().findCache(cacheKey);
 

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/log.dart';
+import 'avif_fallback.dart';
 
 abstract class BaseImageProvider<T extends BaseImageProvider<T>>
     extends ImageProvider<T> {
@@ -125,6 +126,14 @@ abstract class BaseImageProvider<T extends BaseImageProvider<T>>
         );
       } catch (e) {
         await evictCorruptedCache();
+        // AVIF 解碼失敗 → 記住這個 URL，之後自動改用 WebP
+        //（Flutter 的 AVIF 解碼器不支持部分編碼：10bit/HDR/特殊色彩空間）
+        final errorMsg = e.toString();
+        if ((errorMsg.contains('Could not decompress') ||
+                errorMsg.contains('decompressImage')) &&
+            diskCacheKey.contains('.avif')) {
+          AvifFallbackRegistry.instance.markFailed(diskCacheKey);
+        }
         if (data.length < 2 * 1024) {
           // data is too short, it's likely that the data is text, not image
           try {
