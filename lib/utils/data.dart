@@ -593,6 +593,9 @@ Future<void> _importAppDataLocked(
       var content = await appdataFile.readAsString();
       var data = jsonDecode(content);
       appdata.syncData(data);
+      // Refresh collection-backed pages immediately after a WebDAV restore;
+      // collection settings, including detail display modes, live in appdata.
+      ComicCollectionStore.notifyChanged();
       if (data is Map<String, dynamic>) {
         await _restoreWebdavConfigIfAbsent(data);
       }

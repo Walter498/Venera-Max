@@ -464,6 +464,17 @@ class HistoryManager with ChangeNotifier {
         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       """;
 
+  /// 與 [_insertHistorySql] 相同的寫入，但把該行現有的 `hidden` 值帶過去，
+  /// 不讓 `insert or replace` 把它重置成 NULL。
+  ///
+  /// 子查詢放在 VALUES 行內：SQLite 在 REPLACE 刪除衝突行【之前】就求值，
+  /// 讀到的是原本的標記。故意用單條語句，避免和 [_addHistoryAsync] 的
+  /// isolate 寫入產生競態。
+  static const _updateHistoryKeepVisibilitySql = """
+        insert or replace into history (id, title, subtitle, cover, time, type, ep, page, readEpisode, max_page, chapter_group, hidden)
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (select hidden from history where id == ? and type == ?));
+      """;
+
   static String _cacheKey(String id, ComicType type) => "${type.value}:$id";
 
   bool _hasCompositePrimaryKey(ResultSet columns) {
@@ -591,6 +602,23 @@ class HistoryManager with ChangeNotifier {
     await _addHistoryAsync(_dbPath, newItem);
     _mirrorToDomain(newItem);
     _haveAsyncTask = false;
+    _cacheAddedHistory(newItem);
+    notifyListeners();
+  }
+
+  /// 保存 [newItem] 但【不改變】它是否顯示在歷史列表裡。
+  ///
+  /// 用於 App 自己發起的維護性寫入（補封面、本機重掃後補資料）：
+  /// [addHistory] 的語義是「用戶讀了」所以會取消隱藏，那是對的；
+  /// 但背景補完封面如果落在用戶刪除記錄之後，就會把刪掉的記錄拉回來（#270）。
+  void updateHistoryKeepingVisibility(History newItem) {
+    if (!isInitialized) return;
+    _db.execute(_updateHistoryKeepVisibilitySql, [
+      ..._historySqlArgs(newItem),
+      newItem.id,
+      newItem.type.value,
+    ]);
+    _mirrorToDomain(newItem);
     _cacheAddedHistory(newItem);
     notifyListeners();
   }
@@ -1027,7 +1055,9 @@ class HistoryManager with ChangeNotifier {
         });
         updatedHistory.group = history.group;
 
-        addHistory(updatedHistory);
+        // 刷新只改顯示欄位，不能把用戶已刪掉的記錄拉回列表
+        //（refresh-all 任務用的是刪除前拍的快照）
+        updateHistoryKeepingVisibility(updatedHistory);
         return const _HistoryRefreshResult(true);
       } catch (e, s) {
         lastError = e.toString();

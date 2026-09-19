@@ -83,6 +83,33 @@ Future<void> applyReaderSystemUiMode(bool showSystemStatusBar) {
   );
 }
 
+/// 閱讀器專用的方向鎖，由底欄切換鈕循環：
+/// null（跟隨系統）→ 直向 → 橫向 → null
+@visibleForTesting
+bool? nextReadingOrientation(bool? current) => switch (current) {
+  null => false,
+  false => true,
+  _ => null,
+};
+
+/// 方向鎖的偏好方向。未鎖定時回傳空列表（不是 DeviceOrientation.values）：
+/// 後者會強制四方向全開，覆蓋系統自身的旋轉鎖與 manifest 設定
+/// （手機 manifest 不含上下顛倒的直立）。空列表才是「交還控制權」，
+/// 離開閱讀器時恢復其他頁面原本的行為。
+@visibleForTesting
+List<DeviceOrientation> resolveReadingOrientations(bool? rotation) =>
+    switch (rotation) {
+      false => const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ],
+      true => const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ],
+      _ => const <DeviceOrientation>[],
+    };
+
 extension _ReaderContext on BuildContext {
   _ReaderState get reader => findAncestorStateOfType<_ReaderState>()!;
 

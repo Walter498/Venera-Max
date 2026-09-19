@@ -568,7 +568,9 @@ class LocalManager with ChangeNotifier {
       const ComicStateRepository().mirrorLocalComic(comic);
     } catch (_) {}
     if (existingHistory != null) {
-      HistoryManager().addHistory(existingHistory);
+      // A rescan refreshes metadata only; it must not pull a record the user
+      // deleted back into the history list (issue #270).
+      HistoryManager().updateHistoryKeepingVisibility(existingHistory);
     }
 
     final favorites = LocalFavoritesManager();

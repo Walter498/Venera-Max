@@ -19,6 +19,15 @@ enum CollectionDisplayMode {
       name == tabs.name ? tabs : flat;
 }
 
+/// How the members of a collection are presented on its detail page.
+enum CollectionDetailDisplayMode {
+  chapters,
+  covers;
+
+  static CollectionDetailDisplayMode fromName(String? name) =>
+      name == covers.name ? covers : chapters;
+}
+
 /// One member comic of a collection: a reference into some other source, plus
 /// the last known display fields.
 ///
@@ -211,6 +220,24 @@ abstract class ComicCollectionStore {
 
   static const settingsKey = 'comicCollections';
 
+  /// Global detail presentation shared by every collection. It is stored in
+  /// settings (rather than a collection payload) so one switch updates all
+  /// collection details and travels through WebDAV as one preference.
+  static const detailDisplayModeSettingsKey =
+      'comicCollectionDetailDisplayMode';
+
+  static CollectionDetailDisplayMode get detailDisplayMode =>
+      CollectionDetailDisplayMode.fromName(
+        appdata.settings[detailDisplayModeSettingsKey]?.toString(),
+      );
+
+  static void setDetailDisplayMode(CollectionDetailDisplayMode mode) {
+    if (detailDisplayMode == mode) return;
+    appdata.settings[detailDisplayModeSettingsKey] = mode.name;
+    appdata.saveData();
+    notifyChanged();
+  }
+
   static const sourceKeyPrefix = 'comic_collection_';
 
   /// Directory (under the app's data path) holding covers picked from a file.
@@ -285,6 +312,37 @@ abstract class ComicCollectionStore {
   /// Collections that already hold the given comic.
   static List<ComicCollection> containing(String sourceKey, String comicId) =>
       all().where((c) => c.contains(sourceKey, comicId)).toList();
+
+  /// Whether the comic sits in at least one collection.
+  static bool isMember(String sourceKey, String comicId) =>
+      _memberRefKeys().contains('$sourceKey/$comicId');
+
+  static Object? _memberKeysSource;
+
+  static Set<String>? _memberKeys;
+
+  /// Ref keys of every comic filed into any collection.
+  ///
+  /// Memoised because comic tiles ask once per build and parsing the whole
+  /// payload per tile is visible while scrolling a grid. Keyed on the identity
+  /// of the stored list rather than invalidated from [_write]: a sync download
+  /// or backup restore swaps the settings map without passing through here, and
+  /// an identity check catches that as well. Nothing mutates the stored list in
+  /// place — [_write] always assigns a freshly built one.
+  static Set<String> _memberRefKeys() {
+    final raw = appdata.settings[settingsKey];
+    final cached = _memberKeys;
+    if (cached != null && identical(raw, _memberKeysSource)) return cached;
+    final keys = <String>{};
+    for (final c in all()) {
+      for (final m in c.members) {
+        keys.add(m.refKey);
+      }
+    }
+    _memberKeysSource = raw;
+    _memberKeys = keys;
+    return keys;
+  }
 
   /// Creates a collection. Members that are themselves collections are dropped.
   static ComicCollection create({

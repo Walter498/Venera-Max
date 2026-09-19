@@ -45,6 +45,7 @@ import 'package:venera/utils/translations.dart';
 part 'reader.dart';
 part 'translation_models_settings.dart';
 part 'llm_providers_settings.dart';
+part 'translation_prompt_settings.dart';
 part 'explore_settings.dart';
 part 'setting_components.dart';
 part 'launcher_icon_settings.dart';

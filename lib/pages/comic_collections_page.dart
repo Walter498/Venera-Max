@@ -7,7 +7,9 @@ import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/log.dart';
+import 'package:venera/foundation/read_later.dart';
 import 'package:venera/pages/comic_collection_edit_page.dart';
+import 'package:venera/pages/favorites/favorites_page.dart';
 import 'package:venera/pages/guide_page.dart';
 import 'package:venera/utils/io.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
@@ -26,6 +28,7 @@ void deleteComicCollection(ComicCollection collection) {
     LocalFavoritesManager().deleteComicWithId(folder, collection.id, type);
   }
   HistoryManager().remove(collection.id, type);
+  ReadLaterManager().remove(collection.id, type);
   // A cover picked from a file lives in our own data directory, so deleting the
   // collection has to take it along or it stays there for good.
   try {
@@ -59,8 +62,12 @@ class ComicCollectionsPage extends StatefulWidget {
   State<ComicCollectionsPage> createState() => _ComicCollectionsPageState();
 }
 
-class _ComicCollectionsPageState extends State<ComicCollectionsPage> {
+class _ComicCollectionsPageState extends State<ComicCollectionsPage>
+    with SelectionMixin<ComicCollectionsPage, Comic> {
   List<ComicCollection> collections = const [];
+  final searchTextController = TextEditingController();
+  var keyword = '';
+  var sortMode = 'manual';
 
   @override
   void initState() {
@@ -74,6 +81,7 @@ class _ComicCollectionsPageState extends State<ComicCollectionsPage> {
   @override
   void dispose() {
     ComicCollectionStore.changes.removeListener(_reload);
+    searchTextController.dispose();
     super.dispose();
   }
 
@@ -81,6 +89,20 @@ class _ComicCollectionsPageState extends State<ComicCollectionsPage> {
     if (!mounted) return;
     setState(() {
       collections = ComicCollectionStore.all();
+      _pruneSelection();
+      if (collections.isEmpty) multiSelectMode = false;
+    });
+  }
+
+  void _pruneSelection() {
+    final visible = selectableItems.toSet();
+    selectedItems.removeWhere((comic, _) => !visible.contains(comic));
+  }
+
+  void _enterSelectMode(Comic comic) {
+    setState(() {
+      multiSelectMode = true;
+      selectedItems = {comic: true};
     });
   }
 
@@ -132,10 +154,9 @@ class _ComicCollectionsPageState extends State<ComicCollectionsPage> {
     showConfirmDialog(
       context: context,
       title: "Delete".tl,
-      content:
-          "Delete collection '@n'? The comics in it are kept.".tlParams({
-            "n": collection.displayName,
-          }),
+      content: "Delete collection '@n'? The comics in it are kept.".tlParams({
+        "n": collection.displayName,
+      }),
       btnColor: context.colorScheme.error,
       onConfirm: () {
         deleteComicCollection(collection);
@@ -144,127 +165,343 @@ class _ComicCollectionsPageState extends State<ComicCollectionsPage> {
     );
   }
 
+  List<ComicCollection> get filteredCollections {
+    final query = keyword.trim().toLowerCase();
+    final result = collections.where((collection) {
+      if (query.isEmpty) return true;
+      return collection.displayName.toLowerCase().contains(query) ||
+          collection.members.any(
+            (member) => member.label.toLowerCase().contains(query),
+          );
+    }).toList();
+    switch (sortMode) {
+      case 'name':
+        result.sort(
+          (a, b) => a.displayName.toLowerCase().compareTo(
+            b.displayName.toLowerCase(),
+          ),
+        );
+        break;
+      case 'count':
+        result.sort((a, b) => b.members.length.compareTo(a.members.length));
+        break;
+      case 'created':
+        result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
+    return result;
+  }
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: Appbar(
-        title: Text("Collections".tl),
-        actions: [
-          Tooltip(
-            message: "Guide".tl,
-            child: IconButton(
-              icon: const Icon(Icons.help_outline),
-              onPressed: () =>
-                  GuidePage.open(context, anchor: GuideAnchor.collections),
-            ),
-          ),
-          Tooltip(
-            message: "New collection".tl,
-            child: IconButton(icon: const Icon(Icons.add), onPressed: _create),
-          ),
-        ],
-      ),
-      body: collections.isEmpty
-          ? _buildEmptyState()
-          : ReorderableListView.builder(
-              padding: EdgeInsets.fromLTRB(
-                12,
-                8,
-                12,
-                context.padding.bottom + 8,
-              ),
-              buildDefaultDragHandles: false,
-              onReorderItem: (oldIndex, newIndex) {
-                ComicCollectionStore.reorder(oldIndex, newIndex);
-                _applyChange();
-              },
-              itemCount: collections.length,
-              itemBuilder: (context, index) =>
-                  _buildCard(collections[index], index),
-            ),
+  List<Comic> get selectableItems => filteredCollections
+      .map(_asComic)
+      .where((comic) => isBlocked(comic) == null)
+      .toList();
+
+  List<ComicCollection> get selectedCollections => filteredCollections
+      .where((collection) => selectedItems.containsKey(_asComic(collection)))
+      .toList();
+
+  void _deleteSelected() {
+    final selected = selectedCollections;
+    if (selected.isEmpty) return;
+    showConfirmDialog(
+      context: context,
+      title: 'Delete'.tl,
+      content: 'Delete @c collections? The comics in them are kept.'.tlParams({
+        'c': selected.length,
+      }),
+      btnColor: context.colorScheme.error,
+      onConfirm: () {
+        for (final collection in selected) {
+          deleteComicCollection(collection);
+        }
+        exitSelectMode();
+        _applyChange();
+        if (mounted) {
+          showToast(
+            context: context,
+            message: 'Deleted @c items'.tlParams({'c': selected.length}),
+          );
+        }
+      },
     );
   }
 
-  Widget _buildCard(ComicCollection collection, int index) {
-    final modeText = collection.displayMode == CollectionDisplayMode.tabs
-        ? "Chapter tabs".tl
-        : "Merged chapters".tl;
-    return Container(
-      key: ValueKey(collection.id),
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: context.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: context.colorScheme.outlineVariant.toOpacity(0.5),
-          width: 0.6,
+  Future<void> _addSelectedToReadLater() async {
+    final comics = selectedCollections.map(_asComic).toList();
+    if (comics.isEmpty) return;
+    try {
+      await ReadLaterManager().addComics(comics);
+      if (!mounted) return;
+      exitSelectMode();
+      context.showMessage(message: 'Added to read later'.tl);
+    } catch (error, stackTrace) {
+      Log.error('ComicCollection', error, stackTrace);
+      if (mounted) context.showMessage(message: 'Error'.tl);
+    }
+  }
+
+  Comic _asComic(ComicCollection collection) => Comic(
+    collection.displayName,
+    collection.displayCover,
+    collection.id,
+    null,
+    const ['Collection'],
+    '@n comics'.tlParams({'n': collection.members.length}),
+    collection.sourceKey,
+    null,
+    null,
+  );
+
+  String _sortLabel(String value) {
+    switch (value) {
+      case 'name':
+        return 'Name'.tl;
+      case 'count':
+        return 'Comic count'.tl;
+      case 'created':
+        return 'Recently created'.tl;
+      default:
+        return 'Custom order'.tl;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleComics = selectableItems;
+    void handleBatchAction(String value) {
+      switch (value) {
+        case 'selectAll':
+          selectAll();
+          break;
+        case 'deselect':
+          deSelect();
+          break;
+        case 'invert':
+          invertSelection();
+          break;
+        case 'delete':
+          _deleteSelected();
+          break;
+        case 'favorite':
+          final comics = selectedCollections.map(_asComic).toList();
+          if (comics.isNotEmpty) addFavorite(comics);
+          break;
+        case 'readLater':
+          _addSelectedToReadLater();
+          break;
+        case 'edit':
+          final selected = selectedCollections;
+          if (selected.length != 1) return;
+          exitSelectMode();
+          _edit(selected.single);
+          break;
+      }
+    }
+
+    final batchMenu = PopupMenuButton<String>(
+      tooltip: 'Batch manage'.tl,
+      icon: const Icon(Icons.more_vert),
+      onSelected: handleBatchAction,
+      itemBuilder: (context) => [
+        PopupMenuItem(value: 'selectAll', child: Text('Select All'.tl)),
+        PopupMenuItem(value: 'deselect', child: Text('Deselect'.tl)),
+        PopupMenuItem(value: 'invert', child: Text('Invert Selection'.tl)),
+        PopupMenuItem(
+          value: 'delete',
+          enabled: selectedItems.isNotEmpty,
+          child: Text('Delete'.tl),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _open(collection),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 10, 4, 10),
-          child: Row(
-            children: [
-              ReorderableDragStartListener(
-                index: index,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(
-                    Icons.drag_indicator,
-                    color: context.colorScheme.outline,
-                    size: 22,
-                  ),
-                ),
+        PopupMenuItem(
+          value: 'favorite',
+          enabled: selectedItems.isNotEmpty,
+          child: Text('Add to favorites'.tl),
+        ),
+        PopupMenuItem(
+          value: 'readLater',
+          enabled: selectedItems.isNotEmpty,
+          child: Text('Read later'.tl),
+        ),
+        if (selectedItems.length == 1)
+          PopupMenuItem(value: 'edit', child: Text('Edit'.tl)),
+      ],
+    );
+    final selectActions = context.width < 520
+        ? [batchMenu]
+        : [
+            IconButton(
+              icon: const Icon(Icons.select_all),
+              tooltip: 'Select All'.tl,
+              onPressed: selectAll,
+            ),
+            IconButton(
+              icon: const Icon(Icons.flip),
+              tooltip: 'Invert Selection'.tl,
+              onPressed: invertSelection,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Delete'.tl,
+              onPressed: selectedItems.isEmpty ? null : _deleteSelected,
+            ),
+            batchMenu,
+          ];
+    return PopScope(
+      canPop: !multiSelectMode,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && multiSelectMode) exitSelectMode();
+      },
+      child: Scaffold(
+        appBar: Appbar(
+          leading: Tooltip(
+            message: multiSelectMode ? 'Cancel'.tl : 'Back'.tl,
+            child: IconButton(
+              icon: multiSelectMode
+                  ? const Icon(Icons.close)
+                  : const Icon(Icons.arrow_back),
+              onPressed: multiSelectMode ? exitSelectMode : () => context.pop(),
+            ),
+          ),
+          title: multiSelectMode
+              ? Text(selectedItems.length.toString())
+              : Text('Collections'.tl),
+          actions: [
+            if (multiSelectMode)
+              ...selectActions
+            else ...[
+              IconButton(
+                tooltip: 'Multi-Select'.tl,
+                icon: const Icon(Icons.checklist),
+                onPressed: visibleComics.isEmpty
+                    ? null
+                    : () => setState(() => multiSelectMode = true),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      collection.displayName,
-                      style: ts.s16,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${"@n comics".tlParams({'n': collection.members.length})}'
-                      '  ·  $modeText',
-                      style: ts.s12.copyWith(
-                        color: context.colorScheme.outline,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              MenuButton(
-                entries: [
-                  MenuEntry(
-                    icon: Icons.chrome_reader_mode_outlined,
-                    text: "Details".tl,
-                    onClick: () => _open(collection),
-                  ),
-                  MenuEntry(
-                    icon: Icons.edit,
-                    text: "Edit".tl,
-                    onClick: () => _edit(collection),
-                  ),
-                  MenuEntry(
-                    icon: Icons.delete_outline,
-                    text: "Delete".tl,
-                    color: context.colorScheme.error,
-                    onClick: () => _delete(collection),
-                  ),
+              PopupMenuButton<String>(
+                tooltip: 'Sort'.tl,
+                icon: const Icon(Icons.sort),
+                initialValue: sortMode,
+                onSelected: (value) => setState(() => sortMode = value),
+                itemBuilder: (context) => [
+                  for (final value in ['manual', 'name', 'count', 'created'])
+                    PopupMenuItem(value: value, child: Text(_sortLabel(value))),
                 ],
               ),
+              Tooltip(
+                message: 'Guide'.tl,
+                child: IconButton(
+                  icon: const Icon(Icons.help_outline),
+                  onPressed: () =>
+                      GuidePage.open(context, anchor: GuideAnchor.collections),
+                ),
+              ),
+              Tooltip(
+                message: 'New collection'.tl,
+                child: IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: _create,
+                ),
+              ),
             ],
-          ),
+          ],
+        ),
+        body: SmoothCustomScrollView(
+          scrollbarTopPadding: context.padding.top + 56,
+          slivers: [
+            if (collections.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: AppSearchField(
+                    controller: searchTextController,
+                    onChanged: (value) => setState(() {
+                      keyword = value;
+                      _pruneSelection();
+                    }),
+                  ),
+                ),
+              ),
+            if (collections.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _buildEmptyState(),
+              )
+            else if (visibleComics.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Text('No matching collections'.tl, style: ts.s16),
+                ),
+              )
+            else
+              SliverGridComics(
+                comics: visibleComics,
+                selections: selectedItems,
+                enableContextMenu: !multiSelectMode,
+                onLongPressed: multiSelectMode
+                    ? (comic, heroID) => toggleSelect(comic)
+                    : null,
+                onTap: (comic, heroID) {
+                  if (multiSelectMode) {
+                    toggleSelect(comic);
+                    return;
+                  }
+                  final collection = ComicCollectionStore.find(comic.id);
+                  if (collection != null) _open(collection);
+                },
+                menuBuilder: (comic) {
+                  final collection = ComicCollectionStore.find(comic.id);
+                  if (collection == null) return const [];
+                  final sourceIndex = collections.indexWhere(
+                    (item) => item.id == collection.id,
+                  );
+                  return [
+                    if (!multiSelectMode)
+                      MenuEntry(
+                        icon: Icons.checklist,
+                        text: 'Multi-Select'.tl,
+                        onClick: () => _enterSelectMode(comic),
+                      ),
+                    MenuEntry(
+                      icon: Icons.edit,
+                      text: 'Edit'.tl,
+                      onClick: () => _edit(collection),
+                    ),
+                    MenuEntry(
+                      icon: Icons.delete_outline,
+                      text: 'Delete'.tl,
+                      color: context.colorScheme.error,
+                      onClick: () => _delete(collection),
+                    ),
+                    if (sourceIndex > 0)
+                      MenuEntry(
+                        icon: Icons.arrow_upward,
+                        text: 'Move up'.tl,
+                        onClick: () {
+                          ComicCollectionStore.reorder(
+                            sourceIndex,
+                            sourceIndex - 1,
+                          );
+                          _applyChange();
+                        },
+                      ),
+                    if (sourceIndex >= 0 &&
+                        sourceIndex < collections.length - 1)
+                      MenuEntry(
+                        icon: Icons.arrow_downward,
+                        text: 'Move down'.tl,
+                        onClick: () {
+                          ComicCollectionStore.reorder(
+                            sourceIndex,
+                            sourceIndex + 1,
+                          );
+                          _applyChange();
+                        },
+                      ),
+                  ];
+                },
+              ),
+          ],
         ),
       ),
     );
@@ -286,7 +523,8 @@ class _ComicCollectionsPageState extends State<ComicCollectionsPage> {
             Text("No collections yet".tl, style: ts.s16),
             const SizedBox(height: 8),
             Text(
-              "Group the volumes of one story into a single comic. Long-press a comic in any list to add it.".tl,
+              "Group the volumes of one story into a single comic. Long-press a comic in any list to add it."
+                  .tl,
               style: ts.s14.copyWith(color: context.colorScheme.outline),
               textAlign: TextAlign.center,
             ),

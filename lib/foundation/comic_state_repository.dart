@@ -296,6 +296,18 @@ class ComicStateRepository {
   String? quickStatusFor(Comic comic) =>
       _ComicMetadata.statusFromTags(comic.tags);
 
+  /// Cheap, tags-only page count, same contract as [quickStatusFor]: reads only
+  /// what the list item already carries, so a grid of tiles doesn't pay
+  /// [displayInfoFor]'s per-comic database lookups. Prefers [Comic.maxPage] and
+  /// falls back to a `pages:` style tag.
+  String? quickPageCountFor(Comic comic) {
+    final maxPage = comic.maxPage;
+    if (maxPage != null && maxPage > 0) {
+      return maxPage.toString();
+    }
+    return _ComicMetadata.pageCountFromTags(comic.tags);
+  }
+
   List<DomainComicSourceLink> relatedSourcesFor(Comic comic) {
     if (!_domainReady) {
       return const <DomainComicSourceLink>[];
@@ -869,6 +881,16 @@ class _ComicMetadata {
     }
     return _first(namespaceValues(tags, _statusNamespaces)) ??
         _first(tags.map(clean).whereType<String>().where(_looksLikeStatus));
+  }
+
+  /// Page count a source reported as a `pages:` style tag rather than through
+  /// [Comic.maxPage]. Kept as the source's own string: it may carry a suffix
+  /// the app has no business reformatting.
+  static String? pageCountFromTags(List<String>? tags) {
+    if (tags == null) {
+      return null;
+    }
+    return _first(namespaceValues(tags, _pagesNamespaces));
   }
 
   static List<String> namespaceValues(

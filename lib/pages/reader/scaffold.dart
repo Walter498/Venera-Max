@@ -121,9 +121,6 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         sliderFocus.nextFocus();
       }
     });
-    if (rotation != null) {
-      SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-    }
     super.initState();
     // Refresh the translation status badge as pages start/finish/fail; the
     // top bar lives in an OverlayEntry that a parent setState won't rebuild.
@@ -140,6 +137,10 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     ImageTranslationService.instance.removeListener(
       _onTranslationStatusChanged,
     );
+    // 方向鎖只屬於閱讀器：離開時交還系統預設，其他頁面不受影響
+    if (rotation != null) {
+      SystemChrome.setPreferredOrientations(resolveReadingOrientations(null));
+    }
     sliderFocus.dispose();
     super.dispose();
   }
@@ -808,37 +809,21 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           label: "全屏",
           onTap: () => context.reader.fullscreen(),
         ),
-      if (App.isAndroid)
+      if (App.isMobile)
         _ReaderBottomItem(
           icon: rotation == null
               ? Icons.screen_rotation
               : rotation == false
               ? Icons.screen_lock_portrait
               : Icons.screen_lock_landscape,
-          label: "旋转",
+          label: rotation == null ? "跟隨系統" : (rotation == false ? "直向" : "橫向"),
           onTap: () {
-            if (rotation == null) {
-              setState(() {
-                rotation = false;
-              });
-              SystemChrome.setPreferredOrientations([
-                DeviceOrientation.portraitUp,
-                DeviceOrientation.portraitDown,
-              ]);
-            } else if (rotation == false) {
-              setState(() {
-                rotation = true;
-              });
-              SystemChrome.setPreferredOrientations([
-                DeviceOrientation.landscapeLeft,
-                DeviceOrientation.landscapeRight,
-              ]);
-            } else {
-              setState(() {
-                rotation = null;
-              });
-              SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-            }
+            setState(() {
+              rotation = nextReadingOrientation(rotation);
+            });
+            SystemChrome.setPreferredOrientations(
+              resolveReadingOrientations(rotation),
+            );
           },
         ),
       _ReaderBottomItem(

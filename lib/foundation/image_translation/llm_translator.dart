@@ -211,6 +211,68 @@ abstract class LlmProviderStore {
   }
 }
 
+/// The system message sent with every translation request.
+///
+/// The built-in text asks for natural dialogue, glossary reuse and a report of
+/// new proper nouns — input tokens a small self-hosted model may not afford, so
+/// users can substitute a shorter one and accept the weaker result.
+///
+/// Only the user's own text is stored; empty means "use [builtIn]", so later
+/// edits to the built-in text still reach everyone who never customized theirs.
+abstract class LlmPromptStore {
+  static const settingKey = 'imageTranslationPrompt';
+
+  /// `$target` is substituted with the target language's own name.
+  static const builtIn =
+      '你是资深的二次元漫画本地化译者，热爱 ACGN 文化。将用户提供的 JSON 对象中 lines '
+      '数组里每个元素的 text 字段翻译成\$target。要求：像真人说话一样自然口语化，'
+      '贴合二次元漫画的语气和氛围，避免生硬的机翻腔；'
+      '在符合角色人设和场景的前提下，可以适度使用当下流行的二次元/网络用语，'
+      '但不要硬凑或滥用，宁可平实也不要出戏；'
+      '语气词、拟声词按含义和情绪意译；OCR 造成的少量错字请按上下文推断原意。\n'
+      '同一部漫画跨页阅读，人名、地名、招式名等专有名词的译法必须前后一致：'
+      'glossary 字段给出的是已确定的译法（键为原文，值为译文），出现时必须沿用。\n'
+      '同时，请把本次新出现（glossary 中没有）的人名、地名、招式/组织名等专有名词，'
+      '连同你采用的译法，收集到 names 字段返回，供后续页面保持一致。'
+      'names 只收录简短的专有名词（通常不超过 8 个字），'
+      '不要收录整句对白、拟声词、普通词组、数字或网址。\n'
+      '只输出一个 JSON 对象，格式为 '
+      '{"lines":[{"id":0,"text":"译文"}],"names":{"原文":"译文"}}，'
+      'lines 中每个 id 恰好出现一次，不要输出任何其他内容。';
+
+  /// The user's text, or '' when the built-in one is in use.
+  static String get custom =>
+      (appdata.settings[settingKey] as String? ?? '').trim();
+
+  static bool get isCustom => custom.isNotEmpty;
+
+  /// The template actually sent, with `$target` still unsubstituted.
+  static String get template => isCustom ? custom : builtIn;
+
+  /// The system message for [targetName], with `$target` substituted.
+  static String resolve(String targetName) =>
+      template.replaceAll(r'$target', targetName);
+
+  /// What [save] would store for [value]: '' when it is blank or identical to
+  /// the built-in text, so neither case pins the device to this release's
+  /// wording. Split out from [save] to keep the decision free of file IO.
+  static String normalize(String value) {
+    var text = value.trim();
+    return text == builtIn.trim() ? '' : text;
+  }
+
+  /// Stores [value], or clears back to the built-in text when it is blank.
+  static void save(String value) {
+    appdata.settings[settingKey] = normalize(value);
+    appdata.saveData();
+  }
+
+  /// Whether [value] still tells the model which language to translate into.
+  /// Without the placeholder the request carries no target at all, so the model
+  /// guesses — worth warning about, but the user's text is still honored.
+  static bool hasTargetPlaceholder(String value) => value.contains(r'$target');
+}
+
 /// Translates recognized bubble texts through a user-configured
 /// OpenAI-compatible chat endpoint.
 ///
@@ -246,6 +308,13 @@ abstract class LlmTranslator {
   /// Wall-clock ceiling for one [translateBatch] call including all its retries.
   /// Bounds the total time a single call can occupy a concurrency slot.
   static const totalRetryBudget = Duration(minutes: 6);
+
+  /// Attempts allowed when the endpoint answered but its reply could not be
+  /// used (no JSON of the requested shape, or an empty message). Much smaller
+  /// than the transport retry count on purpose: every retry re-sends the whole
+  /// prompt and the page's lines at full token cost, and a model that ignored
+  /// the output format once rarely honors it on the next try.
+  static const maxContentAttempts = 2;
 
   /// How long a caller may wait for a free concurrency slot before giving up.
   /// Deliberately much larger than [totalRetryBudget] so a normal queue never
@@ -411,22 +480,7 @@ abstract class LlmTranslator {
       return _translateBatchPublic(texts, targetLang);
     }
     var target = _targetName(targetLang);
-    var systemPrompt =
-        '你是资深的二次元漫画本地化译者，热爱 ACGN 文化。将用户提供的 JSON 对象中 lines '
-        '数组里每个元素的 text 字段翻译成$target。要求：像真人说话一样自然口语化，'
-        '贴合二次元漫画的语气和氛围，避免生硬的机翻腔；'
-        '在符合角色人设和场景的前提下，可以适度使用当下流行的二次元/网络用语，'
-        '但不要硬凑或滥用，宁可平实也不要出戏；'
-        '语气词、拟声词按含义和情绪意译；OCR 造成的少量错字请按上下文推断原意。\n'
-        '同一部漫画跨页阅读，人名、地名、招式名等专有名词的译法必须前后一致：'
-        'glossary 字段给出的是已确定的译法（键为原文，值为译文），出现时必须沿用。\n'
-        '同时，请把本次新出现（glossary 中没有）的人名、地名、招式/组织名等专有名词，'
-        '连同你采用的译法，收集到 names 字段返回，供后续页面保持一致。'
-        'names 只收录简短的专有名词（通常不超过 8 个字），'
-        '不要收录整句对白、拟声词、普通词组、数字或网址。\n'
-        '只输出一个 JSON 对象，格式为 '
-        '{"lines":[{"id":0,"text":"译文"}],"names":{"原文":"译文"}}，'
-        'lines 中每个 id 恰好出现一次，不要输出任何其他内容。';
+    var systemPrompt = LlmPromptStore.resolve(target);
     var payload = jsonEncode({
       if (glossary.isNotEmpty) 'glossary': glossary,
       'lines': [
@@ -467,9 +521,14 @@ abstract class LlmTranslator {
       // wins, and the page is reported failed so a later retry pass can redo it.
       var giveUpAt = DateTime.now().add(totalRetryBudget);
       Object? lastError;
+      // Counted separately from [attempt]: a 200 whose body is unusable is
+      // charged for at full token price, so it gets [maxContentAttempts], not
+      // the transport allowance.
+      var contentAttempts = 0;
       for (var attempt = 0; attempt < maxAttempts; attempt++) {
         HttpErrorClass? cls;
         Duration? retryAfter;
+        var contentFailure = false;
         try {
           var response = await dio.post(
             _endpoint,
@@ -486,6 +545,9 @@ abstract class LlmTranslator {
           );
           var status = response.statusCode ?? 0;
           if (status == 200) {
+            // The endpoint answered and was billed; anything wrong from here on
+            // is the reply's content, not the transport.
+            contentFailure = true;
             var content =
                 response.data['choices']?[0]?['message']?['content'] as String?;
             if (content == null || content.isEmpty) {
@@ -519,6 +581,11 @@ abstract class LlmTranslator {
         // swallowed by the catch above.
         if (cls == HttpErrorClass.clientError || cls == HttpErrorClass.fatal) {
           break; // bad model/auth: retrying won't help
+        }
+        if (contentFailure && ++contentAttempts >= maxContentAttempts) {
+          // The model keeps replying with something unusable. Further tries
+          // would re-send the whole prompt for the same outcome.
+          break;
         }
         if (cls == HttpErrorClass.rateLimited) {
           _aimd.onRateLimited(bucket);

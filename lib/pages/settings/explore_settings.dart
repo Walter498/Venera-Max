@@ -55,6 +55,14 @@ class _ExploreSettingsState extends State<ExploreSettings> {
           settingKey: "showReadLaterStatusOnTile",
         ).toSliver(),
         _SwitchSetting(
+          title: "Show collection status on comic tile".tl,
+          settingKey: "showCollectionStatusOnTile",
+        ).toSliver(),
+        _SwitchSetting(
+          title: "Show page count on comic tile".tl,
+          settingKey: "showPageCountOnTile",
+        ).toSliver(),
+        _SwitchSetting(
           title: "Reverse default chapter order".tl,
           settingKey: "reverseChapterOrder",
         ).toSliver(),

@@ -95,6 +95,30 @@ extension StringExt on String{
   bool get isNum => double.tryParse(this) != null;
 
   bool get isInt => int.tryParse(this) != null;
+
+  /// Whether [number] appears here as a number of its own rather than inside a
+  /// longer one, so "20" is found in "20 pages" but not in "2024". Digits on
+  /// either side disqualify a match; other characters do not.
+  bool containsNumber(String number) {
+    if (number.isEmpty) {
+      return false;
+    }
+    bool isDigit(int? code) => code != null && code >= 0x30 && code <= 0x39;
+    var from = 0;
+    while (true) {
+      final at = indexOf(number, from);
+      if (at < 0) {
+        return false;
+      }
+      final end = at + number.length;
+      final before = at == 0 ? null : codeUnitAt(at - 1);
+      final after = end >= length ? null : codeUnitAt(end);
+      if (!isDigit(before) && !isDigit(after)) {
+        return true;
+      }
+      from = at + 1;
+    }
+  }
 }
 
 abstract class ListOrNull{

@@ -6,6 +6,51 @@ part of 'components.dart';
 /// would keep failing for the same reason.
 final _warmingCollectionCovers = <String>{};
 
+/// 「已在本合集」角標色（紫）——與收藏(綠)/稍後讀(橙)/歷史(藍)區分
+const _kCollectionStatusColor = Color(0xFF7E57C2);
+
+/// 已加入合集的角標：長列表不用逐個點開確認有沒有收過。
+/// 直接監聽 store（不是 build 時的旗標）：從當前列表加進合集時，
+/// 角標會立即亮起，不需要刷新。不在任何合集時不渲染。
+class CollectionMemberMarker extends StatelessWidget {
+  const CollectionMemberMarker({
+    super.key,
+    required this.sourceKey,
+    required this.comicId,
+    this.size = 13,
+    this.padding = 3,
+  });
+
+  final String sourceKey;
+  final String comicId;
+  final double size;
+  final double padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: ComicCollectionStore.changes,
+      builder: (context, _) {
+        if (!ComicCollectionStore.isMember(sourceKey, comicId)) {
+          return const SizedBox.shrink();
+        }
+        return Container(
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: _kCollectionStatusColor.toOpacity(0.9),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            Icons.library_add_check_rounded,
+            size: size,
+            color: Colors.white,
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// Loads a collection's members once so their titles and covers land in the
 /// store, then rebuilds the tiles that are waiting on it.
 void _warmCollectionCover(String collectionId) {
@@ -99,6 +144,7 @@ class ComicTile extends StatelessWidget {
     super.key,
     required this.comic,
     this.enableLongPressed = true,
+    this.enableContextMenu = true,
     this.badge,
     this.menuOptions,
     this.onTap,
@@ -121,6 +167,9 @@ class ComicTile extends StatelessWidget {
   final String? lastReadTimeText;
 
   final bool enableLongPressed;
+
+  /// 批次選取時抑制單項選單
+  final bool enableContextMenu;
 
   final String? badge;
 
@@ -150,6 +199,14 @@ class ComicTile extends StatelessWidget {
   bool get _isCollection =>
       ComicCollectionStore.isCollectionSourceKey(comic.sourceKey);
 
+  /// 是否顯示「已在本合集」角標（合集本身不顯示：合集不能嵌套）
+  bool get _showCollectionStatus =>
+      !_isCollection && appdata.settings['showCollectionStatusOnTile'] == true;
+
+  /// 是否顯示頁數（合集本身不顯示）
+  bool get _showPageCount =>
+      !_isCollection && appdata.settings['showPageCountOnTile'] == true;
+
   /// Corner marker drawn over the cover of a collection, in both display modes:
   /// the text badge only exists in detailed mode, and a cover marker is what
   /// makes a collection recognisable at a glance either way.
@@ -167,6 +224,13 @@ class ComicTile extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildCollectionStatusMarker({double size = 13}) =>
+      CollectionMemberMarker(
+        sourceKey: comic.sourceKey,
+        comicId: comic.id,
+        size: size,
+      );
 
   void _onTap() {
     if (onTap != null) {
@@ -206,6 +270,7 @@ class ComicTile extends StatelessWidget {
   }
 
   void showMenu(Offset location, BuildContext context) {
+    if (!enableContextMenu) return;
     showMenuX(App.rootContext, location, [
       MenuEntry(
         icon: Icons.chrome_reader_mode_outlined,
@@ -577,6 +642,12 @@ class ComicTile extends StatelessWidget {
                   right: 3,
                   top: 3,
                   child: _buildCollectionMarker(context),
+                )
+              else if (_showCollectionStatus)
+                Positioned(
+                  right: 3,
+                  top: 3,
+                  child: _buildCollectionStatusMarker(),
                 ),
             ],
           ),
@@ -623,7 +694,8 @@ class ComicTile extends StatelessWidget {
                         updateText: displayInfo.updateTime,
                         statusText: displayInfo.status,
                         progressText: chapterProgress.currentTitle,
-                        pagesText: displayInfo.pagesText,
+                        pagesText:
+                            _showPageCount ? displayInfo.pagesText : null,
                         chaptersText: chaptersText,
                         lastReadTimeText: lastReadTimeText,
                       ),
@@ -686,6 +758,14 @@ class ComicTile extends StatelessWidget {
                           context,
                           size: constraints.maxWidth < 80 ? 10 : 13,
                         ),
+                        else if (_showCollectionStatus)
+                          Positioned(
+                            right: 4,
+                            top: 4,
+                            child: _buildCollectionStatusMarker(
+                              size: constraints.maxWidth < 80 ? 10 : 13,
+                            ),
+                          ),
                       ),
                     Align(
                       alignment: Alignment.bottomRight,
@@ -1033,6 +1113,7 @@ class ComicDescription extends StatelessWidget {
     final tagItems = _tagItems();
     final tagText = _tagText(tagItems);
     final status = _clean(statusText) ?? _statusText();
+    final pages = _clean(pagesText) ?? _pagesText();
     final fallbackDescription = _fallbackDescription(
       update,
       progress,
@@ -1056,6 +1137,8 @@ class ComicDescription extends StatelessWidget {
         )
       else if (authors != null)
         _infoRow(context, "Authors".tl, authors, Colors.lightBlue),
+      // 頁數排在更新/來源前：高度預算只留前幾行，頁數是讀者最常篩的
+      if (pages != null) _infoRow(context, "Pages".tl, pages, Colors.teal),
       if (update != null) _infoRow(context, "Update".tl, update, Colors.cyan),
       if (chaptersText != null)
         _infoRow(context, '話數', chaptersText!, Colors.amber),
@@ -1328,6 +1411,11 @@ class ComicDescription extends StatelessWidget {
 
   String? _statusText() {
     return _tagsWithNamespace(_statusNamespaces).firstOrNull;
+  }
+
+  /// 來自 `pages:` 風格標籤的頁數（有些源不用 Comic.maxPage 回報）
+  String? _pagesText() {
+    return _tagsWithNamespace(_pagesNamespaces).firstOrNull;
   }
 
   String? _updateTextFromTags() {
@@ -1635,6 +1723,7 @@ class SliverGridComics extends StatefulWidget {
     this.onLongPressedWithIndex,
     this.selections,
     this.enableHero = true,
+    this.enableContextMenu = true,
     this.swipeActionBuilder,
     this.forceBriefMode = false,
     this.forceDetailedMode = false,
@@ -1662,6 +1751,9 @@ class SliverGridComics extends StatefulWidget {
   final void Function(Comic, int heroID, int index)? onLongPressedWithIndex;
 
   final bool enableHero;
+
+  /// 批次選取時抑制單項選單
+  final bool enableContextMenu;
 
   /// When set, each tile becomes swipeable on mobile. The builder returns the
   /// panes (start = right swipe, end = left swipe) for a given comic, or null
@@ -1760,6 +1852,7 @@ class _SliverGridComicsState extends State<SliverGridComics> {
       lastReadTimeBuilder: widget.lastReadTimeBuilder,
       heroIDs: heroIDs,
       enableHero: widget.enableHero,
+      enableContextMenu: widget.enableContextMenu,
       selection: widget.selections,
       onLastItemBuild: widget.onLastItemBuild,
       badgeBuilder: widget.badgeBuilder,
@@ -1798,6 +1891,7 @@ class _SliverGridComics extends StatelessWidget {
     this.lastReadTimeBuilder,
     required this.heroIDs,
     this.enableHero = true,
+    this.enableContextMenu = true,
     this.onLastItemBuild,
     this.badgeBuilder,
     this.menuBuilder,
@@ -1814,6 +1908,8 @@ class _SliverGridComics extends StatelessWidget {
   final List<int> heroIDs;
 
   final bool enableHero;
+
+  final bool enableContextMenu;
 
   final Map<Comic, bool>? selection;
 
@@ -1846,6 +1942,7 @@ class _SliverGridComics extends StatelessWidget {
             : selection![comics[index]] ?? false;
         var comic = ComicTile(
           comic: comics[index],
+          enableContextMenu: enableContextMenu,
           badge: badge,
           chaptersText: chapterCountBuilder?.call(comics[index]),
           lastReadTimeText: lastReadTimeBuilder?.call(comics[index]),

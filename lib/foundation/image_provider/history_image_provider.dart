@@ -42,7 +42,9 @@ class HistoryImageProvider
       checkStop();
       url = comic.data.cover;
       history.cover = url;
-      HistoryManager().addHistory(history);
+      // Keep the row's list visibility: this fetch can land after the user
+      // deleted the record, and a plain add would put it back (issue #270).
+      HistoryManager().updateHistoryKeepingVisibility(history);
     }
     await for (var progress in ImageDownloader.loadThumbnail(
       url,
