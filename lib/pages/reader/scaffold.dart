@@ -827,7 +827,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           },
         ),
       _ReaderBottomItem(
-        icon: context.reader.autoPageTurningTimer != null
+        icon: context.reader.isAutoReading
             ? Icons.timer
             : Icons.timer_sharp,
         label: "自动",

@@ -1037,28 +1037,69 @@ abstract mixin class _ReaderLocation {
 
   Timer? autoPageTurningTimer;
 
+  /// 是否正在自動閱讀（連續模式的自動滾動 或 畫廊模式的定時翻頁）
+  bool get isAutoReading =>
+      autoPageTurningTimer != null ||
+      (_imageViewController?.autoScrolling ?? false);
+
+  /// 停止自動閱讀（連續滾動 + 定時翻頁都停），並刷新底欄按鈕
+  void stopAutoReading() {
+    autoPageTurningTimer?.cancel();
+    autoPageTurningTimer = null;
+    _imageViewController?.stopAutoScroll();
+    update();
+  }
+
+  /// 自動閱讀開關。
+  ///
+  /// 連續模式（上下滾）→ 以設定速度【平滑連續滾動】，
+  /// 到底自動進下一話；畫廊模式（左右翻）→ 按間隔【帶過渡動畫】翻頁。
   void autoPageTurning(String cid, ComicType type) {
-    if (autoPageTurningTimer != null) {
-      autoPageTurningTimer!.cancel();
-      autoPageTurningTimer = null;
-    } else {
-      int interval = appdata.settings.getReaderSetting(
+    if (isAutoReading) {
+      stopAutoReading();
+      return;
+    }
+    final continuous = mode == ReaderMode.continuousTopToBottom ||
+        mode == ReaderMode.continuousLeftToRight;
+    final vc = _imageViewController;
+    if (continuous && (vc?.supportsAutoScroll ?? false)) {
+      final speed = appdata.settings.getReaderSetting(
         cid,
         type.sourceKey,
-        'autoPageTurningInterval',
+        'autoScrollSpeed',
       );
-      autoPageTurningTimer = Timer.periodic(Duration(seconds: interval), (_) {
-        // Advance a page; at the end of a chapter continue into the next one
-        // (mirrors the manual tap-to-advance behaviour). Only stop when there
-        // is no next page AND no next chapter.
-        if (!toNextPage()) {
-          if (!toNextChapter()) {
-            autoPageTurningTimer?.cancel();
-            autoPageTurningTimer = null;
-          }
+      vc!.startAutoScroll(speed is num ? speed.toDouble() : 60);
+      update();
+      return;
+    }
+    int interval = appdata.settings.getReaderSetting(
+      cid,
+      type.sourceKey,
+      'autoPageTurningInterval',
+    );
+    autoPageTurningTimer = Timer.periodic(Duration(seconds: interval), (_) {
+      // 翻頁用動畫過渡（500ms），比瞬移順；到章末自動進下一話，
+      // 既沒下一頁也沒下一話就整體停下。
+      _autoTurnPage().then((ok) {
+        if (!ok && !toNextChapter()) {
+          stopAutoReading();
         }
       });
-    }
+    });
+    update();
+  }
+
+  /// 帶過渡動畫的翻頁（自動閱讀用）
+  Future<bool> _autoTurnPage() async {
+    final vc = _imageViewController;
+    if (vc == null) return false;
+    if (vc.turnPage(true)) return true; // 連續模式自己處理
+    final target = page + 1;
+    if (target > maxPage) return false;
+    page = target;
+    update();
+    await vc.animateToPage(target, duration: const Duration(milliseconds: 500));
+    return true;
   }
 }
 
@@ -1140,7 +1181,8 @@ enum ReaderMode {
 abstract interface class _ImageViewController {
   void toPage(int page);
 
-  Future<void> animateToPage(int page);
+  /// [duration] 不給就用默認過渡時長（自動閱讀會給更長的過渡，看起來更順）
+  Future<void> animateToPage(int page, {Duration? duration});
 
   /// Continuous mode: turn one page by moving to the adjacent image entry,
   /// crossing chapter join pages and (in seamless mode) chapter boundaries
@@ -1173,6 +1215,16 @@ abstract interface class _ImageViewController {
   bool get isImageZoomed;
 
   Future<Uint8List?> getImageByOffset(Offset offset);
+
+  /// ===== 自動滾動（只有連續模式支持）=====
+  /// 連續模式：以固定速度平滑推進；畫廊模式：false，走定時翻頁。
+  bool get supportsAutoScroll;
+
+  bool get autoScrolling;
+
+  void startAutoScroll(double pixelsPerSecond);
+
+  void stopAutoScroll();
 
   String? getImageKeyByOffset(Offset offset);
 }

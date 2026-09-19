@@ -489,7 +489,23 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                 useDeviceSettings: useDeviceSpecificSettings,
               ),
             _SliderSetting(
-              title: "Auto page turning interval".tl,
+              title: "自動滾動速度（連續模式，像素/秒）",
+              settingsIndex: "autoScrollSpeed",
+              interval: 10,
+              min: 20,
+              max: 240,
+              onChanged: () {
+                setState(() {});
+                widget.onChanged?.call("autoScrollSpeed");
+              },
+              comicId: isEnabledSpecificSettings ? widget.comicId : null,
+              comicSource: isEnabledSpecificSettings
+                  ? widget.comicSource
+                  : null,
+              useDeviceSettings: useDeviceSpecificSettings,
+            ),
+            _SliderSetting(
+              title: "自動翻頁間隔（畫廊模式，秒）",
               settingsIndex: "autoPageTurningInterval",
               interval: 1,
               min: 1,

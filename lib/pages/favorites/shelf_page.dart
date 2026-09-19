@@ -7,6 +7,7 @@ import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/history.dart';
+import 'package:venera/foundation/local.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/local_comics_page.dart';
@@ -162,6 +163,20 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
   bool _editMode = false;
   final Set<String> _selected = {};
 
+  /// 收藏排序（原版功能：LocalSortType，7 種），持久化在 implicitData
+  LocalSortType get _sortType {
+    final v = appdata.implicitData['local_favorites_sort']?.toString();
+    for (final t in LocalSortType.values) {
+      if (t.value == v) return t;
+    }
+    return LocalSortType.defaultSort;
+  }
+
+  set _sortType(LocalSortType t) {
+    appdata.implicitData['local_favorites_sort'] = t.value;
+    appdata.writeImplicitData();
+  }
+
   void _onChanged() {
     if (mounted) setState(() {});
   }
@@ -210,8 +225,88 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
 
   List<FavoriteItem> _comics() {
     final fav = LocalFavoritesManager();
-    // 不排序：用資料庫原序（排序選單已按用戶要求刪除）
-    return _folder == null ? fav.getAllComics() : fav.getFolderComics(_folder!);
+    final list =
+        _folder == null ? fav.getAllComics() : fav.getFolderComics(_folder!);
+    final sortType = _sortType;
+    if (sortType == LocalSortType.defaultSort) return list;
+    final out = List<FavoriteItem>.from(list);
+    final history = {
+      for (final h in HistoryManager().getAll()) '${h.sourceKey}:${h.id}': h,
+    };
+    out.sort((a, b) {
+      switch (sortType) {
+        case LocalSortType.name:
+          return a.name.compareTo(b.name);
+        case LocalSortType.nameDesc:
+          return b.name.compareTo(a.name);
+        case LocalSortType.timeDesc:
+          return (b.lastUpdateTime ?? b.time)
+              .compareTo(a.lastUpdateTime ?? a.time);
+        case LocalSortType.timeAsc:
+          return (a.lastUpdateTime ?? a.time)
+              .compareTo(b.lastUpdateTime ?? b.time);
+        case LocalSortType.author:
+          return a.author.compareTo(b.author);
+        case LocalSortType.lastRead:
+          final ta = history['${a.sourceKey}:${a.id}']?.time ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          final tb = history['${b.sourceKey}:${b.id}']?.time ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          return tb.compareTo(ta);
+        case LocalSortType.defaultSort:
+          return 0;
+      }
+    });
+    return out;
+  }
+
+  /// 排序面板（原版功能還原）：7 個選項 + 確認
+  void showSortDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(builder: (context, setDialogState) {
+          var current = _sortType;
+          return AlertDialog(
+            title: const Text('排序'),
+            content: RadioGroup<LocalSortType>(
+              groupValue: current,
+              onChanged: (v) => setDialogState(() {
+                if (v != null) current = v;
+              }),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  RadioListTile<LocalSortType>(
+                    title: Text('預設'), value: LocalSortType.defaultSort),
+                  RadioListTile<LocalSortType>(
+                    title: Text('名稱升序'), value: LocalSortType.name),
+                  RadioListTile<LocalSortType>(
+                    title: Text('名稱降序'), value: LocalSortType.nameDesc),
+                  RadioListTile<LocalSortType>(
+                    title: Text('最新優先'), value: LocalSortType.timeDesc),
+                  RadioListTile<LocalSortType>(
+                    title: Text('最早優先'), value: LocalSortType.timeAsc),
+                  RadioListTile<LocalSortType>(
+                    title: Text('作者'), value: LocalSortType.author),
+                  RadioListTile<LocalSortType>(
+                    title: Text('最近閱讀'), value: LocalSortType.lastRead),
+                ],
+              ),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () {
+                  setState(() => _sortType = current);
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('確認'),
+              ),
+            ],
+          );
+        });
+      },
+    );
   }
 
   Future<void> _deleteSelected() async {
@@ -256,6 +351,20 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                 ),
               ),
               const Spacer(),
+              // 排序（原版功能）：有非預設排序時高亮
+              InkWell(
+                onTap: showSortDialog,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(
+                    Icons.sort,
+                    size: 22,
+                    color: _sortType != LocalSortType.defaultSort
+                        ? context.colorScheme.primary
+                        : context.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
               InkWell(
                 onTap: () => setState(() {
                   _editMode = !_editMode;

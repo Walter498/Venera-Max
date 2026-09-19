@@ -579,16 +579,29 @@ class _GalleryModeState extends State<_GalleryMode>
   }
 
   @override
-  Future<void> animateToPage(int page) {
+  Future<void> animateToPage(int page, {Duration? duration}) {
     if ((page - controller.page!.round()).abs() > 1) {
       controller.jumpToPage(page > controller.page! ? page - 1 : page + 1);
     }
     return controller.animateToPage(
       page,
-      duration: const Duration(milliseconds: 200),
+      duration: duration ?? const Duration(milliseconds: 200),
       curve: Curves.ease,
     );
   }
+
+  // 畫廊模式不支持連續自動滾動（本質是一頁頁），走定時翻頁
+  @override
+  bool get supportsAutoScroll => false;
+
+  @override
+  bool get autoScrolling => false;
+
+  @override
+  void startAutoScroll(double pixelsPerSecond) {}
+
+  @override
+  void stopAutoScroll() {}
 
   @override
   void toPage(int page) {
@@ -819,6 +832,7 @@ class _ContinuousReaderEntry {
 }
 
 class _ContinuousModeState extends State<_ContinuousMode>
+    with SingleTickerProviderStateMixin
     implements _ImageViewController {
   late _ReaderState reader;
 
@@ -1768,7 +1782,10 @@ class _ContinuousModeState extends State<_ContinuousMode>
 
   @override
   Widget build(BuildContext context) {
-    Widget widget = _buildScrollView();
+    Widget widget = NotificationListener<ScrollNotification>(
+      onNotification: _onAutoScrollNotification,
+      child: _buildScrollView(),
+    );
 
     widget = Stack(
       children: [
@@ -2355,9 +2372,61 @@ class _ContinuousModeState extends State<_ContinuousMode>
     }
   }
 
+  // ===== 連續模式自動滾動：固定速度（像素/秒）平滑推進 =====
+  Ticker? _autoScrollTicker;
+  Duration? _lastAutoTick;
+  double _autoScrollSpeed = 60;
+
   @override
-  Future<void> animateToPage(int page) {
-    return _goToEntry(reader.chapter, page, animate: true);
+  bool get supportsAutoScroll => true;
+
+  @override
+  bool get autoScrolling => _autoScrollTicker?.isActive ?? false;
+
+  @override
+  void startAutoScroll(double pixelsPerSecond) {
+    _autoScrollSpeed = pixelsPerSecond <= 0 ? 60 : pixelsPerSecond;
+    _lastAutoTick = null;
+    _autoScrollTicker ??= createTicker(_onAutoScrollTick);
+    if (!_autoScrollTicker!.isActive) _autoScrollTicker!.start();
+  }
+
+  @override
+  void stopAutoScroll() {
+    _autoScrollTicker?.stop();
+    _lastAutoTick = null;
+  }
+
+  void _onAutoScrollTick(Duration elapsed) {
+    if (_lastAutoTick == null) {
+      _lastAutoTick = elapsed;
+      return;
+    }
+    final dt = (elapsed - _lastAutoTick!).inMicroseconds / 1000000.0;
+    _lastAutoTick = elapsed;
+    if (!_scrollController.hasClients || dt <= 0) return;
+    final pos = _scrollController.position;
+    final next = pos.pixels + _autoScrollSpeed * dt;
+    if (next >= pos.maxScrollExtent - 0.5) {
+      // 到底：自動進下一話並繼續；沒有下一話就整體停下
+      if (!reader.toNextChapter()) reader.stopAutoReading();
+    } else {
+      _scrollController.jumpTo(next);
+    }
+  }
+
+  /// 用戶手動拖動 → 自動滾動交還控制權
+  bool _onAutoScrollNotification(ScrollNotification n) {
+    if (n is ScrollStartNotification && n.dragDetails != null && autoScrolling) {
+      reader.stopAutoReading();
+    }
+    return false;
+  }
+
+  @override
+  Future<void> animateToPage(int page, {Duration? duration}) {
+    return _goToEntry(reader.chapter, page,
+        animate: true, duration: duration);
   }
 
   @override
