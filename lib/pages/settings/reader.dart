@@ -491,9 +491,9 @@ class _ReaderSettingsState extends State<ReaderSettings> {
             _SliderSetting(
               title: "自動滾動速度（連續模式，像素/秒）",
               settingsIndex: "autoScrollSpeed",
-              interval: 10,
-              min: 20,
-              max: 240,
+              interval: 50,
+              min: 200,
+              max: 800,
               onChanged: () {
                 setState(() {});
                 widget.onChanged?.call("autoScrollSpeed");

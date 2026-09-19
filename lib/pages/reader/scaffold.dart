@@ -201,6 +201,29 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             !isOnChapterCommentsPage)
           buildPageInfoText(),
         if (!isOnChapterCommentsPage) buildStatusInfo(),
+        // 自動閱讀中：底部小字提示（連點兩下可關閉）
+        if (context.reader.isAutoReading && !isOnChapterCommentsPage)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 28,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.toOpacity(0.55),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Text(
+                    '連點兩下關閉自動閱讀',
+                    style: TextStyle(fontSize: 12, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ),
         Positioned(
           right: 16,
           bottom: 36,
@@ -836,6 +859,11 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             context.reader.cid,
             context.reader.type,
           );
+            // 進入自動閱讀 → 自動收起上下欄（畫面乾淨）
+            if (context.reader.isAutoReading &&
+                context.readerScaffold.isOpen) {
+              context.readerScaffold.openOrClose();
+            }
           update();
         },
       ),

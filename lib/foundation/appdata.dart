@@ -372,7 +372,7 @@ class Settings with ChangeNotifier {
     'blockedCommentWords': [],
     'defaultSearchTarget': null,
     'autoPageTurningInterval': 5, // in seconds
-    'autoScrollSpeed': 60, // 連續模式自動滾動速度（像素/秒）
+    'autoScrollSpeed': 300, // 連續模式自動滾動速度（像素/秒）
     'readerMode': 'galleryLeftToRight', // values of [ReaderMode]
     'enableContinuousChapterReading': true,
     'readerScreenPicNumberForLandscape': 1, // 1 - 5

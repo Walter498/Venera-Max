@@ -262,11 +262,13 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
 
   /// 排序面板（原版功能還原）：7 個選項 + 確認
   void showSortDialog() {
+    // 注意：選中的臨時值必須放在 builder【外面】——
+    // 放在 StatefulBuilder 內每次重建都會被重置回原值，導致點不動
+    var current = _sortType;
     showDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(builder: (context, setDialogState) {
-          var current = _sortType;
           return AlertDialog(
             title: const Text('排序'),
             content: RadioGroup<LocalSortType>(
