@@ -38,13 +38,13 @@ jobs:
           mv build/ios/iphoneos/VeneraX-ios.ipa result/VeneraX-ios-$APP_VERSION.ipa
       - name: Publish build log on failure
         if: failure()
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: log-${{ github.run_number }}
           name: build log ${{ github.run_number }}
           files: ios_build.log
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: build-${{ github.run_number }}
           name: VeneraX iOS build ${{ github.run_number }}
