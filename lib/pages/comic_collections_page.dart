@@ -9,7 +9,7 @@ import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/foundation/read_later.dart';
 import 'package:venera/pages/comic_collection_edit_page.dart';
-import 'package:venera/pages/favorites/favorites_page.dart';
+import 'package:venera/pages/favorites/favorite_actions.dart';
 import 'package:venera/pages/guide_page.dart';
 import 'package:venera/utils/io.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';

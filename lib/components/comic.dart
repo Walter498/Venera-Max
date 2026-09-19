@@ -758,14 +758,14 @@ class ComicTile extends StatelessWidget {
                           context,
                           size: constraints.maxWidth < 80 ? 10 : 13,
                         ),
-                        else if (_showCollectionStatus)
-                          Positioned(
-                            right: 4,
-                            top: 4,
-                            child: _buildCollectionStatusMarker(
-                              size: constraints.maxWidth < 80 ? 10 : 13,
-                            ),
-                          ),
+                      )
+                    else if (_showCollectionStatus)
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: _buildCollectionStatusMarker(
+                          size: constraints.maxWidth < 80 ? 10 : 13,
+                        ),
                       ),
                     Align(
                       alignment: Alignment.bottomRight,
