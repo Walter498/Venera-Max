@@ -58,7 +58,9 @@ jobs:
           git config user.email 'actions@github.com'
           git config user.name 'github-actions'
           # 只提交構建日誌，絕不提交 ipa/中間產物
-          git add ios_build.log
+          #（ios_build.log 被 .gitignore 忽略，用 -f 強制加入；
+          #  整段都不允許失敗，構建成功才是重點）
+          git add -f ios_build.log || true
           git reset -- result build 2>/dev/null || true
           git commit -m 'ios build log [skip ci]' || echo 'no changes'
           git pull --rebase origin main || true
