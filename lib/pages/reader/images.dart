@@ -2028,6 +2028,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
     bool center = false,
     bool Function()? isCurrent,
     double? maxStepExtent,
+    Duration? duration,
   }) async {
     bool isStale() => isCurrent != null && !isCurrent();
     if (isStale()) return;
@@ -2041,6 +2042,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       await _applyScroll(
         0 - _centerAdjust(chapter, page, center),
         animate: animate,
+        duration: duration,
       );
       return;
     }
@@ -2055,6 +2057,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
             delta -
             _centerAdjust(chapter, page, center),
         animate: animate,
+        duration: duration,
       );
       return;
     }
@@ -2357,14 +2360,15 @@ class _ContinuousModeState extends State<_ContinuousMode>
     return null;
   }
 
-  Future<void> _applyScroll(double offset, {required bool animate}) async {
+  Future<void> _applyScroll(double offset,
+      {required bool animate, Duration? duration}) async {
     if (!_scrollController.hasClients) return;
     final pos = _scrollController.position;
     final target = offset.clamp(pos.minScrollExtent, pos.maxScrollExtent);
     if (animate) {
       await _scrollController.animateTo(
         target,
-        duration: const Duration(milliseconds: 200),
+        duration: duration ?? const Duration(milliseconds: 200),
         curve: Curves.ease,
       );
     } else {

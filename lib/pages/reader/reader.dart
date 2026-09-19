@@ -871,6 +871,9 @@ abstract mixin class _VolumeListener {
 }
 
 abstract mixin class _ReaderLocation {
+  /// 當前閱讀模式（由宿主 _ReaderState 提供）
+  ReaderMode get mode;
+
   int _page = 1;
   int? _pendingPage;
 
