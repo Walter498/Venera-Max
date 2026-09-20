@@ -1558,7 +1558,11 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       removed += await CacheManager()
           .deleteBySubstring('@${comic.sourceKey}@${comic.id}@');
     } catch (_) {}
-    // ② JS 源的頁數/頁面快取（源若提供 resetComicCache 就呼叫）
+    // ② HTTP 回應快取（App 的 NetworkCacheManager：源 API 的回應可能被它快取住）
+    try {
+      NetworkCacheManager().clear();
+    } catch (_) {}
+    // ③ JS 源的頁數/頁面快取（源若提供 resetComicCache 就呼叫）
     try {
       await JsEngine().runCode("""
         (function(){
@@ -1570,7 +1574,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         })()
       """);
     } catch (_) {}
-    // ③ 記憶體圖片快取
+    // ④ 記憶體圖片快取
     try {
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
