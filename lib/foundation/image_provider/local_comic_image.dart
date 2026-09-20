@@ -33,7 +33,17 @@ class LocalComicImageProvider
         throw "Error: Comic not found.";
       }
       Directory? firstDir;
-      await for (var entity in dir.list()) {
+      // 目錄可能剛好被刪掉/不存在（例如還原備份帶進來的舊本機漫畫條目，
+      // 指向別的裝置的容器路徑）→ 這裡要吞掉，給出乾淨的錯誤而不是
+      // 讓 PathNotFoundException 一路冒泡成未處理異常。
+      Stream<FileSystemEntity> entries;
+      try {
+        entries = dir.list();
+      } catch (e) {
+        throw "Error: Comic not found.";
+      }
+      try {
+        await for (var entity in entries) {
         if(entity is File) {
           if(["jpg", "jpeg", "png", "webp", "gif", "jpe", "jpeg"].contains(entity.extension)) {
             file = entity;
@@ -42,6 +52,9 @@ class LocalComicImageProvider
         } else if(entity is Directory) {
           firstDir ??= entity;
         }
+        }
+      } catch (e) {
+        throw "Error: Comic not found.";
       }
       if(file == null && firstDir != null) {
         await for (var entity in firstDir.list()) {
