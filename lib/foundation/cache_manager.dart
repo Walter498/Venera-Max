@@ -312,6 +312,38 @@ class CacheManager {
     }
   }
 
+  /// 刪除 key【包含】[substring] 的所有快取（回傳刪除數量）。
+  ///
+  /// 圖片快取的 key 是 `url@sourceKey@cid@eid` —— 漫畫 id 在中間，
+  /// 前綴法匹配不到，所以需要這個。用於「清除某部漫畫的所有快取」。
+  Future<int> deleteBySubstring(String substring) async {
+    final pattern = '%${_escapeLike(substring)}%';
+    var rows = _db.select(
+      'SELECT key, dir, name FROM cache WHERE key LIKE ? ESCAPE \'\\\\\'',
+      [pattern],
+    );
+    var removed = 0;
+    for (var row in rows) {
+      var dir = row[1] as String;
+      var name = row[2] as String;
+      var file = File('$cachePath/$dir/$name');
+      if (await file.exists()) {
+        if (_currentSize != null) {
+          _currentSize = _currentSize! - await file.length();
+        }
+        await file.delete();
+      }
+      removed++;
+    }
+    if (removed > 0) {
+      _db.execute(
+        'DELETE FROM cache WHERE key LIKE ? ESCAPE \'\\\\\'',
+        [pattern],
+      );
+    }
+    return removed;
+  }
+
   /// Deletes every cache entry whose key starts with [prefix], returning the
   /// number removed. Used to invalidate a scope of derived cache (e.g. all
   /// translated pages of one comic) without touching unrelated entries.

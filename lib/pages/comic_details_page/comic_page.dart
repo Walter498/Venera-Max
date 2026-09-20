@@ -15,6 +15,8 @@ import 'package:venera/foundation/chapter_duplicates.dart';
 import 'package:venera/foundation/comic_collection_store.dart';
 import 'package:venera/foundation/comic_details_cache.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
+import 'package:venera/foundation/js_engine.dart';
+import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/comic_state_repository.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/domain_database.dart';
@@ -784,6 +786,12 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         child: Text(comic.title),
       ),
       actions: [
+        // 清除本漫畫快取（用戶指定位置：返回鍵右邊）
+        IconButton(
+          icon: const Icon(Icons.cleaning_services_outlined),
+          tooltip: '清除本漫畫快取',
+          onPressed: clearComicCache,
+        ),
         // 合集：章節清單 ↔ 封面網格 視圖切換
         if (ComicCollectionStore.isCollectionSourceKey(widget.sourceKey))
           IconButton(
@@ -1519,6 +1527,56 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         ],
       ),
     );
+  }
+
+  /// 清除這部漫畫的所有快取（圖片磁碟快取、記憶體圖片、源的頁數/頁面快取）
+  /// —— 用戶更新了源之後，已載入過的章節仍用舊清單，按這個才會全部重載。
+  Future<void> clearComicCache() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清除本漫畫快取？'),
+        content: const Text(
+            '會清除這部漫戲的所有已快取圖片、章節頁數與頁面清單。\n'
+            '之後打開任何章節都會重新向源請求（推薦更新源後用一次）。'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('取消'.tl)),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('清除')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    var removed = 0;
+    // ① 圖片/頁面磁碟快取：key = url@sourceKey@cid@eid（cid 在中間）
+    try {
+      removed += await CacheManager()
+          .deleteBySubstring('@${comic.sourceKey}@${comic.id}@');
+    } catch (_) {}
+    // ② JS 源的頁數/頁面快取（源若提供 resetComicCache 就呼叫）
+    try {
+      await JsEngine().runCode("""
+        (function(){
+          var s = ComicSource.sources[${jsonEncode(comic.sourceKey)}];
+          if (s && typeof s.resetComicCache === 'function') {
+            s.resetComicCache(${jsonEncode(comic.id)});
+          }
+          return true;
+        })()
+      """);
+    } catch (_) {}
+    // ③ 記憶體圖片快取
+    try {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+    } catch (_) {}
+    if (mounted) {
+      showMessage(message: '已清除 ${removed > 0 ? "$removed 個檔案" : "快取"}，重新打開章節即可');
+    }
   }
 
   void _onCollectionChanged() {
