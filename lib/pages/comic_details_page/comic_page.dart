@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -1575,7 +1576,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       PaintingBinding.instance.imageCache.clearLiveImages();
     } catch (_) {}
     if (mounted) {
-      showMessage(message: '已清除 ${removed > 0 ? "$removed 個檔案" : "快取"}，重新打開章節即可');
+      context.showMessage(message: '已清除 ${removed > 0 ? "$removed 個檔案" : "快取"}，重新打開章節即可');
     }
   }
 
