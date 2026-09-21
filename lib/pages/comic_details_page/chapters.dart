@@ -556,7 +556,9 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 itemHeight: 44,
               ),
             ).sliverPadding(EdgeInsets.zero),
-            if (!gridMode && !canShowAll)
+            // 「顯示全部」按鈕：文字模式與封面模式都要出現
+            //（原本只有 !gridMode 才渲染 → 封面模式永遠沒有按鈕）
+            if (!canShowAll)
               SliverToBoxAdapter(
                 child: Align(
                   alignment: Alignment.center,
