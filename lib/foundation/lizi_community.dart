@@ -11,7 +11,16 @@ import 'package:venera/network/app_dio.dart';
 ///
 /// 注意：成功時 code 是 201（不是 200）。
 class LiziCommunityApi {
-  static const String api = "http://ai.qsmm.fun";
+  /// 域名池：官方域名會輪換/被封（ai.qsmm.fun 已被停用 DNS），
+  /// 任何一個可用就自動用它並記住（跟漫畫源同一套策略）。
+  static const List<String> apiHosts = [
+    "http://ai.xajtl.com",
+    "http://ai.qsmm.fun",
+  ];
+
+  static int _apiIndex = 0;
+
+  static String get api => apiHosts[_apiIndex % apiHosts.length];
 
   /// 漫畫封面線路（與栗子源 lizimh.js 的線路1一致）
   static const String imgBase = "https://cdn.lzimg.xyz";
@@ -23,18 +32,28 @@ class LiziCommunityApi {
       BaseOptions(responseType: ResponseType.json),
       const Duration(seconds: 15),
     );
-    var res = await dio.get('$api$path');
-    var raw = res.data;
-    if (raw is String) raw = jsonDecode(raw);
-    if (raw is! Map) throw '伺服器回應格式錯誤';
-    final map = Map<String, dynamic>.from(raw);
-    final code = map['code'];
-    if (code != 200 && code != 201) {
-      throw map['message']?.toString() ?? '請求失敗 (code=$code)';
+    Object? lastError;
+    for (var i = 0; i < apiHosts.length; i++) {
+      final idx = (_apiIndex + i) % apiHosts.length;
+      try {
+        var res = await dio.get('${apiHosts[idx]}$path');
+        var raw = res.data;
+        if (raw is String) raw = jsonDecode(raw);
+        if (raw is! Map) throw '伺服器回應格式錯誤';
+        final map = Map<String, dynamic>.from(raw);
+        final code = map['code'];
+        if (code != 200 && code != 201) {
+          throw map['message']?.toString() ?? '請求失敗 (code=$code)';
+        }
+        _apiIndex = idx; // 記住這台可用
+        final data = map['data'];
+        if (data is Map) return Map<String, dynamic>.from(data);
+        return {};
+      } catch (e) {
+        lastError = e;
+      }
     }
-    final data = map['data'];
-    if (data is Map) return Map<String, dynamic>.from(data);
-    return {};
+    throw lastError ?? '伺服器不可達';
   }
 
   /// 社區版塊（來自 configv2 的 cfg_general.community_sections）
