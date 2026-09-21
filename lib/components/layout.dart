@@ -76,13 +76,18 @@ class SliverGridDelegateWithFixedHeight extends SliverGridDelegate {
 }
 
 class SliverGridDelegateWithComics extends SliverGridDelegate {
-  SliverGridDelegateWithComics({this.overrideBrief, this.forceColumns});
+  SliverGridDelegateWithComics(
+      {this.overrideBrief, this.forceColumns, this.detailedItemHeight});
 
   /// 強制簡潔(網格)或詳細(列表)模式；null = 跟隨全域設定。
   final bool? overrideBrief;
 
   /// 強制列數（首頁 4x2 版面用）；null = 按寬度自適應。
   final int? forceColumns;
+
+  /// 詳細模式的卡片高度（null = 預設 168）。收藏頁需要高一點才能顯示
+  /// 更多資訊行（作者/頁數/更新/上次閱讀…）。
+  final double? detailedItemHeight;
 
   bool get useBriefMode =>
       overrideBrief ?? (appdata.settings['comicDisplayMode'] == 'brief');
@@ -103,7 +108,7 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
     double scale,
   ) {
     const minCrossAxisExtent = 360;
-    final itemHeight = 168 * scale;
+    final itemHeight = (detailedItemHeight ?? 168) * scale;
     final width = constraints.crossAxisExtent;
     var crossItems = width ~/ minCrossAxisExtent;
     crossItems = math.max(1, crossItems);

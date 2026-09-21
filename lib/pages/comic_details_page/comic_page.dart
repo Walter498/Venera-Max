@@ -699,6 +699,8 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
             data = res.data;
           });
           ComicDetailsCache().update(widget.sourceKey, widget.id, res.data);
+        // 詳情沒帶評論、但源有評論接口 → 抓第一頁顯示在章節下方
+        unawaited(_loadInlineComments());
           await onDataLoaded();
           return true;
         }
@@ -1584,6 +1586,24 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     }
   }
 
+  /// 內嵌評論（源在詳情不帶評論時，用 commentsLoader 抓第一頁顯示在章節下面）
+  List<Comment>? _inlineComments;
+
+  Future<void> _loadInlineComments() async {
+    final source = ComicSource.find(widget.sourceKey);
+    final loader = source?.commentsLoader;
+    if (loader == null) return;
+    if (comic.comments?.isNotEmpty == true) return;
+    if (_inlineComments != null) return;
+    try {
+      final res = await loader(comic.id, comic.subId, 1, null);
+      if (!mounted) return;
+      if (!res.error && res.data.isNotEmpty) {
+        setState(() => _inlineComments = res.data);
+      }
+    } catch (_) {}
+  }
+
   void _onCollectionChanged() {
     if (mounted && ComicCollectionStore.isCollectionSourceKey(widget.sourceKey)) {
       setState(() {});
@@ -1782,10 +1802,14 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   }
 
   Widget buildComments() {
-    if (comic.comments == null || comic.comments!.isEmpty) {
+    // 優先用詳情自帶的評論；沒有就用 commentsLoader 抓回來的內嵌評論
+    final list = (comic.comments?.isNotEmpty == true)
+        ? comic.comments!
+        : (_inlineComments ?? const <Comment>[]);
+    if (list.isEmpty) {
       return const SliverPadding(padding: EdgeInsets.zero);
     }
-    return _CommentsPart(comments: comic.comments!, showMore: showComments);
+    return _CommentsPart(comments: list, showMore: showComments);
   }
 
   void _viewCover(BuildContext context) {

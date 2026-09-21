@@ -1730,6 +1730,7 @@ class SliverGridComics extends StatefulWidget {
     this.forceColumns,
     this.chapterCountBuilder,
     this.lastReadTimeBuilder,
+    this.detailedItemHeight,
   });
 
   final List<Comic> comics;
@@ -1776,6 +1777,9 @@ class SliverGridComics extends StatefulWidget {
 
   /// 每張卡的上次閱讀時間（收藏頁用）；null = 不顯示。
   final String? Function(Comic)? lastReadTimeBuilder;
+
+  /// 詳細模式卡片高度（收藏頁加高用）；null = 預設。
+  final double? detailedItemHeight;
 
   @override
   State<SliverGridComics> createState() => _SliverGridComicsState();
@@ -1850,6 +1854,7 @@ class _SliverGridComicsState extends State<SliverGridComics> {
       forceColumns: widget.forceColumns,
       chapterCountBuilder: widget.chapterCountBuilder,
       lastReadTimeBuilder: widget.lastReadTimeBuilder,
+      detailedItemHeight: widget.detailedItemHeight,
       heroIDs: heroIDs,
       enableHero: widget.enableHero,
       enableContextMenu: widget.enableContextMenu,
@@ -1879,6 +1884,9 @@ class _SliverGridComics extends StatelessWidget {
   /// 每張卡的上次閱讀時間（收藏頁用）；null = 不顯示。
   final String? Function(Comic)? lastReadTimeBuilder;
 
+  /// 詳細模式卡片高度（收藏頁加高用）；null = 預設。
+  final double? detailedItemHeight;
+
   /// 強制列數（首頁 4 列版面用）；null = 自適應。
   final int? forceColumns;
 
@@ -1889,6 +1897,7 @@ class _SliverGridComics extends StatelessWidget {
     this.forceColumns,
     this.chapterCountBuilder,
     this.lastReadTimeBuilder,
+    this.detailedItemHeight,
     required this.heroIDs,
     this.enableHero = true,
     this.enableContextMenu = true,
@@ -2001,6 +2010,7 @@ class _SliverGridComics extends StatelessWidget {
         overrideBrief:
             forceBriefMode ? true : (forceDetailedMode ? false : null),
         forceColumns: forceColumns,
+        detailedItemHeight: detailedItemHeight,
       ),
     );
   }
