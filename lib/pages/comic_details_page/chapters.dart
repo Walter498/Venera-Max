@@ -344,7 +344,8 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
   }
 
   /// 章節封面網格（詳情頁「封面預覽」模式）
-  Widget buildChapterCoverGrid(BuildContext context, ComicDetails details) {
+  Widget buildChapterCoverGrid(BuildContext context, ComicDetails details,
+      {int limit = 0}) {
     final covers = details.chapterCovers ?? const <String, String>{};
     // 後備：源若提供 thumbnails（每章一張縮圖，順序與章節一致）就用它
     final thumbs = details.thumbnails ?? const <String>[];
@@ -358,7 +359,10 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
         childAspectRatio: 0.58,
       ),
       delegate: SliverChildBuilderDelegate((context, slot) {
-        if (slot >= visible.length) return const SizedBox.shrink();
+        final total = (limit > 0 && visible.length > limit)
+            ? limit
+            : visible.length;
+        if (slot >= total) return const SizedBox.shrink();
         if (reverse) {
           slot = visible.length - slot - 1;
         }
@@ -376,7 +380,9 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
             thumbs[i].isNotEmpty) {
           coverUrl = thumbs[i];
         }
-        return InkWell(
+        return KeyedSubtree(
+          key: ValueKey('chapter-cover-$key'),
+          child: InkWell(
           onTap: () => selectMode ? toggleSelect(epKey) : state.read(i + 1),
           borderRadius: BorderRadius.circular(10),
           child: Column(
@@ -436,6 +442,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
               ),
             ],
           ),
+        ),
         );
       }, childCount: visible.length),
     );
@@ -478,7 +485,11 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                     ),
             ),
             if (gridMode)
-              buildChapterCoverGrid(context, pageState.comic),
+              buildChapterCoverGrid(
+                context,
+                pageState.comic,
+                limit: canShowAll ? 0 : 3 * 5,
+              ),
             if (gridMode)
               const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
             if (!gridMode)
