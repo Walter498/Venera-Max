@@ -351,6 +351,9 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     final thumbs = details.thumbnails ?? const <String>[];
     // 章節封面固定 5 個一行（用戶指定 2026-09-16）
     const cross = 5;
+    // 收起時 childCount 必須真的減半：以前 childCount=visible.length、
+    // 只把多餘格子回傳 SizedBox.shrink() → 網格仍佔滿整段高度 → 大片空白。
+    final total = (limit > 0 && visible.length > limit) ? limit : visible.length;
     return SliverGrid(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: cross,
@@ -359,12 +362,8 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
         childAspectRatio: 0.58,
       ),
       delegate: SliverChildBuilderDelegate((context, slot) {
-        final total = (limit > 0 && visible.length > limit)
-            ? limit
-            : visible.length;
-        if (slot >= total) return const SizedBox.shrink();
         if (reverse) {
-          slot = visible.length - slot - 1;
+          slot = total - slot - 1;
         }
         var i = visible[slot];
         var key = chapters.ids.elementAt(i);
@@ -444,7 +443,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
           ),
         ),
         );
-      }, childCount: visible.length),
+      }, childCount: total),
     );
   }
 
@@ -456,21 +455,28 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     _computeVisible();
     return SliverLayoutBuilder(
       builder: (context, constrains) {
+        final gridMode = appdata.settings['chapterCoverGrid'] == true;
+        // 封面模式收起時固定 3 行 × 5 欄 = 15 格；文字模式收起時 8 行。
+        const coverLimit = 3 * 5;
         int length = visible.length;
         bool canShowAll = showAll || selectMode;
         if (!canShowAll) {
-          var width = constrains.crossAxisExtent - 16;
-          var crossItems = width ~/ 200;
-          if (width % 200 != 0) {
-            crossItems += 1;
-          }
-          length = math.min(length, crossItems * 8);
-          if (length == visible.length) {
-            canShowAll = true;
+          if (gridMode) {
+            if (visible.length <= coverLimit) {
+              canShowAll = true;
+            }
+          } else {
+            var width = constrains.crossAxisExtent - 16;
+            var crossItems = width ~/ 200;
+            if (width % 200 != 0) {
+              crossItems += 1;
+            }
+            length = math.min(length, crossItems * 8);
+            if (length == visible.length) {
+              canShowAll = true;
+            }
           }
         }
-
-        final gridMode = appdata.settings['chapterCoverGrid'] == true;
         return SliverMainAxisGroup(
           slivers: [
             SliverToBoxAdapter(
@@ -488,7 +494,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
               buildChapterCoverGrid(
                 context,
                 pageState.comic,
-                limit: canShowAll ? 0 : 3 * 5,
+                limit: canShowAll ? 0 : coverLimit,
               ),
             if (gridMode)
               const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
