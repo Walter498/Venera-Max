@@ -344,44 +344,37 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
   }
 
   /// 章節封面網格（詳情頁「封面預覽」模式）
+  ///
+  /// 收起時改用 Wrap + 固定格子尺寸（SliverToBoxAdapter 包住）：
+  /// 高度【物理上】就是 limit 格的 3 行，絕對不可能出現
+  /// 「格子隱藏但佔位」的那種大片空白。展開時才用 SliverGrid。
   Widget buildChapterCoverGrid(BuildContext context, ComicDetails details,
       {int limit = 0}) {
-    final covers = details.chapterCovers ?? const <String, String>{};
-    // 後備：源若提供 thumbnails（每章一張縮圖，順序與章節一致）就用它
-    final thumbs = details.thumbnails ?? const <String>[];
-    // 章節封面固定 5 個一行（用戶指定 2026-09-16）
-    const cross = 5;
-    // 收起時 childCount 必須真的減半：以前 childCount=visible.length、
-    // 只把多餘格子回傳 SizedBox.shrink() → 網格仍佔滿整段高度 → 大片空白。
-    final total = (limit > 0 && visible.length > limit) ? limit : visible.length;
-    return SliverGrid(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: cross,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.58,
-      ),
-      delegate: SliverChildBuilderDelegate((context, slot) {
-        if (reverse) {
-          slot = total - slot - 1;
-        }
-        var i = visible[slot];
-        var key = chapters.ids.elementAt(i);
-        var value = chapters[key]!;
-        var epKey = (i + 1).toString();
-        bool visited = (_history?.readEpisode ?? const {}).contains(epKey);
-        // 封面優先級：chapterCovers → thumbnails → 惰性向源要該話第一頁
-        // （都沒有才顯示章節序號佔位；不要用漫畫封面充數）
-        String? coverUrl =
-            (covers[key]?.isNotEmpty == true) ? covers[key] : null;
-        if ((coverUrl == null || coverUrl.isEmpty) &&
-            i < thumbs.length &&
-            thumbs[i].isNotEmpty) {
-          coverUrl = thumbs[i];
-        }
-        return KeyedSubtree(
-          key: ValueKey('chapter-cover-$key'),
-          child: InkWell(
+    final collapsed = limit > 0 && visible.length > limit;
+    final total = collapsed ? limit : visible.length;
+
+    /// 顯示槽位 → visible 下標：倒序時從最新一話往回數
+    int mapSlot(int slot) => reverse ? visible.length - 1 - slot : slot;
+
+    Widget cell(int slot) {
+      final i = mapSlot(slot);
+      final key = chapters.ids.elementAt(i);
+      final value = chapters[key]!;
+      final epKey = (i + 1).toString();
+      final visited = (_history?.readEpisode ?? const {}).contains(epKey);
+      final covers = details.chapterCovers ?? const <String, String>{};
+      final thumbs = details.thumbnails ?? const <String>[];
+      // 封面優先級：chapterCovers → thumbnails → 惰性向源要該話第一頁
+      String? coverUrl =
+          (covers[key]?.isNotEmpty == true) ? covers[key] : null;
+      if ((coverUrl == null || coverUrl.isEmpty) &&
+          i < thumbs.length &&
+          thumbs[i].isNotEmpty) {
+        coverUrl = thumbs[i];
+      }
+      return KeyedSubtree(
+        key: ValueKey('chapter-cover-$key'),
+        child: InkWell(
           onTap: () => selectMode ? toggleSelect(epKey) : state.read(i + 1),
           borderRadius: BorderRadius.circular(10),
           child: Column(
@@ -394,15 +387,14 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       // 必須走 App 的圖片載入器：它會套用源的 onImageLoad
-                  // headers（帶 UA）。Image.network 是 Flutter 原生 HTTP，
-                  // 不帶 UA → 栗子圖床回 403 → 封面永遠顯示佔位圖。
-                  child: _LazyChapterCover(
-                    coverUrl: coverUrl,
-                    placeholderIndex: i + 1,
-                    sourceKey: details.sourceKey,
-                    comicId: details.id,
-                    epId: key,
-                  ),
+                      // headers（帶 UA），Image.network 會被圖床 403。
+                      child: _LazyChapterCover(
+                        coverUrl: coverUrl,
+                        placeholderIndex: i + 1,
+                        sourceKey: details.sourceKey,
+                        comicId: details.id,
+                        epId: key,
+                      ),
                     ),
                     if (visited)
                       Positioned(
@@ -442,8 +434,41 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
             ],
           ),
         ),
-        );
-      }, childCount: total),
+      );
+    }
+
+    if (collapsed) {
+      return SliverToBoxAdapter(
+        child: LayoutBuilder(
+          builder: (context, c) {
+            const cross = 5;
+            const spacing = 10.0;
+            final cellW = (c.maxWidth - spacing * (cross - 1)) / cross;
+            final cellH = cellW / 0.58 + 20;
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: [
+                for (var slot = 0; slot < total; slot++)
+                  SizedBox(width: cellW, height: cellH, child: cell(slot)),
+              ],
+            );
+          },
+        ),
+      );
+    }
+
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 5,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.58,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, slot) => cell(slot),
+        childCount: total,
+      ),
     );
   }
 
