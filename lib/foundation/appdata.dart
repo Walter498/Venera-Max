@@ -373,6 +373,8 @@ class Settings with ChangeNotifier {
     'defaultSearchTarget': null,
     'autoPageTurningInterval': 5, // in seconds
     'autoScrollSpeed': 300, // 連續模式自動滾動速度（像素/秒）
+    // 連續模式上滑／下滑切換下一章所需距離（像素）。越小越容易觸發。
+    'changeChapterOffset': 160,
     'readerMode': 'galleryLeftToRight', // values of [ReaderMode]
     'enableContinuousChapterReading': true,
     'readerScreenPicNumberForLandscape': 1, // 1 - 5

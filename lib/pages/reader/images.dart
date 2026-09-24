@@ -793,6 +793,13 @@ const Set<PointerDeviceKind> _kTouchLikeDeviceTypes = <PointerDeviceKind>{
 
 const double _kChangeChapterOffset = 160;
 
+/// 上滑／下滑切換下一章所需距離（像素）。
+/// 可在「閱讀設定」調整，值越小 → 不必滑那麼多就能切到下一章。
+double _globalChangeChapterOffset() {
+  final v = appdata.settings['changeChapterOffset'];
+  return (v is num && v > 0) ? v.toDouble() : _kChangeChapterOffset;
+}
+
 class _ContinuousMode extends StatefulWidget {
   const _ContinuousMode({super.key});
 
@@ -1483,15 +1490,23 @@ class _ContinuousModeState extends State<_ContinuousMode>
   }
 
   void _updateSwipeChangeChapter() {
+    final rawOffset = appdata.settings.getReaderSetting(
+      reader.cid,
+      reader.type.sourceKey,
+      'changeChapterOffset',
+    );
+    final changeOffset = (rawOffset is num && rawOffset > 0)
+        ? rawOffset.toDouble()
+        : _kChangeChapterOffset;
     if (prepareToPrevChapter) {
       jumpToNextChapter = false;
       jumpToPrevChapter =
           scrollController.offset <
-          scrollController.position.minScrollExtent - _kChangeChapterOffset;
+          scrollController.position.minScrollExtent - changeOffset;
     } else if (prepareToNextChapter) {
       jumpToNextChapter =
           scrollController.offset >
-          scrollController.position.maxScrollExtent + _kChangeChapterOffset;
+          scrollController.position.maxScrollExtent + changeOffset;
       jumpToPrevChapter = false;
     }
   }
@@ -2757,7 +2772,7 @@ class _SwipeChangeChapterProgressState
     var offset = isPrev
         ? controller!.position.minScrollExtent - position
         : position - controller!.position.maxScrollExtent;
-    var newValue = offset / _kChangeChapterOffset;
+    var newValue = offset / _globalChangeChapterOffset();
     newValue = newValue.clamp(0.0, 1.0);
     if (newValue != value) {
       setState(() {

@@ -524,6 +524,25 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                     ?.startsWith('continuous') ??
                 false)
               _SliderSetting(
+                title: "Swipe distance to change chapter (px)".tl,
+                settingsIndex: "changeChapterOffset",
+                interval: 10,
+                min: 40,
+                max: 400,
+                onChanged: () {
+                  setState(() {});
+                  widget.onChanged?.call("changeChapterOffset");
+                },
+                comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                comicSource: isEnabledSpecificSettings
+                    ? widget.comicSource
+                    : null,
+                useDeviceSettings: useDeviceSpecificSettings,
+              ),
+            if ((_effectiveSetting('readerMode') as String?)
+                    ?.startsWith('continuous') ??
+                false)
+              _SliderSetting(
                 title: "Mouse scroll speed".tl,
                 settingsIndex: "readerScrollSpeed",
                 interval: 0.1,
