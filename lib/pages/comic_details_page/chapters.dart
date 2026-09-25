@@ -1,5 +1,38 @@
 part of 'comic_page.dart';
 
+/// 從章節標題解析話號（「第123话」「第123話」…），解析不到回傳 -1。
+int _chapterNumberOf(String? title) {
+  if (title == null) return -1;
+  final m = RegExp(r'第\s*(\d+)\s*[话話]').firstMatch(title);
+  if (m == null) return -1;
+  return int.tryParse(m.group(1)!) ?? -1;
+}
+
+/// 「按話號排序」開啟時重排顯示清單。
+///
+/// 用途：來源給的順序不可靠時的保險。最典型的情況是源用「章節 id」當 key ——
+/// JS 物件對整數字串 key 一律按【數值升序】列舉，補更/重傳的章節 id 較大，
+/// 就會被搬到後面（實測「魔皇大管家」73/83/86~88/90 話跑到 91 話之後）。
+/// 只重排顯示用的 index 清單，章節索引不被改寫，閱讀、下載、歷史不受影響。
+/// 解析不到話號的章節排最後，並保持原本相對順序。
+List<int> _sortByChapterNumber(List<int> visible, List<String> titles) {
+  if (appdata.settings['chapterSortByNumber'] != true) return visible;
+  final nums = <int, int>{};
+  final pos = <int, int>{};
+  for (var p = 0; p < visible.length; p++) {
+    final i = visible[p];
+    final n = _chapterNumberOf(i < titles.length ? titles[i] : null);
+    nums[i] = n <= 0 ? 1 << 30 : n;
+    pos[i] = p;
+  }
+  final out = List<int>.from(visible);
+  out.sort((a, b) {
+    final d = nums[a]! - nums[b]!;
+    return d != 0 ? d : pos[a]! - pos[b]!;
+  });
+  return out;
+}
+
 class _ComicChapters extends StatelessWidget {
   const _ComicChapters({this.history, required this.groupedMode});
 
@@ -204,6 +237,7 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
     required VoidCallback onToggleShowAll,
   }) {
     final gridMode = appdata.settings['chapterCoverGrid'] == true;
+    final sortByNumber = appdata.settings['chapterSortByNumber'] == true;
     return _ComicSectionHeader(
       icon: Icons.view_list_rounded,
       title: "Chapters".tl,
@@ -223,6 +257,26 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
               onPressed: () {
                 setState(() {
                   appdata.settings['chapterCoverGrid'] = !gridMode;
+                });
+                appdata.saveData();
+              },
+            ),
+          ),
+          // 按話號排序：來源順序不可靠時的保險（例如源用章節 id 當 key，
+          // 被 JS 按數值重排 → 補更的章節跑到後面）。預設關閉 = 用來源順序。
+          Tooltip(
+            message: sortByNumber
+                ? "Use source order".tl
+                : "Sort by chapter number".tl,
+            child: IconButton(
+              icon: Icon(
+                sortByNumber
+                    ? Icons.format_list_numbered_rounded
+                    : Icons.sort_rounded,
+              ),
+              onPressed: () {
+                setState(() {
+                  appdata.settings['chapterSortByNumber'] = !sortByNumber;
                 });
                 appdata.saveData();
               },
@@ -309,6 +363,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
       for (var i = 0; i < chapters.length; i++)
         if (!hidden.contains(i)) i,
     ];
+    visible = _sortByChapterNumber(visible, chapters.titles.toList());
   }
 
   @override
@@ -757,6 +812,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
       for (var i = 0; i < group.length; i++)
         if (!hidden.contains(offset + i)) i,
     ];
+    visible = _sortByChapterNumber(visible, group.values.toList());
   }
 
   /// Selectable keys = ONLY the current group's visible chapters, in reader

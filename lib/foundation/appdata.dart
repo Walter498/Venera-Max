@@ -478,6 +478,8 @@ class Settings with ChangeNotifier {
     'showSingleImageOnFirstPage': false,
     'enableDoubleTapToZoom': true,
     'reverseChapterOrder': false,
+    // 章節面板：按標題話號排序（來源順序不可靠時的保險），預設關
+    'chapterSortByNumber': false,
     'showSystemStatusBar': false,
     'comicSpecificSettings': <String, Map<String, dynamic>>{},
     'deviceSpecificSettings': <String, Map<String, dynamic>>{},
