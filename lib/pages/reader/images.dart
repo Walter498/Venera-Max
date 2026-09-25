@@ -1507,13 +1507,23 @@ class _ContinuousModeState extends State<_ContinuousMode>
         : _kChangeChapterOffset;
     if (prepareToPrevChapter) {
       jumpToNextChapter = false;
-      jumpToPrevChapter =
+      final passed =
           scrollController.offset <
           scrollController.position.minScrollExtent - changeOffset;
+      // 跨過門檻的一瞬間震一下：此前的「上滑切下一章 / 下滑切上一章」
+      // 只有視覺進度條，完全沒有觸覺反饋。
+      if (passed && !jumpToPrevChapter) {
+        HapticFeedback.mediumImpact();
+      }
+      jumpToPrevChapter = passed;
     } else if (prepareToNextChapter) {
-      jumpToNextChapter =
+      final passed =
           scrollController.offset >
           scrollController.position.maxScrollExtent + changeOffset;
+      if (passed && !jumpToNextChapter) {
+        HapticFeedback.mediumImpact();
+      }
+      jumpToNextChapter = passed;
       jumpToPrevChapter = false;
     }
   }
@@ -1930,6 +1940,8 @@ class _ContinuousModeState extends State<_ContinuousMode>
               jumpToPrevChapter = false;
               jumpToNextChapter = false;
               context.readerScaffold.setFloatingButton(-1);
+              // 滑到章首、出現「下滑查看上一章」提示時給一次輕微觸覺。
+              HapticFeedback.selectionClick();
               setState(() {
                 prepareToPrevChapter = true;
               });
@@ -1941,6 +1953,8 @@ class _ContinuousModeState extends State<_ContinuousMode>
               jumpToPrevChapter = false;
               jumpToNextChapter = false;
               context.readerScaffold.setFloatingButton(1);
+              // 滑到章末、出現「上滑查看下一章」提示時給一次輕微觸覺。
+              HapticFeedback.selectionClick();
               setState(() {
                 prepareToNextChapter = true;
               });
