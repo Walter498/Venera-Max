@@ -927,6 +927,13 @@ class _ContinuousModeState extends State<_ContinuousMode>
   /// against the old extents that offset can read as the chapter start.
   bool _repivoting = false;
 
+  /// 當前這次滾動是否由「使用者自己的拖動」發起。
+  ///
+  /// 程式化滾動（還原上次閱讀位置）和圖片載入造成的版面位移都不是，
+  /// 它們以前會把 readerScrolling / lastScrollStop 設成當下，
+  /// 導致剛進漫畫還沒動手就被 800ms 靜止判定擋住第一次點擊。
+  bool _userDragging = false;
+
   /// Per-image GlobalKeys ("chapter:page") used to read each visible item's
   /// render box during scroll so we can resolve the current reading position
   /// without [ScrollablePositionedList]'s itemPositions listener.
@@ -1891,14 +1898,22 @@ class _ContinuousModeState extends State<_ContinuousMode>
       onNotification: (notification) {
         if (_repivoting) return true;
         if (notification is ScrollStartNotification) {
-          reader.readerScrolling = true;
+          // 只有使用者真的拖動才算「滾動中」：初始定位／圖片載入造成的
+          // 版面位移不該讓閱讀器看起來「剛停手」。
+          if (notification.dragDetails != null) {
+            _userDragging = true;
+            reader.readerScrolling = true;
+          }
           delayedSetIsScrolling(true);
           if (notification.dragDetails != null) {
             _cancelProgrammaticPageTurn();
           }
         } else if (notification is ScrollEndNotification) {
-          reader.readerScrolling = false;
-          reader.lastScrollStop = DateTime.now();
+          if (_userDragging) {
+            _userDragging = false;
+            reader.readerScrolling = false;
+            reader.lastScrollStop = DateTime.now();
+          }
           delayedSetIsScrolling(false);
         }
 
