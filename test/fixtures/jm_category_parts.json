@@ -1,0 +1,628 @@
+[
+  {
+    "title": "每週必看",
+    "items": [
+      {
+        "label": "每週必看",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "每週必看",
+            "param": null
+          }
+        }
+      }
+    ]
+  },
+  {
+    "title": "成人A漫",
+    "items": [
+      {
+        "label": "最新A漫",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "最新A漫",
+            "param": "0"
+          }
+        }
+      },
+      {
+        "label": "同人",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "同人",
+            "param": "doujin"
+          }
+        }
+      },
+      {
+        "label": "單本",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "單本",
+            "param": "single"
+          }
+        }
+      },
+      {
+        "label": "短篇",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "短篇",
+            "param": "short"
+          }
+        }
+      },
+      {
+        "label": "其他類",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "其他類",
+            "param": "another"
+          }
+        }
+      },
+      {
+        "label": "韓漫",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "韓漫",
+            "param": "hanman"
+          }
+        }
+      },
+      {
+        "label": "美漫",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "美漫",
+            "param": "meiman"
+          }
+        }
+      },
+      {
+        "label": "Cosplay",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "Cosplay",
+            "param": "another_cosplay"
+          }
+        }
+      },
+      {
+        "label": "3D",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "3D",
+            "param": "3D"
+          }
+        }
+      },
+      {
+        "label": "禁漫漢化組",
+        "target": {
+          "page": "category",
+          "attributes": {
+            "category": "禁漫漢化組",
+            "param": "禁漫漢化組"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "title": "主題A漫",
+    "items": [
+      {
+        "label": "無修正",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "無修正"
+          }
+        }
+      },
+      {
+        "label": "劇情向",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "劇情向"
+          }
+        }
+      },
+      {
+        "label": "青年漫",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "青年漫"
+          }
+        }
+      },
+      {
+        "label": "校服",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "校服"
+          }
+        }
+      },
+      {
+        "label": "純愛",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "純愛"
+          }
+        }
+      },
+      {
+        "label": "人妻",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "人妻"
+          }
+        }
+      },
+      {
+        "label": "教師",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "教師"
+          }
+        }
+      },
+      {
+        "label": "百合",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "百合"
+          }
+        }
+      },
+      {
+        "label": "Yaoi",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "Yaoi"
+          }
+        }
+      },
+      {
+        "label": "性轉",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "性轉"
+          }
+        }
+      },
+      {
+        "label": "NTR",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "NTR"
+          }
+        }
+      },
+      {
+        "label": "女裝",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "女裝"
+          }
+        }
+      },
+      {
+        "label": "癡女",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "癡女"
+          }
+        }
+      },
+      {
+        "label": "全彩",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "全彩"
+          }
+        }
+      },
+      {
+        "label": "女性向",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "女性向"
+          }
+        }
+      },
+      {
+        "label": "完結",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "完結"
+          }
+        }
+      },
+      {
+        "label": "禁漫漢化組",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "禁漫漢化組"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "title": "角色扮演",
+    "items": [
+      {
+        "label": "御姐",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "御姐"
+          }
+        }
+      },
+      {
+        "label": "熟女",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "熟女"
+          }
+        }
+      },
+      {
+        "label": "巨乳",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "巨乳"
+          }
+        }
+      },
+      {
+        "label": "貧乳",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "貧乳"
+          }
+        }
+      },
+      {
+        "label": "女性支配",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "女性支配"
+          }
+        }
+      },
+      {
+        "label": "教師",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "教師"
+          }
+        }
+      },
+      {
+        "label": "女僕",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "女僕"
+          }
+        }
+      },
+      {
+        "label": "護士",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "護士"
+          }
+        }
+      },
+      {
+        "label": "泳裝",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "泳裝"
+          }
+        }
+      },
+      {
+        "label": "眼鏡",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "眼鏡"
+          }
+        }
+      },
+      {
+        "label": "連褲襪",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "連褲襪"
+          }
+        }
+      },
+      {
+        "label": "其他制服",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "其他制服"
+          }
+        }
+      },
+      {
+        "label": "兔女郎",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "兔女郎"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "title": "特殊PLAY",
+    "items": [
+      {
+        "label": "群交",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "群交"
+          }
+        }
+      },
+      {
+        "label": "足交",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "足交"
+          }
+        }
+      },
+      {
+        "label": "束縛",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "束縛"
+          }
+        }
+      },
+      {
+        "label": "肛交",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "肛交"
+          }
+        }
+      },
+      {
+        "label": "阿黑顏",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "阿黑顏"
+          }
+        }
+      },
+      {
+        "label": "藥物",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "藥物"
+          }
+        }
+      },
+      {
+        "label": "扶他",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "扶他"
+          }
+        }
+      },
+      {
+        "label": "調教",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "調教"
+          }
+        }
+      },
+      {
+        "label": "野外露出",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "野外露出"
+          }
+        }
+      },
+      {
+        "label": "催眠",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "催眠"
+          }
+        }
+      },
+      {
+        "label": "自慰",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "自慰"
+          }
+        }
+      },
+      {
+        "label": "觸手",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "觸手"
+          }
+        }
+      },
+      {
+        "label": "獸交",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "獸交"
+          }
+        }
+      },
+      {
+        "label": "亞人",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "亞人"
+          }
+        }
+      },
+      {
+        "label": "怪物女孩",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "怪物女孩"
+          }
+        }
+      },
+      {
+        "label": "皮物",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "皮物"
+          }
+        }
+      },
+      {
+        "label": "ryona",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "ryona"
+          }
+        }
+      },
+      {
+        "label": "騎大車",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "騎大車"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "title": "特殊PLAY",
+    "items": [
+      {
+        "label": "CG",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "CG"
+          }
+        }
+      },
+      {
+        "label": "重口",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "重口"
+          }
+        }
+      },
+      {
+        "label": "獵奇",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "獵奇"
+          }
+        }
+      },
+      {
+        "label": "非H",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "非H"
+          }
+        }
+      },
+      {
+        "label": "血腥暴力",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "血腥暴力"
+          }
+        }
+      },
+      {
+        "label": "站長推薦",
+        "target": {
+          "page": "search",
+          "attributes": {
+            "keyword": "站長推薦"
+          }
+        }
+      }
+    ]
+  }
+]
