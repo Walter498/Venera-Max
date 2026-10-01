@@ -33,6 +33,7 @@ import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/foundation/image_provider/reader_image.dart';
 import 'package:venera/foundation/image_translation/translation_config.dart';
 import 'package:venera/foundation/image_translation/translation_service.dart';
+import 'package:venera/foundation/image_translation/pre_translation_tasks.dart';
 import 'package:venera/foundation/image_translation/translation_types.dart';
 import 'package:venera/foundation/local.dart';
 import 'package:venera/foundation/log.dart';
@@ -171,6 +172,36 @@ class _ReaderState extends State<Reader>
   @override
   void update() {
     setState(() {});
+  }
+
+  /// Starts a background job for exactly the chapter currently open. The job
+  /// uses the same cache and page-order path as the reader, so completed pages
+  /// are skipped and the floating progress chip can follow it.
+  void translateCurrentChapter() {
+    if (!ImageTranslationService.isEnabledForComic(cid, type.sourceKey)) {
+      context.showMessage(message: "Enable AI translation for this comic first".tl);
+      return;
+    }
+    if (!ImageTranslationService.isReadyForComic(cid, type.sourceKey)) {
+      context.showMessage(message: "Translation models or provider are not ready".tl);
+      return;
+    }
+    final task = PreTranslationTaskManager.instance.start(
+      cid: cid,
+      sourceKey: type.sourceKey,
+      comicType: type,
+      title: widget.name,
+      cover: widget.history.cover,
+      chapters: [
+        PreTranslationChapter(
+          eid: eid,
+          title: widget.chapters?.titles.elementAtOrNull(chapter - 1) ?? widget.name,
+        ),
+      ],
+    );
+    context.showMessage(
+      message: task == null ? "A translation task is already running".tl : "Chapter translation started".tl,
+    );
   }
 
   /// The maximum page number for images only (excluding chapter comments page).

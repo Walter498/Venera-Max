@@ -125,6 +125,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     // Refresh the translation status badge as pages start/finish/fail; the
     // top bar lives in an OverlayEntry that a parent setState won't rebuild.
     ImageTranslationService.instance.addListener(_onTranslationStatusChanged);
+    PreTranslationTaskManager.instance.addListener(_onPreTranslationChanged);
     Future.delayed(const Duration(milliseconds: 200), addDragListener);
   }
 
@@ -132,11 +133,49 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     if (mounted) setState(() {});
   }
 
+  void _onPreTranslationChanged() {
+    if (mounted) setState(() {});
+  }
+
+  PreTranslationTask? get _chapterTranslationTask =>
+      PreTranslationTaskManager.instance.runningTaskFor(
+        context.reader.cid, context.reader.type.sourceKey);
+
+  Widget _buildChapterTranslationChip() {
+    final task = _chapterTranslationTask;
+    if (task == null) return const SizedBox.shrink();
+    final activity = PreTranslationTaskManager.instance.activityOf(task.id);
+    final progress = activity?.liveProgress(task) ?? task.progress;
+    final processed = activity?.liveProcessed(task) ?? task.done + task.failed;
+    final total = task.total;
+    final label = total > 0 ? '$processed/$total' : '…';
+    return Material(
+      color: context.colorScheme.surfaceContainerHigh,
+      elevation: 4,
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(width: 20, height: 20,
+            child: CircularProgressIndicator(value: progress <= 0 ? null : progress,
+              strokeWidth: 2.4)),
+          const SizedBox(width: 7),
+          Text('翻譯本章 $label', style: ts.s12),
+          if (task.failed > 0) ...[
+            const SizedBox(width: 5),
+            Text('失敗 ${task.failed}', style: TextStyle(color: context.colorScheme.error, fontSize: 11)),
+          ],
+        ]),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     ImageTranslationService.instance.removeListener(
       _onTranslationStatusChanged,
     );
+    PreTranslationTaskManager.instance.removeListener(_onPreTranslationChanged);
     // 方向鎖只屬於閱讀器：離開時交還系統預設，其他頁面不受影響
     if (rotation != null) {
       SystemChrome.setPreferredOrientations(resolveReadingOrientations(null));
@@ -239,6 +278,12 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             ),
           ),
         ),
+        if (_chapterTranslationTask != null)
+          Positioned(
+            right: 16,
+            bottom: 112,
+            child: IgnorePointer(child: _buildChapterTranslationChip()),
+          ),
         Positioned(
           top: 0,
           left: 0,
@@ -340,6 +385,15 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                   ),
                 ),
               ...buildTranslationControls(),
+              if (ImageTranslationService.isEnabledForComic(
+                    context.reader.cid, context.reader.type.sourceKey))
+                Tooltip(
+                  message: "Translate current chapter".tl,
+                  child: IconButton(
+                    icon: const Icon(Icons.translate_rounded),
+                    onPressed: context.reader.translateCurrentChapter,
+                  ),
+                ),
               Tooltip(
                 message: "Settings".tl,
                 child: IconButton(
