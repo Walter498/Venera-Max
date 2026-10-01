@@ -18,8 +18,12 @@ import 'package:venera/utils/opencc.dart';
 /// already being in the target language) — the service uses the votes to
 /// lock a comic's dominant language.
 class PageAnalysis {
-  PageAnalysis(this.regions, this.languageVotes, [this.newGlossary = const {}],
-      {this.incomplete = false});
+  PageAnalysis(
+    this.regions,
+    this.languageVotes, [
+    this.newGlossary = const {},
+    this.incomplete = false,
+  ]);
 
   final List<TranslatedRegion> regions;
 
@@ -99,7 +103,7 @@ class PageTranslationPipeline {
       regions,
       ocr.languageVotes,
       result.glossary,
-      incomplete: result.missingIds.isNotEmpty,
+      result.missingIds.isNotEmpty,
     );
   }
 
