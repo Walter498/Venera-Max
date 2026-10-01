@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
-import 'package:venera/foundation/category_chip_rows.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/home_layout.dart';
 import 'package:venera/pages/search_page.dart';
 import 'package:venera/utils/translations.dart';
 
-/// 分類頁：保留來源定義的所有分組與原生搜尋／分類跳轉。
-/// tag/class/isend 編碼篩選保留即時網格與多選交集；其他來源參數
-/// 視為不透明值，交由原生目的頁處理，避免自行拼接造成查詢錯誤。
+/// 分類頁（2026-09-16 改版：仿栗子官方 App 圖一佈局）
+/// 頂部搜索框 → 題材 / 地區 / 狀態篩選 chips → 即時結果網格（可翻頁）。
+/// 篩選條件可組合（tag: X|class: Y|isend: Z），組合參數由源端解析
+/// （栗子源 v2.25.0+ 支援；其他源選單一條件時正常，多條件視源而定）。
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
 
@@ -17,19 +17,29 @@ class CategoriesPage extends StatefulWidget {
   State<CategoriesPage> createState() => _CategoriesPageState();
 }
 
+class _FilterOption {
+  final String label;
+  final String? param; // null = 全部
+  const _FilterOption(this.label, this.param);
+}
+
+class _FilterRow {
+  final String title;
+  final List<_FilterOption> options;
+  const _FilterRow(this.title, this.options);
+}
+
 class _CategoriesPageState extends State<CategoriesPage> {
-  /// 可切換的源（有分類資料）：首頁顯示源排前面
+  /// 可切換的源（有分類資料 + 分類載入器）：首頁顯示源排前面
   List<ComicSource> _availableSources = [];
   int _sourceIndex = 0;
   ComicSource? _source;
-  List<CategoryChipRow> _rows = const [];
-  final Map<int, String?> _selected = {};
+  List<_FilterRow> _rows = const [];
+  final Map<String, String?> _selected = {}; // rowTitle -> param（單選行用）
+  /// 題材行（tag:）多選集合（2026-09-17 用戶要求：標籤可多選）
   final Set<String> _selectedTags = {};
-  int? _tagRowId;
-  final Set<int> _expandedRows = {};
-  int _loadGeneration = 0;
-
-  bool get _hasInlineFilters => _rows.any((row) => row.isFilter);
+  String? _tagRowTitle;
+  bool _expanded = false;
 
   List<Comic> _comics = [];
   int _page = 1;
@@ -62,13 +72,15 @@ class _CategoriesPageState extends State<CategoriesPage> {
     for (final key in effectiveHomeDisplaySourceKeys()) {
       final s = ComicSource.find(key);
       if (s != null &&
+          s.categoryComicsData != null &&
           s.categoryData != null &&
           seen.add(s.key)) {
         list.add(s);
       }
     }
     for (final s in ComicSource.all()) {
-      if (s.categoryData != null &&
+      if (s.categoryComicsData != null &&
+          s.categoryData != null &&
           seen.add(s.key)) {
         list.add(s);
       }
@@ -80,16 +92,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
     _reload();
   }
 
-  /// 切換源時重建分組並清除舊源的選擇與展開狀態。
+  /// 切換源：篩選 chips 換成新源的分類，每行都保留「全部」，然後重載
   void _switchSource(int index) {
     if (index == _sourceIndex || index >= _availableSources.length) return;
     setState(() {
       _sourceIndex = index;
       _source = _availableSources[index];
       _selected.clear();
-      _selectedTags.clear();
-      _tagRowId = null;
-      _expandedRows.clear();
+      _expanded = false;
       _rows = const [];
     });
     _buildRows();
@@ -98,35 +108,55 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   void _buildRows() {
     final data = _source?.categoryData;
-    final rows = data == null
-        ? <CategoryChipRow>[]
-        : buildCategoryChipRows(data, allLabel: '全部'.tl);
-    _selected.clear();
-    _selectedTags.clear();
-    _tagRowId = null;
-    for (final row in rows.where((row) => row.isFilter)) {
-      _selected[row.id] = null;
-      if (_tagRowId == null && row.isTagFilter) _tagRowId = row.id;
+    if (data == null) return;
+    final rows = <_FilterRow>[];
+    for (final part in data.categories) {
+      if (part is! FixedCategoryPart) continue;
+      final options = <_FilterOption>[_FilterOption('全部'.tl, null)];
+      var hasRealParam = false;
+      for (final item in part.categories) {
+        final param = item.target.attributes?['param']?.toString();
+        // 「推薦 / 排行」類不是篩選條件，跳過
+        if (param == 'rank') continue;
+        options.add(_FilterOption(item.label, param));
+        if (param != null) hasRealParam = true;
+      }
+      if (hasRealParam && options.length > 1) {
+        rows.add(_FilterRow(part.title, options));
+        _selected[part.title] = null;
+        // 題材行（參數是 tag: 開頭的）支持多選
+        if (_tagRowTitle == null &&
+            options.any((o) => o.param?.startsWith('tag:') == true)) {
+          _tagRowTitle = part.title;
+        }
+      }
     }
     setState(() => _rows = rows);
   }
 
-  String? get _combinedParam =>
-      combineCategoryChipParams(_rows, _selected, _selectedTags, _tagRowId);
+  /// 組合所有篩選行的參數：tag:格斗|class:3|isend:0
+  /// （題材行單選時才進這裡；多選走 _loadMultiTags 交集）
+  String? get _combinedParam {
+    final segs = <String>[];
+    for (final row in _rows) {
+      if (row.title == _tagRowTitle) {
+        if (_selectedTags.length == 1) segs.add(_selectedTags.first);
+        continue;
+      }
+      final p = _selected[row.title];
+      if (p != null && p.isNotEmpty) segs.add(p);
+    }
+    if (segs.isEmpty) return null;
+    return segs.join('|');
+  }
 
   Future<void> _reload() async {
-    _loadGeneration++;
     setState(() {
-      _loading = false;
       _comics = [];
       _page = 1;
       _hasMore = true;
       _error = null;
     });
-    if (!_hasInlineFilters) {
-      setState(() => _hasMore = false);
-      return;
-    }
     if (_selectedTags.length >= 2) {
       await _loadMultiTags();
     } else {
@@ -138,19 +168,24 @@ class _CategoriesPageState extends State<CategoriesPage> {
   Future<void> _loadMultiTags() async {
     final loader = _source?.categoryComicsData?.load;
     if (loader == null) return;
-    final generation = _loadGeneration;
     setState(() => _loading = true);
     try {
       // 非題材條件照樣組合進每個請求
-      final base = combineCategoryChipParams(_rows, _selected, {}, _tagRowId) ?? '';
+      final base = <String>[
+        for (final row in _rows)
+          if (row.title != _tagRowTitle &&
+              _selected[row.title] != null &&
+              _selected[row.title]!.isNotEmpty)
+            _selected[row.title]!,
+      ].join('|');
       final results = await Future.wait([
         for (final t in _selectedTags)
           loader('', base.isEmpty ? t : '$t|$base', const <String>[], 1),
       ]);
-      if (!mounted || generation != _loadGeneration) return;
+      if (!mounted) return;
       Map<String, Comic>? inter;
       for (final r in results) {
-        if (!r.success) throw StateError(r.errorMessage ?? 'Tag load failed');
+        if (!r.success) continue; // 失敗的標籤跳過（寬鬆處理）
         final m = {for (final c in r.data) c.id: c};
         inter = inter == null
             ? m
@@ -164,27 +199,18 @@ class _CategoriesPageState extends State<CategoriesPage> {
         _error = null;
       });
     } catch (e) {
-      if (mounted && generation == _loadGeneration) {
-        setState(() {
-          _error = e.toString();
-          _loading = false;
-          _hasMore = false;
-        });
-      }
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
   Future<void> _loadMore() async {
-    if (_loading || !_hasMore || !_hasInlineFilters) return;
+    if (_loading || !_hasMore) return;
     final loader = _source?.categoryComicsData?.load;
     if (loader == null) return;
-    final generation = _loadGeneration;
-    final page = _page;
-    final param = _combinedParam;
-    setState(() => _loading = true);
+    _loading = true;
     try {
-      final res = await loader('', param, const <String>[], page);
-      if (!mounted || generation != _loadGeneration) return;
+      final res = await loader('', _combinedParam, const <String>[], _page);
+      if (!mounted) return;
       setState(() {
         if (res.success) {
           // 去重（源的翻頁可能回傳重複項）
@@ -194,10 +220,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
               if (!ids.contains(c.id)) c,
           ];
           _comics = [..._comics, ...fresh];
-          final maxPage = res.subData;
-          _hasMore = res.data.isNotEmpty &&
-              page < 50 &&
-              (maxPage is! int || page < maxPage);
+          _hasMore = res.data.isNotEmpty && _page < 50;
           _page++;
           _error = null;
         } else {
@@ -206,16 +229,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
         }
       });
     } catch (e) {
-      if (mounted && generation == _loadGeneration) {
+      if (mounted) {
         setState(() {
           _error = e.toString();
           _hasMore = false;
         });
       }
     } finally {
-      if (mounted && generation == _loadGeneration) {
-        setState(() => _loading = false);
-      }
+      _loading = false;
     }
   }
 
@@ -229,12 +250,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
             SliverToBoxAdapter(child: _buildSourceTabs()),
           SliverToBoxAdapter(child: _buildSearchBar()),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
-          if (_hasInlineFilters) ...[
-            const SliverToBoxAdapter(child: Divider(height: 24)),
-            if (_comics.isNotEmpty)
-              SliverGridComics(comics: _comics, forceBriefMode: true),
-            SliverToBoxAdapter(child: _buildFooter()),
-          ],
+          const SliverToBoxAdapter(child: Divider(height: 24)),
+          if (_comics.isNotEmpty)
+            SliverGridComics(comics: _comics, forceBriefMode: true),
+          SliverToBoxAdapter(child: _buildFooter()),
         ],
       ),
     );
@@ -320,67 +339,49 @@ class _CategoriesPageState extends State<CategoriesPage> {
     );
   }
 
-  Widget _buildRow(CategoryChipRow row) {
-    final selectedParam = _selected[row.id];
+  Widget _buildRow(_FilterRow row) {
+    final selectedParam = _selected[row.title];
+    // 題材行（選項多）：預設顯示前 9 個 + 展開鈕；其他行全部平鋪
     final expandable = row.options.length > 10;
-    final expanded = _expandedRows.contains(row.id);
-    final visible = (expandable && !expanded)
+    final visible = (expandable && !_expanded)
         ? row.options.take(9).toList()
         : row.options;
     return Padding(
-      key: ValueKey('category-row-${row.id}'),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
         children: [
-          if (row.title.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-              child: Text(row.title.ts(_source!.key),
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          for (final opt in visible)
+            _chip(
+              opt.label,
+              selected: row.title == _tagRowTitle
+                  ? (opt.param == null
+                      ? _selectedTags.isEmpty
+                      : _selectedTags.contains(opt.param))
+                  : opt.param == selectedParam,
+              onTap: () {
+                if (row.title == _tagRowTitle) {
+                  // 題材行：多選切換；「全部」= 清空選擇
+                  if (opt.param == null) {
+                    _selectedTags.clear();
+                  } else if (!_selectedTags.remove(opt.param)) {
+                    _selectedTags.add(opt.param!);
+                  }
+                  _selected[row.title] = null;
+                } else {
+                  _selected[row.title] = opt.param;
+                }
+                setState(() {});
+                _reload();
+              },
             ),
-          Wrap(
-            spacing: 4,
-            runSpacing: 4,
-            children: [
-              for (final opt in visible)
-                _chip(
-                  opt.label.ts(_source!.key),
-                  selected: row.isFilter && (row.id == _tagRowId
-                      ? (opt.param == null
-                          ? _selectedTags.isEmpty
-                          : _selectedTags.contains(opt.param))
-                      : opt.param == selectedParam),
-                  onTap: () {
-                    if (!row.isFilter) {
-                      // Let the native destination load source-specific options.
-                      opt.target?.jump(context);
-                      return;
-                    }
-                    if (row.id == _tagRowId) {
-                      if (opt.param == null) {
-                        _selectedTags.clear();
-                      } else if (!_selectedTags.remove(opt.param)) {
-                        _selectedTags.add(opt.param!);
-                      }
-                      _selected[row.id] = null;
-                    } else {
-                      _selected[row.id] = opt.param;
-                    }
-                    setState(() {});
-                    _reload();
-                  },
-                ),
-              if (expandable)
-                _chip(
-                  expanded ? '收起' : '展開 ▾',
-                  selected: false,
-                  onTap: () => setState(() {
-                    if (!_expandedRows.remove(row.id)) _expandedRows.add(row.id);
-                  }),
-                ),
-            ],
-          ),
+          if (expandable)
+            _chip(
+              _expanded ? '收起' : '展開 ▾',
+              selected: false,
+              onTap: () => setState(() => _expanded = !_expanded),
+            ),
         ],
       ),
     );
@@ -392,8 +393,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Container(
-        constraints: const BoxConstraints(minWidth: 66, minHeight: 36),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        width: 66,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
           color: selected
               ? context.colorScheme.primaryContainer
@@ -402,7 +404,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
         ),
         child: Text(
           label,
-          textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(

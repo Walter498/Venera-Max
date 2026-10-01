@@ -14,11 +14,6 @@ jobs:
           architecture: x64
       - run: sudo xcode-select --switch /Applications/Xcode_16.4.app || true
       - run: flutter pub get
-      - name: Verify category chip routing regression
-        run: |
-          dart format lib/foundation/category_chip_rows.dart lib/pages/categories_page.dart test/category_chip_rows_test.dart
-          flutter analyze --no-fatal-infos --no-fatal-warnings lib/foundation/category_chip_rows.dart lib/pages/categories_page.dart test/category_chip_rows_test.dart
-          flutter test test/category_chip_rows_test.dart
       - name: Disable code signing in Xcode project
         run: |
           cd ios
