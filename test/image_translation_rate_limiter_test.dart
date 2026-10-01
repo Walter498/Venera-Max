@@ -51,6 +51,25 @@ void main() {
   });
 
   group('ConcurrencyGate', () {
+    test('ten reader/background requests share at most six slots', () async {
+      final gate = ConcurrencyGate((_) => 6);
+      var active = 0;
+      var peak = 0;
+      await Future.wait(List.generate(10, (_) async {
+        await gate.acquire('same-provider');
+        active++;
+        if (active > peak) peak = active;
+        try {
+          await Future.delayed(const Duration(milliseconds: 10));
+        } finally {
+          active--;
+          gate.release('same-provider');
+        }
+      }));
+      expect(peak, 6);
+      expect(gate.activeOf('same-provider'), 0);
+      expect(gate.waitingOf('same-provider'), 0);
+    });
     test('caps concurrent holders and hands slot to waiter on release', () async {
       var gate = ConcurrencyGate((_) => 2);
       await gate.acquire('a');

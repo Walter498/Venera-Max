@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:venera/foundation/app.dart';
+import 'package:venera/foundation/image_translation/rate_limiter.dart';
 import 'package:venera/foundation/image_translation/inpaint.dart';
 import 'package:venera/foundation/image_translation/llm_translator.dart';
 import 'package:venera/foundation/image_translation/page_renderer.dart';
@@ -53,6 +55,16 @@ class PageOcr {
 class PageTranslationPipeline {
   PageTranslationPipeline();
 
+  // API concurrency does not multiply decoded RGBA buffers. Shared by reader
+  // and background jobs: at most 2 heavy stages on mobile / 3 on desktop.
+  static final _pixelGate = ConcurrencyGate((_) => App.isDesktop ? 3 : 2);
+
+  Future<T> _withPixels<T>(Future<T> Function() work) async {
+    await _pixelGate.acquire('pixels', maxWait: const Duration(minutes: 10));
+    try { return await work(); }
+    finally { _pixelGate.release('pixels'); }
+  }
+
   /// OCR + translation. Returns render-ready regions; an empty list means
   /// the page has no text worth translating.
   Future<PageAnalysis> analyzePage(
@@ -95,6 +107,11 @@ class PageTranslationPipeline {
     Uint8List imageBytes, {
     required String sourceLang,
     required String targetLang,
+  }) => _withPixels(() => _ocrPagePixels(imageBytes,
+      sourceLang: sourceLang, targetLang: targetLang));
+
+  Future<PageOcr> _ocrPagePixels(Uint8List imageBytes, {
+    required String sourceLang, required String targetLang,
   }) async {
     var image = await _decode(imageBytes);
     var paths = TranslationModels.workerPaths();
@@ -157,7 +174,10 @@ class PageTranslationPipeline {
     Uint8List imageBytes,
     List<TranslatedRegion> regions, {
     InpaintMode mode = InpaintMode.smart,
-  }) async {
+  }) => _withPixels(() => _renderPagePixels(imageBytes, regions, mode: mode));
+
+  Future<Uint8List> _renderPagePixels(Uint8List imageBytes,
+    List<TranslatedRegion> regions, {required InpaintMode mode}) async {
     var image = await _decode(imageBytes);
     if (mode != InpaintMode.patch && regions.isNotEmpty) {
       TextInpainter.erase(image, [
