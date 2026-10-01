@@ -7,6 +7,8 @@ import 'package:venera/foundation/log.dart';
 import 'package:venera/foundation/res.dart';
 import 'package:venera/foundation/webdav_library_store.dart';
 import 'package:venera/network/app_dio_io.dart';
+import 'package:venera/utils/io.dart';
+import 'package:venera/utils/webdav_upload.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 import 'package:xml/xml.dart';
 
@@ -542,13 +544,23 @@ class WebdavLibraryClient {
 
   /// Streams a local file to [remotePath]. Uses the long transfer-window
   /// timeout since an image/cover upload is a real transfer, not a probe.
+  ///
+  /// Goes through [writeFileStreamed] rather than the client's own
+  /// writeFromFile: a local library kept in a user-picked directory cannot be
+  /// read as a stream the way that expects, which aborted every migration
+  /// before its first request (#285).
   Future<void> uploadFile(
     String localPath,
     String remotePath, {
     void Function(int count, int total)? onProgress,
   }) async {
     final client = _newClient(WebdavLibrary.transferTimeout);
-    await client.writeFromFile(localPath, remotePath, onProgress: onProgress);
+    await writeFileStreamed(
+      client,
+      File(localPath),
+      remotePath,
+      onProgress: onProgress,
+    );
   }
 
   /// Number of named entries in [remoteDir], or -1 when it does not exist or

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
@@ -139,6 +140,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   History? history;
 
   bool showAppbarTitle = false;
+  VoidCallback? jumpToLastReadChapter;
 
   var scrollController = ScrollController();
 
@@ -1099,6 +1101,12 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                   text: 'Read Later'.tl,
                   onPressed: toggleReadLater,
                 ),
+                if (history != null && comic.chapters != null)
+                  _ActionButton(
+                    icon: const Icon(Icons.my_location_rounded),
+                    text: 'Locate last chapter'.tl,
+                    onPressed: () => jumpToLastReadChapter?.call(),
+                  ),
                 if (source?.commentsLoader != null)
                   _ActionButton(
                     icon: const Icon(Icons.chat_bubble_outline_rounded),

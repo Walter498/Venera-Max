@@ -79,4 +79,7 @@ class HistoryImageProvider
     history.type.sourceKey,
     history.id,
   );
+
+  @override
+  String? get fallbackUrl => history.cover;
 }

@@ -918,3 +918,99 @@ class _EmbeddedChapterCommentsPageState
     );
   }
 }
+
+/// A compact chapter footer in the reader, with a full comments route.
+/// Never fabricates a total count: the badge counts the fetched first page.
+class _ChapterCommentsPreview extends StatefulWidget {
+  const _ChapterCommentsPreview({super.key, required this.comicId,
+    required this.epId, required this.source, required this.comicTitle,
+    required this.chapterTitle});
+  final String comicId, epId, comicTitle, chapterTitle;
+  final ComicSource source;
+  @override
+  State<_ChapterCommentsPreview> createState() => _ChapterCommentsPreviewState();
+}
+
+class _ChapterCommentsPreviewState extends State<_ChapterCommentsPreview> {
+  List<Comment>? _comments;
+  String? _error;
+  int _generation = 0;
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  @override
+  void didUpdateWidget(covariant _ChapterCommentsPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.epId != widget.epId || oldWidget.comicId != widget.comicId ||
+        oldWidget.source.key != widget.source.key) {
+      _comments = null; _error = null; _load();
+    }
+  }
+
+  Future<void> _load() async {
+    final generation = ++_generation;
+    try {
+      final res = await widget.source.chapterCommentsLoader!(
+        widget.comicId, widget.epId, 1, null);
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        if (res.error) { _error = res.errorMessage ?? 'Comments unavailable'; }
+        else { _comments = res.data.where((c) => !_shouldBlockComment(c)).toList(); }
+      });
+    } catch (e) {
+      if (mounted && generation == _generation) setState(() => _error = e.toString());
+    }
+  }
+
+  void _openAll() {
+    context.to(() => ChapterCommentsPage(
+      comicId: widget.comicId, epId: widget.epId, source: widget.source,
+      comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final comments = _comments;
+    return Material(
+      color: context.colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Chapter Comments'.tl, style: ts.s18)),
+            TextButton(onPressed: _openAll, child: Text('View all comments'.tl)),
+          ]),
+          Text(widget.chapterTitle, style: ts.s12.withColor(context.colorScheme.outline)),
+          const SizedBox(height: 10),
+          if (comments == null && _error == null)
+            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+          else if (_error != null)
+            TextButton(onPressed: () { setState(() { _error = null; }); _load(); },
+              child: Text('Retry'.tl))
+          else if (comments!.isEmpty)
+            Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: Text('No comments'.tl))
+          else
+            for (final comment in comments.take(3))
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(comment.userName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  if (comment.time != null) Text(comment.time!, style: ts.s12.withColor(context.colorScheme.outline)),
+                  // Rich content/replies remain on the full page; the compact
+                  // preview is deliberately bounded for long chapter footers.
+                  Text(comment.content, maxLines: 3, overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(onPressed: _openAll,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: Text('View comments and reply'.tl)),
+        ]),
+      ),
+    );
+  }
+}

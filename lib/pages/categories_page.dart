@@ -3,6 +3,8 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/home_layout.dart';
+import 'package:venera/foundation/category_filter_plan.dart';
+import 'package:venera/foundation/res.dart';
 import 'package:venera/pages/search_page.dart';
 import 'package:venera/utils/translations.dart';
 
@@ -35,11 +37,12 @@ class _CategoriesPageState extends State<CategoriesPage> {
   int _sourceIndex = 0;
   ComicSource? _source;
   List<_FilterRow> _rows = const [];
-  final Map<String, String?> _selected = {}; // rowTitle -> param（單選行用）
+  final Map<String, Set<String>> _selected = {}; // rowTitle -> param（單選行用）
   /// 題材行（tag:）多選集合（2026-09-17 用戶要求：標籤可多選）
   final Set<String> _selectedTags = {};
   String? _tagRowTitle;
   bool _expanded = false;
+  int _requestGeneration = 0;
 
   List<Comic> _comics = [];
   int _page = 1;
@@ -99,6 +102,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _sourceIndex = index;
       _source = _availableSources[index];
       _selected.clear();
+      _selectedTags.clear();
+      _tagRowTitle = null;
       _expanded = false;
       _rows = const [];
     });
@@ -123,7 +128,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       }
       if (hasRealParam && options.length > 1) {
         rows.add(_FilterRow(part.title, options));
-        _selected[part.title] = null;
+        _selected[part.title] = <String>{};
         // 題材行（參數是 tag: 開頭的）支持多選
         if (_tagRowTitle == null &&
             options.any((o) => o.param?.startsWith('tag:') == true)) {
@@ -134,109 +139,71 @@ class _CategoriesPageState extends State<CategoriesPage> {
     setState(() => _rows = rows);
   }
 
-  /// 組合所有篩選行的參數：tag:格斗|class:3|isend:0
-  /// （題材行單選時才進這裡；多選走 _loadMultiTags 交集）
-  String? get _combinedParam {
-    final segs = <String>[];
-    for (final row in _rows) {
-      if (row.title == _tagRowTitle) {
-        if (_selectedTags.length == 1) segs.add(_selectedTags.first);
-        continue;
-      }
-      final p = _selected[row.title];
-      if (p != null && p.isNotEmpty) segs.add(p);
-    }
-    if (segs.isEmpty) return null;
-    return segs.join('|');
-  }
+  List<String?> get _queryPlan => buildCategoryQueries([
+    for (final row in _rows)
+      if (row.title != _tagRowTitle)
+        (_selected[row.title] ?? <String>{}).toList(),
+  ], tags: _selectedTags.toList());
 
   Future<void> _reload() async {
+    ++_requestGeneration;
     setState(() {
       _comics = [];
       _page = 1;
       _hasMore = true;
+      _loading = false;
       _error = null;
     });
-    if (_selectedTags.length >= 2) {
-      await _loadMultiTags();
-    } else {
-      await _loadMore();
-    }
-  }
-
-  /// 題材多選：每個標籤並行抓一頁，取【交集】（同時帶全部選中標籤的漫畫）
-  Future<void> _loadMultiTags() async {
-    final loader = _source?.categoryComicsData?.load;
-    if (loader == null) return;
-    setState(() => _loading = true);
-    try {
-      // 非題材條件照樣組合進每個請求
-      final base = <String>[
-        for (final row in _rows)
-          if (row.title != _tagRowTitle &&
-              _selected[row.title] != null &&
-              _selected[row.title]!.isNotEmpty)
-            _selected[row.title]!,
-      ].join('|');
-      final results = await Future.wait([
-        for (final t in _selectedTags)
-          loader('', base.isEmpty ? t : '$t|$base', const <String>[], 1),
-      ]);
-      if (!mounted) return;
-      Map<String, Comic>? inter;
-      for (final r in results) {
-        if (!r.success) continue; // 失敗的標籤跳過（寬鬆處理）
-        final m = {for (final c in r.data) c.id: c};
-        inter = inter == null
-            ? m
-            : (Map.fromEntries(
-                inter.entries.where((e) => m.containsKey(e.key))));
-      }
-      setState(() {
-        _comics = inter?.values.toList() ?? [];
-        _hasMore = false; // 多選交集模式不分頁
-        _loading = false;
-        _error = null;
-      });
-    } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
-    }
+    await _loadMore();
   }
 
   Future<void> _loadMore() async {
     if (_loading || !_hasMore) return;
-    final loader = _source?.categoryComicsData?.load;
-    if (loader == null) return;
-    _loading = true;
+    final source = _source;
+    final loader = source?.categoryComicsData?.load;
+    if (source == null || loader == null) return;
+    final generation = _requestGeneration;
+    final page = _page;
+    final plan = _queryPlan;
+    final tags = _selectedTags.toList();
+    setState(() => _loading = true);
     try {
-      final res = await loader('', _combinedParam, const <String>[], _page);
-      if (!mounted) return;
-      setState(() {
-        if (res.success) {
-          // 去重（源的翻頁可能回傳重複項）
-          final ids = {for (final c in _comics) c.id};
-          final fresh = [
-            for (final c in res.data)
-              if (!ids.contains(c.id)) c,
-          ];
-          _comics = [..._comics, ...fresh];
-          _hasMore = res.data.isNotEmpty && _page < 50;
-          _page++;
-          _error = null;
-        } else {
-          _error = res.errorMessage;
-          _hasMore = false;
+      // Bounded fan-out: no request per tag, only region/status combinations.
+      if (plan.length > 64) throw StateError('篩選組合超過 64，請減少選項');
+      final results = <Res<List<Comic>>>[];
+      for (var start = 0; start < plan.length; start += 4) {
+        final batch = plan.skip(start).take(4);
+        results.addAll(await Future.wait([
+          for (final param in batch) loader('', param, const <String>[], page),
+        ]));
+        if (!mounted || generation != _requestGeneration) return;
+      }
+      final failed = results.where((r) => !r.success).firstOrNull;
+      if (failed != null) throw StateError(failed.errorMessage ?? '分類載入失敗');
+      final ids = _comics.map((c) => c.id).toSet();
+      final fresh = <Comic>[];
+      var hasNext = false;
+      for (final res in results) {
+        if (res.data.isNotEmpty &&
+            (res.subData is! int || page < (res.subData as int))) hasNext = true;
+        for (final comic in res.data) {
+          if (tags.length > 1 && !matchesAllCategoryTags(comic.tags ?? const <String>[], tags)) continue;
+          if (ids.add(comic.id)) fresh.add(comic);
         }
+      }
+      if (!mounted || generation != _requestGeneration) return;
+      setState(() {
+        _comics.addAll(fresh);
+        _hasMore = hasNext;
+        _page = page + 1;
+        _error = null;
       });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _hasMore = false;
-        });
+      if (mounted && generation == _requestGeneration) {
+        setState(() { _error = e.toString(); _hasMore = false; });
       }
     } finally {
-      _loading = false;
+      if (mounted && generation == _requestGeneration) setState(() => _loading = false);
     }
   }
 
@@ -340,7 +307,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   }
 
   Widget _buildRow(_FilterRow row) {
-    final selectedParam = _selected[row.title];
+    final selectedParams = _selected[row.title] ?? <String>{};
     // 題材行（選項多）：預設顯示前 9 個 + 展開鈕；其他行全部平鋪
     final expandable = row.options.length > 10;
     final visible = (expandable && !_expanded)
@@ -359,7 +326,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                   ? (opt.param == null
                       ? _selectedTags.isEmpty
                       : _selectedTags.contains(opt.param))
-                  : opt.param == selectedParam,
+                  : (opt.param == null ? selectedParams.isEmpty : selectedParams.contains(opt.param)),
               onTap: () {
                 if (row.title == _tagRowTitle) {
                   // 題材行：多選切換；「全部」= 清空選擇
@@ -368,9 +335,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
                   } else if (!_selectedTags.remove(opt.param)) {
                     _selectedTags.add(opt.param!);
                   }
-                  _selected[row.title] = null;
+                  _selected[row.title] = <String>{};
                 } else {
-                  _selected[row.title] = opt.param;
+                  final selected = _selected.putIfAbsent(row.title, () => <String>{});
+                  if (opt.param == null) {
+                    selected.clear();
+                  } else if (!selected.remove(opt.param)) {
+                    selected.add(opt.param!);
+                  }
                 }
                 setState(() {});
                 _reload();

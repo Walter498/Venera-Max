@@ -70,6 +70,70 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
   /// Normal: every chapter. Grouped: only the current group's chapters.
   Set<String> get selectableKeys;
 
+  final GlobalKey _chapterGridKey = GlobalKey();
+  int? _locatedChapter;
+
+  void locateLastChapter() {
+    if (!mounted || pageState.history == null) return;
+    final h = pageState.history!;
+    int local = h.ep - 1;
+    int slot;
+    bool reversed;
+    if (this is _GroupedComicChaptersState) {
+      final view = this as _GroupedComicChaptersState;
+      int groupIndex;
+      if (h.group != null) {
+        groupIndex = (h.group! - 1).clamp(0, view.chapters.groupCount - 1).toInt();
+      } else {
+        groupIndex = 0;
+        while (groupIndex + 1 < view.chapters.groupCount &&
+            local >= view.chapters.getGroupByIndex(groupIndex).length) {
+          local -= view.chapters.getGroupByIndex(groupIndex++).length;
+        }
+      }
+      setState(() {
+        view.index = groupIndex;
+        view.showAll = true;
+        view._computeVisible();
+        view._locatedChapter = local;
+      });
+      view.tabController.index = groupIndex;
+      slot = view.visible.indexOf(local);
+      reversed = view.reverse;
+      if (reversed && slot >= 0) slot = view.visible.length - 1 - slot;
+    } else {
+      final view = this as _NormalComicChaptersState;
+      setState(() {
+        view.showAll = true;
+        view._computeVisible();
+        view._locatedChapter = local;
+      });
+      slot = view.visible.indexOf(local);
+      reversed = view.reverse;
+      if (reversed && slot >= 0) slot = view.visible.length - 1 - slot;
+    }
+    if (slot < 0) {
+      context.showMessage(message: '上次閱讀章節已被隱藏或移除');
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final render = _chapterGridKey.currentContext?.findRenderObject();
+      if (render is! RenderSliverGrid) return;
+      final viewport = RenderAbstractViewport.of(render);
+      final base = viewport.getOffsetToReveal(render, 0).offset;
+      final geometry = render.gridDelegate.getLayout(render.constraints)
+          .getGeometryForChildIndex(slot);
+      final controller = pageState.scrollController;
+      if (!controller.hasClients) return;
+      final target = (base + geometry.scrollOffset - context.padding.top - 76)
+          .clamp(controller.position.minScrollExtent, controller.position.maxScrollExtent)
+          .toDouble();
+      // Direct positioning: no long animation across hundreds of chapters.
+      controller.jumpTo(target);
+    });
+  }
+
   void enterSelectMode() {
     setState(() {
       selectMode = true;
@@ -282,6 +346,17 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
               },
             ),
           ),
+          Tooltip(
+            message: (showAll ? "Collapse" : "Expand").tl,
+            child: IconButton(
+              icon: Icon(
+                showAll
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+              ),
+              onPressed: onToggleShowAll,
+            ),
+          ),
           // 倒序：按一下從第一話開始顯示，再按一下從最後一話開始顯示
           Tooltip(
             message: (reverse ? "Oldest first" : "Newest first").tl,
@@ -298,17 +373,7 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
               },
             ),
           ),
-          Tooltip(
-            message: (showAll ? "Collapse" : "Expand").tl,
-            child: IconButton(
-              icon: Icon(
-                showAll
-                    ? Icons.expand_less_rounded
-                    : Icons.expand_more_rounded,
-              ),
-              onPressed: onToggleShowAll,
-            ),
-          ),
+
         ],
       ),
     );
@@ -429,7 +494,9 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
       }
       return KeyedSubtree(
         key: ValueKey('chapter-cover-$key'),
-        child: InkWell(
+        child: ColoredBox(
+          color: _locatedChapter == i ? context.colorScheme.primaryContainer : Colors.transparent,
+          child: InkWell(
           onTap: () => selectMode ? toggleSelect(epKey) : state.read(i + 1),
           borderRadius: BorderRadius.circular(10),
           child: Column(
@@ -489,6 +556,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
             ],
           ),
         ),
+        ),
       );
     }
 
@@ -514,6 +582,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     }
 
     return SliverGrid(
+      key: _chapterGridKey,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 5,
         mainAxisSpacing: 10,
@@ -533,6 +602,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     // update() on the page state — recompute here so the change lands without
     // waiting for a details refresh.
     _computeVisible();
+    pageState.jumpToLastReadChapter = locateLastChapter;
     return SliverLayoutBuilder(
       builder: (context, constrains) {
         final gridMode = appdata.settings['chapterCoverGrid'] == true;
@@ -580,6 +650,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
               const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
             if (!gridMode)
               SliverGrid(
+              key: _chapterGridKey,
               delegate: SliverChildBuilderDelegate(childCount: length, (
                 context,
                 slot,
@@ -597,7 +668,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 bool visited = (_history?.readEpisode ?? const {}).contains(
                   epKey,
                 );
-                bool isSelected = selected.contains(epKey);
+                bool isSelected = selected.contains(epKey) || _locatedChapter == i;
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
                   child: Material(
@@ -953,6 +1024,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
     // update() on the page state — recompute here so the change lands without
     // waiting for a details refresh.
     _computeVisible();
+    pageState.jumpToLastReadChapter = locateLastChapter;
     return SliverLayoutBuilder(
       builder: (context, constrains) {
         var group = chapters.getGroupByIndex(index);
@@ -979,8 +1051,8 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
                       context,
                       reverse: reverse,
                       onToggleOrder: () => setState(() => reverse = !reverse),
-                      showAll: true,
-                      onToggleShowAll: () {},
+                      showAll: showAll,
+                      onToggleShowAll: () => setState(() => showAll = !showAll),
                     ),
             ),
             SliverToBoxAdapter(
@@ -1005,6 +1077,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
             ),
             SliverPadding(padding: const EdgeInsets.only(top: 8)),
             SliverGrid(
+              key: _chapterGridKey,
               delegate: SliverChildBuilderDelegate(childCount: length, (
                 context,
                 slot,
@@ -1027,7 +1100,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
                       _history!.readEpisode.contains(groupedIndex) ||
                       _history!.readEpisode.contains(rawIndex);
                 }
-                bool isSelected = selected.contains(groupedIndex);
+                bool isSelected = selected.contains(groupedIndex) || _locatedChapter == i;
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
                   child: Material(

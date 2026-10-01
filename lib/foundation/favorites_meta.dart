@@ -59,6 +59,9 @@ const Set<String> kUpdateTimeTagPrefixes = {
 
 /// Other metadata prefixes — routed to `extra_meta` JSON map (kept for
 /// future filters but not promoted to first-class columns).
+///
+/// Language prefixes stay out: nothing reads `extra_meta` back, so routing
+/// them here hid them from the tag list instead of relocating them (#288).
 const Set<String> kExtraMetaTagPrefixes = {
   'uploader',
   'uploaders',
@@ -72,9 +75,6 @@ const Set<String> kExtraMetaTagPrefixes = {
   'magazine',
   'parody',
   'parodies',
-  'language',
-  'languages',
-  'lang',
   'year',
   'pages',
   'rating',
@@ -83,8 +83,6 @@ const Set<String> kExtraMetaTagPrefixes = {
   'categories',
   'series',
   'source',
-  '语言',
-  '語言',
   '类型',
   '類型',
   '出版社',

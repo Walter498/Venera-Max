@@ -5,6 +5,7 @@ import 'package:sqlite3/common.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/image_translation/translation_store.dart';
+import 'package:venera/foundation/image_translation/translation_types.dart';
 
 void main() {
   group('TranslationStore.migrateSchema', () {
@@ -330,6 +331,64 @@ void main() {
       expect(store.comics.single.chapterCount, 2);
       expect(store.comics.single.pageCount, 3);
       expect(store.comics.single.title, 'Comic');
+    });
+
+    // #287: the key used to end with the image key — a source url online, an
+    // absolute file:// path once downloaded — so downloading a pre-translated
+    // chapter made every page read as untranslated. Reading now adopts the old
+    // row onto the transport-independent key instead of re-translating.
+    test('adoptLegacyKey moves a transport-keyed row to the stable key', () {
+      var identity = chapter();
+      var legacyKey = '${identity.scopePrefix}https://cdn/page-1.jpg';
+      var stableKey = '${identity.scopePrefix}p1@';
+      store.put(legacyKey, [
+        TranslatedRegion(
+          rect: IntRect(1, 2, 30, 40),
+          text: 'translated',
+          backgroundColor: 0xFFFFFFFF,
+          textColor: 0xFF000000,
+          lineHeight: 10,
+        ),
+      ]);
+
+      var adopted = store.adoptLegacyKey(legacyKey, stableKey);
+
+      expect(adopted, isNotNull);
+      expect(adopted!.single.text, 'translated');
+      // Readable under the stable key from now on, and the old row is gone so
+      // the adoption never repeats.
+      expect(store.get(stableKey)?.single.text, 'translated');
+      expect(store.get(legacyKey), isNull);
+    });
+
+    test('adoptLegacyKey keeps an existing stable row and drops the old one', () {
+      var identity = chapter();
+      var legacyKey = '${identity.scopePrefix}https://cdn/page-1.jpg';
+      var stableKey = '${identity.scopePrefix}p1@';
+      store.put(legacyKey, const []);
+      store.put(stableKey, [
+        TranslatedRegion(
+          rect: IntRect(0, 0, 10, 10),
+          text: 'newer',
+          backgroundColor: 0xFFFFFFFF,
+          textColor: 0xFF000000,
+          lineHeight: 10,
+        ),
+      ]);
+
+      expect(store.adoptLegacyKey(legacyKey, stableKey)?.single.text, 'newer');
+      expect(store.get(legacyKey), isNull);
+    });
+
+    test('adoptLegacyKey reports nothing to adopt', () {
+      var identity = chapter();
+      expect(
+        store.adoptLegacyKey(
+          '${identity.scopePrefix}https://cdn/page-1.jpg',
+          '${identity.scopePrefix}p1@',
+        ),
+        isNull,
+      );
     });
 
     test('recordExistingChapter lazily indexes durable page rows', () {

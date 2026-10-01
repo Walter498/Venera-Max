@@ -93,4 +93,7 @@ class CachedImageProvider
   @override
   String get diskCacheKey =>
       ImageDownloader.thumbnailCacheKey(url, sourceKey, cid);
+
+  @override
+  String? get fallbackUrl => url;
 }

@@ -909,7 +909,15 @@ class PreTranslationTaskManager with ChangeNotifier {
   ) async {
     var service = ImageTranslationService.instance;
     var settledBeforeBatch = 0;
-    var pending = <({int index, String cacheKey, Uint8List imageBytes})>[];
+    var pending =
+        <
+          ({
+            int index,
+            String cacheKey,
+            String legacyCacheKey,
+            Uint8List imageBytes,
+          })
+        >[];
     void reportFetchPhase() {
       activity
         ..completedPages =
@@ -922,6 +930,12 @@ class PreTranslationTaskManager with ChangeNotifier {
       if (_canceledIds.contains(task.id)) return;
       var imageKey = pageKeys[i];
       var cacheKey = ImageTranslationService.cacheKeyFor(
+        task.sourceKey,
+        task.cid,
+        chapter.eid,
+        i + 1,
+      );
+      var legacyCacheKey = ImageTranslationService.legacyCacheKeyFor(
         imageKey,
         task.sourceKey,
         task.cid,
@@ -935,7 +949,12 @@ class PreTranslationTaskManager with ChangeNotifier {
           continue;
         }
         var bytes = await _fetchPageBytes(task, chapter.eid, imageKey);
-        pending.add((index: i, cacheKey: cacheKey, imageBytes: bytes));
+        pending.add((
+          index: i,
+          cacheKey: cacheKey,
+          legacyCacheKey: legacyCacheKey,
+          imageBytes: bytes,
+        ));
         reportFetchPhase();
       } catch (e, s) {
         Log.warning('Pre-translation', 'Retry page failed: $e\n$s');
@@ -949,7 +968,13 @@ class PreTranslationTaskManager with ChangeNotifier {
       var config = task.config;
       var results = await service.translatePageGroup(
         pending
-            .map((p) => (cacheKey: p.cacheKey, imageBytes: p.imageBytes))
+            .map(
+              (p) => (
+                cacheKey: p.cacheKey,
+                legacyCacheKey: p.legacyCacheKey,
+                imageBytes: p.imageBytes,
+              ),
+            )
             .toList(),
         task.comicKey,
         config,
@@ -1012,7 +1037,15 @@ class PreTranslationTaskManager with ChangeNotifier {
     PreTranslationGroupActivity activity,
   ) async {
     var service = ImageTranslationService.instance;
-    var pending = <({int index, String cacheKey, Uint8List imageBytes})>[];
+    var pending =
+        <
+          ({
+            int index,
+            String cacheKey,
+            String legacyCacheKey,
+            Uint8List imageBytes,
+          })
+        >[];
     var done = 0;
     var failed = 0;
     // Page indices that failed this group, recorded so a later retry pass can
@@ -1039,6 +1072,12 @@ class PreTranslationTaskManager with ChangeNotifier {
       if (_canceledIds.contains(task.id)) return null;
       var imageKey = pageKeys[i];
       var cacheKey = ImageTranslationService.cacheKeyFor(
+        task.sourceKey,
+        task.cid,
+        chapter.eid,
+        i + 1,
+      );
+      var legacyCacheKey = ImageTranslationService.legacyCacheKeyFor(
         imageKey,
         task.sourceKey,
         task.cid,
@@ -1052,7 +1091,12 @@ class PreTranslationTaskManager with ChangeNotifier {
           continue;
         }
         var bytes = await _fetchPageBytes(task, chapter.eid, imageKey);
-        pending.add((index: i, cacheKey: cacheKey, imageBytes: bytes));
+        pending.add((
+          index: i,
+          cacheKey: cacheKey,
+          legacyCacheKey: legacyCacheKey,
+          imageBytes: bytes,
+        ));
         reportFetchPhase();
       } catch (e, s) {
         Log.warning('Pre-translation', 'Page failed: $e\n$s');
@@ -1067,7 +1111,13 @@ class PreTranslationTaskManager with ChangeNotifier {
         var config = task.config;
         var results = await service.translatePageGroup(
           pending
-              .map((p) => (cacheKey: p.cacheKey, imageBytes: p.imageBytes))
+              .map(
+                (p) => (
+                  cacheKey: p.cacheKey,
+                  legacyCacheKey: p.legacyCacheKey,
+                  imageBytes: p.imageBytes,
+                ),
+              )
               .toList(),
           task.comicKey,
           config,

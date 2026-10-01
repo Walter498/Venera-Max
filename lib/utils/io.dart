@@ -200,6 +200,61 @@ Future<void> copyFileStreaming(
   }
 }
 
+/// Reads [file] as a chunked stream through a [RandomAccessFile].
+///
+/// Use this instead of [File.openRead] wherever the path may point inside a
+/// user-picked directory: [AndroidFile] leaves openRead unimplemented, so it
+/// throws while the argument is being evaluated — before the consumer can even
+/// start (#285). RandomAccessFile is implemented for SAF, and unlike
+/// readAsBytes it surfaces a read failure instead of yielding zero bytes.
+///
+/// Each listen opens its own handle and starts from the beginning, so a
+/// consumer that re-sends the body (the WebDAV client replays a request after
+/// an auth challenge) does not get an exhausted stream.
+///
+/// When [expectedLength] is given, a run that ends short of it throws instead of
+/// completing: a caller that already declared that size (an upload's
+/// content-length) would otherwise publish a truncated copy as a success.
+Stream<List<int>> readFileChunked(
+  File file, {
+  int chunkSize = 1 << 20,
+  int? expectedLength,
+}) {
+  return Stream.multi((controller) async {
+    await controller.addStream(
+      _readFileChunks(file, chunkSize, expectedLength),
+    );
+    await controller.close();
+  });
+}
+
+Stream<List<int>> _readFileChunks(
+  File file,
+  int chunkSize,
+  int? expectedLength,
+) async* {
+  final handle = await file.open();
+  var read = 0;
+  try {
+    while (true) {
+      final chunk = await handle.read(chunkSize);
+      if (chunk.isEmpty) break;
+      read += chunk.length;
+      yield chunk;
+    }
+    if (expectedLength != null && read != expectedLength) {
+      throw FileSystemException(
+        'Read $read of $expectedLength bytes',
+        file.path,
+      );
+    }
+  } finally {
+    try {
+      await handle.close();
+    } catch (_) {}
+  }
+}
+
 extension DirectoryExtension on Directory {
   /// Calculate the size of the directory.
   Future<int> get size async {

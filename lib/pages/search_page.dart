@@ -37,6 +37,7 @@ class _SearchPageState extends State<SearchPage> {
       ComicSource.find(searchTarget)!.searchPageData!;
 
   bool aggregatedSearch = false;
+  final Set<String> _selectedSourceKeys = {};
 
   var focusNode = FocusNode();
 
@@ -47,9 +48,15 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void search([String? text]) {
-    if (aggregatedSearch) {
+    if (_selectedSourceKeys.isEmpty) {
+      _selectedSourceKeys.addAll(aggregatedSearch ? searchSources : [searchTarget]);
+    }
+    if (aggregatedSearch || _selectedSourceKeys.length > 1) {
       context
-          .to(() => AggregatedSearchPage(keyword: text ?? controller.text))
+          .to(() => AggregatedSearchPage(
+                keyword: text ?? controller.text,
+                sourceKeys: _selectedSourceKeys.toList(),
+              ))
           .then((_) => update());
     } else {
       context
@@ -178,6 +185,7 @@ class _SearchPageState extends State<SearchPage> {
       }
     }
     searchSources = sources;
+    _selectedSourceKeys.removeWhere((key) => !sources.contains(key));
     if (!searchSources.contains(searchTarget)) {
       searchTarget = searchSources.firstOrNull ?? "";
     }
@@ -252,6 +260,13 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget buildSearchTarget() {
     var sources = searchSources.map((e) => ComicSource.find(e)!).toList();
+    if (_selectedSourceKeys.isEmpty && searchTarget.isNotEmpty) {
+      if (aggregatedSearch) {
+        _selectedSourceKeys.addAll(searchSources);
+      } else {
+        _selectedSourceKeys.add(searchTarget);
+      }
+    }
     return SliverToBoxAdapter(
       child: Container(
         width: double.infinity,
@@ -274,11 +289,17 @@ class _SearchPageState extends State<SearchPage> {
               children: sources.map((e) {
                 return OptionChip(
                   text: e.name,
-                  isSelected: searchTarget == e.key || aggregatedSearch,
+                  isSelected: _selectedSourceKeys.contains(e.key),
                   onTap: () {
-                    if (aggregatedSearch) return;
                     setState(() {
-                      searchTarget = e.key;
+                      if (_selectedSourceKeys.contains(e.key)) {
+                        if (_selectedSourceKeys.length == 1) return;
+                        _selectedSourceKeys.remove(e.key);
+                      } else {
+                        _selectedSourceKeys.add(e.key);
+                      }
+                      searchTarget = _selectedSourceKeys.first;
+                      aggregatedSearch = _selectedSourceKeys.length > 1;
                       useDefaultOptions();
                     });
                   },
@@ -293,6 +314,12 @@ class _SearchPageState extends State<SearchPage> {
                 onChanged: (value) {
                   setState(() {
                     aggregatedSearch = value ?? false;
+                    _selectedSourceKeys.clear();
+                    if (aggregatedSearch) {
+                      _selectedSourceKeys.addAll(searchSources);
+                    } else if (searchTarget.isNotEmpty) {
+                      _selectedSourceKeys.add(searchTarget);
+                    }
                   });
                 },
               ),

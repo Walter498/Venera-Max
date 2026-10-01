@@ -69,6 +69,9 @@ class LocalFavoriteImageProvider
     ComicSource.fromIntKey(intKey)?.key,
   );
 
+  @override
+  String? get fallbackUrl => url;
+
   /// The sidecar copy is read before [CacheManager], so it has to go too.
   @override
   Future<void> evictCorruptedCache() async {

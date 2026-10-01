@@ -162,6 +162,9 @@ class ImageFavoritesProvider
     eid,
   );
 
+  @override
+  String? get fallbackUrl => imageFavorite.imageKey;
+
   /// The sidecar copy is read before [CacheManager], so it has to go too.
   /// [imageFavorite.imageKey] may be empty or stale — [load] then re-resolves
   /// the real page url — which makes the [CacheManager] delete best-effort.

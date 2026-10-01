@@ -1027,16 +1027,15 @@ class _ComicMetadata {
 
   static const _pagesNamespaces = {'page', 'pages', '頁數', '页数'};
 
+  // Keep in sync with ComicDescription._metadataNamespaces, including the
+  // absence of 'language' (issue #288).
   static const _metadataNamespaces = {
     ..._authorNamespaces,
     ..._statusNamespaces,
     ..._updateNamespaces,
     ..._pagesNamespaces,
-    'language',
     'source',
     'uploader',
-    '語言',
-    '语言',
     '來源',
     '来源',
     '上傳者',

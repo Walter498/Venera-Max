@@ -1051,10 +1051,10 @@ class _ContinuousModeState extends State<_ContinuousMode>
         'Chapter @ep'.tlParams({'ep': chapter});
   }
 
-  /// Builds the flat, natural-order entry list spanning every currently
+  /// Builds the flat entry list in reading order, spanning every currently
   /// loaded chapter (earliest first). There is no leading spacer: index 0 is
   /// the first real entry. The pivot/center is chosen separately via
-  /// [_indexOfEntry], so the list order is purely chapters in ascending order.
+  /// [_indexOfEntry], without changing the chapters' original indices.
   List<_ContinuousReaderEntry> _continuousEntries() {
     if (reader.images != null &&
         !identical(_continuousChapterImages[reader.chapter], reader.images)) {
@@ -1670,7 +1670,11 @@ class _ContinuousModeState extends State<_ContinuousMode>
           () => _ensureContinuousChapterLoaded(entry.nextChapter!),
         );
       }
-      return _buildChapterJoinPage(context, entry);
+      return Column(children: [
+        if (entry.chapter > 0 && showChapterCommentsAtEnd)
+          _buildChapterCommentsBlock(chapter: entry.chapter),
+        _buildChapterJoinPage(context, entry),
+      ]);
     }
     Widget child = _buildImageEntry(entry);
     // 相邻图片之间的可选间隙(issue #117-3)。沿主轴在图片后加内边距，间隙区域
@@ -1697,7 +1701,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       ? const NeverScrollableScrollPhysics()
       : isZoomedIn
       ? const ClampingScrollPhysics()
-      : const BouncingScrollPhysics();
+      : const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
 
   ScrollBehavior get _scrollBehavior => const MaterialScrollBehavior().copyWith(
     scrollbars: false,
@@ -1740,23 +1744,20 @@ class _ContinuousModeState extends State<_ContinuousMode>
             true;
   }
 
-  Widget _buildChapterCommentsBlock() {
+  Widget _buildChapterCommentsBlock({int? chapter}) {
     var source = ComicSource.find(reader.type.sourceKey);
     var chapters = reader.widget.chapters;
     if (source == null || chapters == null) return const SizedBox();
-    var chapterIndex = reader.chapter - 1;
+    var chapterIndex = (chapter ?? reader.chapter) - 1;
     if (chapterIndex < 0 || chapterIndex >= chapters.length) {
       return const SizedBox();
     }
-    return SizedBox(
-      height: reader.size.height,
-      child: _EmbeddedChapterCommentsPage(
+    return _ChapterCommentsPreview(
         comicId: reader.cid,
         epId: chapters.ids.elementAt(chapterIndex),
         source: source,
         comicTitle: reader.widget.name,
         chapterTitle: chapters.titles.elementAt(chapterIndex),
-      ),
     );
   }
 
@@ -1806,7 +1807,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
           ),
         ),
         // ⑧ 章節末評論：下滑即見（可在閱讀設定關閉）。
-        if (showChapterCommentsAtEnd)
+        if (!seamlessChapterReading && showChapterCommentsAtEnd)
           SliverToBoxAdapter(child: _buildChapterCommentsBlock()),
       ],
     );
@@ -1935,6 +1936,10 @@ class _ContinuousModeState extends State<_ContinuousMode>
           if (!scrollController.hasClients) return false;
           if (scrollController.position.pixels <=
                   scrollController.position.minScrollExtent &&
+              (scrollController.position.maxScrollExtent >
+                      scrollController.position.minScrollExtent ||
+                  scrollController.position.pixels <
+                      scrollController.position.minScrollExtent) &&
               !reader.isFirstChapterOfGroup) {
             if (!prepareToPrevChapter) {
               jumpToPrevChapter = false;
@@ -2265,10 +2270,11 @@ class _ContinuousModeState extends State<_ContinuousMode>
           current.isImage &&
           chapterImages != null &&
           (forward ? current.page >= chapterImages.length : current.page <= 1);
-      final adjacentChapter = current.chapter + (forward ? 1 : -1);
-      if (atBoundary &&
-          adjacentChapter >= 1 &&
-          adjacentChapter <= reader.maxChapter) {
+      final adjacentChapter = reader.visibleChapterFrom(
+        current.chapter,
+        forward ? 1 : -1,
+      );
+      if (atBoundary && adjacentChapter != null) {
         _requestBoundaryTurn(adjacentChapter, forward: forward);
         return true;
       }
@@ -2588,10 +2594,9 @@ class _ContinuousModeState extends State<_ContinuousMode>
 
   @override
   bool handleOnTap(Offset location) {
-    if (delayedIsScrolling) {
-      return true;
-    }
-    return false;
+    // Programmatic pivots/layout changes must never swallow a stationary tap.
+    return _userDragging && scrollController.hasClients &&
+        scrollController.position.isScrollingNotifier.value;
   }
 
   @override
@@ -2631,6 +2636,7 @@ ImageProvider _createImageProviderFromKey(
   final eid =
       reader.widget.chapters?.ids.elementAtOrNull(chapterNumber - 1) ?? '0';
   String? translationKey;
+  String? legacyTranslationKey;
   TranslationConfig? translationConfig;
   var translated = false;
   // Gate on the per-comic switch alone (which syncs over WebDAV), not on model
@@ -2643,11 +2649,19 @@ ImageProvider _createImageProviderFromKey(
         reader.type.sourceKey,
       )) {
     translationKey = ImageTranslationService.cacheKeyFor(
+      reader.type.comicSource?.key,
+      reader.cid,
+      eid,
+      page,
+    );
+    legacyTranslationKey = ImageTranslationService.legacyCacheKeyFor(
       imageKey,
       reader.type.comicSource?.key,
       reader.cid,
       eid,
     );
+    ImageTranslationService.instance.setReadingPosition(
+      reader.type.sourceKey, reader.cid, reader.eid, reader.page);
     translationConfig = TranslationConfig.of(
       reader.cid,
       reader.type.comicSource?.key,
@@ -2667,6 +2681,7 @@ ImageProvider _createImageProviderFromKey(
         .mode
         .isContinuous, // For continuous mode, we need to resize the image to improve performance
     translationKey: translationKey,
+    legacyTranslationKey: legacyTranslationKey,
     translationConfig: translationConfig,
     translated: translated,
     comicTitle: reader.widget.name,

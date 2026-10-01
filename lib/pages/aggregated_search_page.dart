@@ -6,9 +6,10 @@ import "package:venera/foundation/comic_source/comic_source.dart";
 import "package:venera/utils/translations.dart";
 
 class AggregatedSearchPage extends StatefulWidget {
-  const AggregatedSearchPage({super.key, required this.keyword});
+  const AggregatedSearchPage({super.key, required this.keyword, this.sourceKeys});
 
   final String keyword;
+  final List<String>? sourceKeys;
 
   @override
   State<AggregatedSearchPage> createState() => _AggregatedSearchPageState();
@@ -27,7 +28,7 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
         .where((e) => e.searchPageData != null)
         .map((e) => e.key)
         .toList();
-    var settings = appdata.settings['searchSources'] as List;
+    var settings = widget.sourceKeys ?? (appdata.settings['searchSources'] as List);
     var sources = <String>[];
     for (var source in settings) {
       if (all.contains(source)) {

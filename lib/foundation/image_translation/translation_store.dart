@@ -656,6 +656,38 @@ class TranslationStore with ChangeNotifier {
     }
   }
 
+  /// Moves a page stored under the pre-#287 transport-derived key to the stable
+  /// page-ordinal [cacheKey] and returns its regions, or null when no such row
+  /// exists. The rewrite happens once per page, on the first read that can still
+  /// address the old key, so the work already paid for survives the key change
+  /// without a blanket migration (an image key cannot be mapped back to a page
+  /// number without re-listing the chapter).
+  ///
+  /// INSERT OR IGNORE keeps an existing stable row if one appeared meanwhile;
+  /// the legacy row is dropped either way, so the adoption never repeats.
+  List<TranslatedRegion>? adoptLegacyKey(String legacyKey, String cacheKey) {
+    if (!isInitialized) return null;
+    try {
+      var rows = _db.select(
+        "select regions, time from translated_page where cache_key = ?;",
+        [legacyKey],
+      );
+      if (rows.isEmpty) return null;
+      _db.execute(_insertIgnoreSql, [
+        cacheKey,
+        rows.first['regions'],
+        rows.first['time'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+      ]);
+      _db.execute("delete from translated_page where cache_key = ?;", [
+        legacyKey,
+      ]);
+      return get(cacheKey);
+    } catch (e, s) {
+      Log.error("TranslationStore", "adoptLegacyKey failed: $e", s);
+      return null;
+    }
+  }
+
   /// Deletes every stored page whose key starts with [scopePrefix] — the same
   /// comic/chapter scope prefixes the rendered-image cache is cleared by, so a
   /// re-translate or "clear" drops both levels in lockstep. Returns rows removed.

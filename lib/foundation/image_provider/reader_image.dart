@@ -41,6 +41,7 @@ class ReaderImageProvider
     this.page, {
     this.enableResize = false,
     this.translationKey,
+    this.legacyTranslationKey,
     this.translationConfig,
     this.translated = false,
     this.comicTitle = '',
@@ -62,6 +63,11 @@ class ReaderImageProvider
   /// translation is off. When set, a cached or synced stored translation is
   /// shown before falling back to the original and background translation.
   final String? translationKey;
+
+  /// The key this page's translation was stored under before [translationKey]
+  /// switched to the page ordinal. Non-null only while [imageKey] is the one
+  /// that wrote it, which is what makes the older row addressable at all.
+  final String? legacyTranslationKey;
 
   /// This comic's own language pair + text-removal mode. Non-null exactly when
   /// [translationKey] is.
@@ -138,6 +144,7 @@ class ReaderImageProvider
           imageBytes!,
           config.mode,
           chapter: chapter,
+          legacyCacheKey: legacyTranslationKey,
         ),
         isEngineReady: ImageTranslationService.isReadyForLang(
           config.sourceLang,
@@ -156,6 +163,7 @@ class ReaderImageProvider
               ImageTranslationService.evictImage(this);
             },
             chapter: chapter,
+            legacyCacheKey: legacyTranslationKey,
           );
         },
       );
@@ -239,6 +247,11 @@ class ReaderImageProvider
   @override
   String get diskCacheKey =>
       ImageDownloader.imageCacheKey(imageKey, sourceKey, cid, eid);
+
+  /// A translated page is rendered locally, so a decode failure there says
+  /// nothing about the server's encoding of the original.
+  @override
+  String? get fallbackUrl => translationKey == null ? imageKey : null;
 }
 
 /// Reads one page file from the local library.

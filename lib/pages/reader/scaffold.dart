@@ -370,10 +370,10 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     var index = (reader.page - 1).clamp(0, images.length - 1);
     return (
       cacheKey: ImageTranslationService.cacheKeyFor(
-        images[index],
         reader.type.comicSource?.key,
         reader.cid,
         reader.eid,
+        index + 1,
       ),
       mode: TranslationConfig.of(reader.cid, reader.type.sourceKey).mode,
     );

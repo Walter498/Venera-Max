@@ -560,6 +560,8 @@ class _ReaderState extends State<Reader>
 
   @override
   void onPageChanged() {
+    ImageTranslationService.instance.setReadingPosition(
+      type.sourceKey, cid, eid, page);
     updateHistory();
   }
 
