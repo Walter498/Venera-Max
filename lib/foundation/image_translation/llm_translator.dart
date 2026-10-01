@@ -14,9 +14,15 @@ import 'package:venera/network/app_dio.dart';
 /// renderings the model reported for this page, which the caller folds back
 /// into the comic's glossary so later pages/chapters stay consistent.
 class LlmTranslationResult {
-  const LlmTranslationResult(this.texts, this.glossary);
+  const LlmTranslationResult(this.texts, this.glossary,
+      {this.missingIds = const <int>{}});
 
   final List<String> texts;
+
+  /// Indices the model left out of an otherwise valid reply. Their slots stay
+  /// empty, and callers must treat the page as unfinished: caching it would
+  /// keep the untranslated lines on screen forever.
+  final Set<int> missingIds;
 
   /// source term -> agreed translation, discovered on this page.
   final Map<String, String> glossary;
@@ -662,15 +668,24 @@ abstract class LlmTranslator {
       throw Exception('LLM response is not in the expected JSON shape');
     }
     var results = List.filled(count, '');
+    final answered = <int>{};
     for (var item in lines) {
       if (item is! Map) continue;
       var id = item['id'];
       var text = item['text'];
       if (id is int && id >= 0 && id < count && text is String) {
         results[id] = text.trim();
+        if (text.trim().isNotEmpty) answered.add(id);
       }
     }
-    return LlmTranslationResult(results, names);
+    return LlmTranslationResult(
+      results,
+      names,
+      missingIds: {
+        for (var i = 0; i < count; i++)
+          if (!answered.contains(i)) i,
+      },
+    );
   }
 
   /// Whether a reported name/translation pair is worth keeping in the glossary.

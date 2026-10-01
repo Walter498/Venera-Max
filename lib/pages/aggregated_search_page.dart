@@ -22,6 +22,119 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
 
   var _keyword = "";
 
+  /// Tags the sources actually returned with their results.
+
+  /// Tags the user picked. Filtering is applied to whatever the sources
+  /// returned; tags a source never sends simply have nothing to match, and the
+  /// sheet says so instead of pretending the filter succeeded.
+  final Set<String> _tagFilter = {};
+
+  final Set<String> _availableTags = {};
+
+  /// Bumped whenever the results change so the panel rebuilds with new tags.
+  int _resultsRevision = 0;
+
+  void _onResultsChanged() {
+    if (mounted) setState(() => _resultsRevision++);
+  }
+
+  void _clearTagFilter() => setState(_tagFilter.clear);
+
+  Widget buildFilterAction(Set<String> availableTags) {
+    return IconButton(
+      tooltip: "Filter by tag".tl,
+      icon: Badge(
+        isLabelVisible: _tagFilter.isNotEmpty,
+        label: Text('${_tagFilter.length}'),
+        child: Icon(
+          _tagFilter.isEmpty ? Icons.filter_alt_outlined : Icons.filter_alt,
+        ),
+      ),
+      onPressed: () async {
+        var picked = {..._tagFilter};
+        await showModalBottomSheet(
+          context: context,
+          showDragHandle: true,
+          builder: (sheetContext) {
+            return StatefulBuilder(
+              builder: (context, setSheet) {
+                final tags = availableTags.toList()..sort();
+                return SizedBox(
+                  height: context.height * 0.6,
+                  child: Column(children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(children: [
+                        Expanded(
+                          child: Text("Filter by tag".tl, style: ts.s18),
+                        ),
+                        TextButton(
+                          onPressed: () => setSheet(picked.clear),
+                          child: Text("Clear".tl),
+                        ),
+                      ]),
+                    ),
+                    if (tags.isEmpty)
+                      Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              // Honest empty state: no source supplied tags.
+                              "The current results carry no tags from any source"
+                                  .tl,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: ListView(
+                          children: [
+                            for (final tag in tags)
+                              CheckboxListTile(
+                                dense: true,
+                                value: picked.contains(tag),
+                                title: Text(tag),
+                                onChanged: (v) => setSheet(() {
+                                  if (v == true) {
+                                    picked.add(tag);
+                                  } else {
+                                    picked.remove(tag);
+                                  }
+                                }),
+                              ),
+                          ],
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () {
+                            setState(() {
+                              _tagFilter
+                                ..clear()
+                                ..addAll(picked);
+                            });
+                            Navigator.of(sheetContext).pop();
+                          },
+                          child: Text("Apply".tl),
+                        ),
+                      ),
+                    ),
+                  ]),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     var all = ComicSource.all()
@@ -61,12 +174,29 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
     return SmoothCustomScrollView(
       scrollbarTopPadding: context.padding.top + 56,
       slivers: [
-        SliverSearchBar(controller: controller),
+        SliverSearchBar(
+          controller: controller,
+          action: buildFilterAction(_availableTags),
+        ),
         // 2026-09-16 改版：所有源結果合併成單一直落列表（不再按源分行橫滑）
         _MergedSearchResults(
-          key: ValueKey(_keyword),
+          key: ValueKey('$_keyword\u0000$_resultsRevision'),
           sources: sources,
           keyword: _keyword,
+          tagFilter: _tagFilter,
+          onAvailableTags: (tags) {
+            if (!mounted) return;
+            setState(() {
+              _availableTags
+                ..clear()
+                ..addAll(tags);
+              // A selected tag that is no longer present must not keep
+              // filtering everything out silently.
+              _tagFilter.removeWhere((t) => !tags.contains(t));
+            });
+          },
+          onChanged: _onResultsChanged,
+          filterActionBuilder: buildFilterAction,
         ),
       ],
     );
@@ -84,10 +214,18 @@ class _MergedSearchResults extends StatefulWidget {
     super.key,
     required this.sources,
     required this.keyword,
+    this.tagFilter = const <String>{},
+    this.onAvailableTags,
+    this.onChanged,
+    this.filterActionBuilder,
   });
 
   final List<ComicSource> sources;
   final String keyword;
+  final Set<String> tagFilter;
+  final void Function(Set<String> tags)? onAvailableTags;
+  final VoidCallback? onChanged;
+  final Widget Function(Set<String> availableTags)? filterActionBuilder;
 
   @override
   State<_MergedSearchResults> createState() => _MergedSearchResultsState();
@@ -142,6 +280,7 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
       _failedSources = failed;
       _loading = false;
     });
+    widget.onAvailableTags?.call(_collectTags());
     // 背景校準：同名組用 loadInfo 數【真實話數】重排（不阻塞首屏）
     _resolveChapterCounts();
   }
@@ -177,6 +316,23 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
       }
     }));
     if (changed && mounted) setState(() {});
+  }
+
+  /// Every tag the loaded results actually carry. Sources that send none
+  /// contribute nothing here, which the filter sheet reports rather than
+  /// pretending a tag filter is available.
+  Set<String> _collectTags() => {
+    for (final c in _merged)
+      for (final tag in c.tags ?? const <String>[])
+        if (tag.trim().isNotEmpty) tag.trim(),
+  };
+
+  bool _matchesTags(Comic c) {
+    if (widget.tagFilter.isEmpty) return true;
+    final own = {
+      for (final tag in c.tags ?? const <String>[]) tag.trim().toLowerCase(),
+    };
+    return widget.tagFilter.every((t) => own.contains(t.toLowerCase()));
   }
 
   /// 真實話數：loadInfo → 章節表條目數；loadInfo 失敗退回文字解析
@@ -270,6 +426,20 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
         ),
       );
     }
+    final visible = [for (final c in _merged) if (_matchesTags(c)) c];
+    if (visible.isEmpty && widget.tagFilter.isNotEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+            child: Text(
+              "No result carries all the selected tags".tl,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
     return SliverMainAxisGroup(
       slivers: [
         if (_failedSources > 0)
@@ -286,7 +456,7 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
         // 詳細模式直落列表（與單源搜索結果同一種卡片，含來源標示）；
         // 同名組的卡片額外顯示【真實話數】行
         SliverGridComics(
-          comics: _merged,
+          comics: visible,
           forceDetailedMode: true,
           chapterCountBuilder: (c) {
             final n = _chapterCounts['${c.sourceKey}:${c.id}'];

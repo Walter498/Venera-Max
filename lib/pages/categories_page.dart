@@ -21,8 +21,15 @@ class CategoriesPage extends StatefulWidget {
 
 class _FilterOption {
   final String label;
-  final String? param; // null = 全部
-  const _FilterOption(this.label, this.param);
+
+  /// The source's own parameter for this item, passed through unchanged.
+  final String? param;
+
+  /// The source's own category name for this item (its native query target),
+  /// never a synthesized one. Sources identify their queries by this value.
+  final String nativeCategory;
+
+  const _FilterOption(this.label, this.param, {required this.nativeCategory});
 }
 
 class _FilterRow {
@@ -117,13 +124,22 @@ class _CategoriesPageState extends State<CategoriesPage> {
     final rows = <_FilterRow>[];
     for (final part in data.categories) {
       if (part is! FixedCategoryPart) continue;
-      final options = <_FilterOption>[_FilterOption('全部'.tl, null)];
+      final options = <_FilterOption>[
+        _FilterOption('全部'.tl, null, nativeCategory: part.title),
+      ];
       var hasRealParam = false;
       for (final item in part.categories) {
-        final param = item.target.attributes?['param']?.toString();
+        final attr = item.target.attributes;
+        final param = attr?['param']?.toString();
         // 「推薦 / 排行」類不是篩選條件，跳過
         if (param == 'rank') continue;
-        options.add(_FilterOption(item.label, param));
+        options.add(
+          _FilterOption(
+            item.label,
+            param,
+            nativeCategory: attr?['category']?.toString() ?? part.title,
+          ),
+        );
         if (param != null) hasRealParam = true;
       }
       if (hasRealParam && options.length > 1) {
@@ -139,14 +155,119 @@ class _CategoriesPageState extends State<CategoriesPage> {
     setState(() => _rows = rows);
   }
 
-  List<String?> get _queryPlan => buildCategoryQueries([
+  /// One source-native query: the category name and param the source itself
+  /// defines, plus the options list that source expects. Nothing here is
+  /// synthesized from another source's protocol.
+  ({String category, String? param, List<String> options})? _queryFor(
+    _FilterRow row,
+    String param,
+  ) {
+    final opt = row.options.firstWhere(
+      (o) => o.param == param,
+      orElse: () => _FilterOption('', '', nativeCategory: row.title),
+    );
+    return (
+      category: opt.nativeCategory,
+      param: opt.param,
+      options: _optionsFor(row.title),
+    );
+  }
+
+  /// The source's own option defaults (first value of each option list), so a
+  /// loader that reads `options[0]` receives a real value instead of nothing.
+  final Map<String, List<String>> _optionsCache = {};
+
+  List<String> _optionsFor(String rowTitle) => _optionsCache[rowTitle] ?? const [];
+
+  Future<void> _loadOptionsForRows() async {
+    final data = _source?.categoryComicsData;
+    if (data == null) return;
+    for (final row in _rows) {
+      if (_optionsCache.containsKey(row.title)) continue;
+      // Every option in a row shares the source's option list for that query.
+      final native =
+          row.options.firstWhere((o) => o.param != null, orElse: () => row.options.first)
+              .nativeCategory;
+      List<String> values = const [];
+      try {
+        if (data.optionsLoader != null) {
+          final res = await data.optionsLoader!(native, row.options.first.param);
+          if (res.success) {
+            values = [
+              for (final o in res.data)
+                if (o.options.isNotEmpty) o.options.keys.first,
+            ];
+          }
+        }
+        if (values.isEmpty && data.options != null) {
+          values = [
+            for (final o in data.options!)
+              if (o.options.isNotEmpty) o.options.keys.first,
+          ];
+        }
+      } catch (_) {}
+      _optionsCache[row.title] = values;
+    }
+  }
+
+  /// Selected (row, param) pairs, in row order.
+  List<({_FilterRow row, String param})> get _selectedPairs => [
     for (final row in _rows)
-      if (row.title != _tagRowTitle)
-        (_selected[row.title] ?? <String>{}).toList(),
-  ], tags: _selectedTags.toList());
+      for (final param in _selected[row.title] ?? const <String>{})
+        (row: row, param: param),
+  ];
+
+  /// Per-query accumulated results, keyed by 'category\u0000param'. Keeping
+  /// them per query (rather than one merged list) is what lets a row union its
+  /// selections and different rows intersect without losing pagination.
+  final Map<String, List<Comic>> _byQuery = {};
+  final Map<String, bool> _queryHasMore = {};
+
+  static String _queryKey(String category, String? param) =>
+      '$category\u0000${param ?? ''}';
+
+  /// Union within each row, intersect across rows. A row with nothing selected
+  /// is not a constraint.
+  List<Comic> _applyFilters() {
+    final rows = <List<Comic>>[];
+    for (final row in _rows) {
+      final params = _selected[row.title] ?? const <String>{};
+      if (params.isEmpty) continue;
+      final union = <String, Comic>{};
+      for (final param in params) {
+        final opt = row.options.firstWhere(
+          (o) => o.param == param,
+          orElse: () => _FilterOption('', '', nativeCategory: row.title),
+        );
+        for (final c in _byQuery[_queryKey(opt.nativeCategory, opt.param)] ?? const <Comic>[]) {
+          union['${c.sourceKey}:${c.id}'] = c;
+        }
+      }
+      rows.add(union.values.toList());
+    }
+    if (rows.isEmpty) {
+      final all = <String, Comic>{};
+      for (final list in _byQuery.values) {
+        for (final c in list) {
+          all['${c.sourceKey}:${c.id}'] = c;
+        }
+      }
+      return all.values.toList();
+    }
+    var kept = rows.first;
+    for (var i = 1; i < rows.length; i++) {
+      final keys = {for (final c in rows[i]) '${c.sourceKey}:${c.id}'};
+      kept = [for (final c in kept) if (keys.contains('${c.sourceKey}:${c.id}')) c];
+    }
+    return kept;
+  }
+
+  bool get _anyQueryHasMore => _queryHasMore.values.any((v) => v);
 
   Future<void> _reload() async {
     ++_requestGeneration;
+    _byQuery.clear();
+    _queryHasMore.clear();
     setState(() {
       _comics = [];
       _page = 1;
@@ -154,47 +275,51 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _loading = false;
       _error = null;
     });
+    await _loadOptionsForRows();
     await _loadMore();
   }
 
   Future<void> _loadMore() async {
     if (_loading || !_hasMore) return;
-    final source = _source;
-    final loader = source?.categoryComicsData?.load;
-    if (source == null || loader == null) return;
+    final loader = _source?.categoryComicsData?.load;
+    if (loader == null) return;
     final generation = _requestGeneration;
     final page = _page;
-    final plan = _queryPlan;
-    final tags = _selectedTags.toList();
+    var pairs = _selectedPairs;
+    if (pairs.isEmpty) {
+      // Nothing selected: the source's own default listing, unchanged.
+      final first = _rows.isNotEmpty ? _rows.first : null;
+      if (first == null) return;
+      pairs = [(row: first, param: '')];
+    }
     setState(() => _loading = true);
     try {
-      // Bounded fan-out: no request per tag, only region/status combinations.
-      if (plan.length > 64) throw StateError('篩選組合超過 64，請減少選項');
-      final results = <Res<List<Comic>>>[];
-      for (var start = 0; start < plan.length; start += 4) {
-        final batch = plan.skip(start).take(4);
-        results.addAll(await Future.wait([
-          for (final param in batch) loader('', param, const <String>[], page),
-        ]));
+      var anyMore = false;
+      for (final pair in pairs) {
+        final opt = pair.row.options.firstWhere(
+          (o) => o.param == pair.param,
+          orElse: () => _FilterOption('', '', nativeCategory: pair.row.title),
+        );
+        final key = _queryKey(opt.nativeCategory, opt.param);
+        if (_queryHasMore[key] == false) continue;
+        final res = await loader(
+          opt.nativeCategory,
+          opt.param,
+          _optionsFor(pair.row.title),
+          page,
+        );
         if (!mounted || generation != _requestGeneration) return;
-      }
-      final failed = results.where((r) => !r.success).firstOrNull;
-      if (failed != null) throw StateError(failed.errorMessage ?? '分類載入失敗');
-      final ids = _comics.map((c) => c.id).toSet();
-      final fresh = <Comic>[];
-      var hasNext = false;
-      for (final res in results) {
-        if (res.data.isNotEmpty &&
-            (res.subData is! int || page < (res.subData as int))) hasNext = true;
-        for (final comic in res.data) {
-          if (tags.length > 1 && !matchesAllCategoryTags(comic.tags ?? const <String>[], tags)) continue;
-          if (ids.add(comic.id)) fresh.add(comic);
-        }
+        if (!res.success) throw StateError(res.errorMessage ?? '載入失敗');
+        (_byQuery[key] ??= []).addAll(res.data);
+        final more = res.data.isNotEmpty &&
+            (res.subData is! int || page < (res.subData as int));
+        _queryHasMore[key] = more;
+        if (more) anyMore = true;
       }
       if (!mounted || generation != _requestGeneration) return;
       setState(() {
-        _comics.addAll(fresh);
-        _hasMore = hasNext;
+        _comics = _applyFilters();
+        _hasMore = anyMore;
         _page = page + 1;
         _error = null;
       });
@@ -203,7 +328,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
         setState(() { _error = e.toString(); _hasMore = false; });
       }
     } finally {
-      if (mounted && generation == _requestGeneration) setState(() => _loading = false);
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _loading = false);
+      }
     }
   }
 

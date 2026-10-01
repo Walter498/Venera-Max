@@ -18,9 +18,14 @@ import 'package:venera/utils/opencc.dart';
 /// already being in the target language) — the service uses the votes to
 /// lock a comic's dominant language.
 class PageAnalysis {
-  PageAnalysis(this.regions, this.languageVotes, [this.newGlossary = const {}]);
+  PageAnalysis(this.regions, this.languageVotes, [this.newGlossary = const {}],
+      {this.incomplete = false});
 
   final List<TranslatedRegion> regions;
+
+  /// True when the model left out lines this page needed. The page is shown
+  /// untranslated and retried later rather than cached half-translated.
+  final bool incomplete;
   final Map<String, int> languageVotes;
 
   /// Name/proper-noun translations the model reported for this page, to be
@@ -90,7 +95,12 @@ class PageTranslationPipeline {
       ...ocr.ready,
       ...regionsFromTranslation(ocr.pending, result.texts),
     ];
-    return PageAnalysis(regions, ocr.languageVotes, result.glossary);
+    return PageAnalysis(
+      regions,
+      ocr.languageVotes,
+      result.glossary,
+      incomplete: result.missingIds.isNotEmpty,
+    );
   }
 
   /// Whether the OCR isolate already holds its models — see

@@ -1,5 +1,8 @@
 {
   "zh_CN": {
+    "Filter by tag": "按标签筛选",
+    "The current results carry no tags from any source": "目前结果没有任何来源提供标签",
+    "No result carries all the selected tags": "没有结果同时带有全部已选标签",
     "No comments": "暂无评论",
     "View comments and reply": "查看评论／发表评论",
     "View all comments": "查看全部评论",

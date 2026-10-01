@@ -573,6 +573,11 @@ class ImageTranslationService with ChangeNotifier {
       );
       _updateLanguageLock(comicKey, analysis.languageVotes, config);
       _mergeGlossary(comicKey, analysis.newGlossary);
+      if (analysis.incomplete) {
+        // Leave nothing behind: no text cache, no rendered image, so the page
+        // is retried and cannot masquerade as translated.
+        throw Exception('Translation incomplete');
+      }
       regions = analysis.regions;
       TranslationStore().put(cacheKey, regions, chapter: chapter);
     }
@@ -713,6 +718,7 @@ class ImageTranslationService with ChangeNotifier {
 
     var batchOk = true;
     var translated = const <String>[];
+    var missingTextIds = const <int>{};
     if (texts.isNotEmpty) {
       if (shouldCancel?.call() ?? false) throw const PipelineCanceled();
       onStage?.call(TranslationStage.translating, completedPages());
@@ -724,6 +730,7 @@ class ImageTranslationService with ChangeNotifier {
         );
         _mergeGlossary(comicKey, result.glossary);
         translated = result.texts;
+        missingTextIds = result.missingIds;
       } catch (e, s) {
         Log.warning('Image Translation', 'Batch translate failed: $e\n$s');
         batchOk = false;
@@ -735,6 +742,16 @@ class ImageTranslationService with ChangeNotifier {
       if (po == null) continue;
       if (!batchOk && po.pending.isNotEmpty) {
         settled[i] = true; // request failed; retry this page on a later run
+        continue;
+      }
+      // Does this page own any line the model failed to answer?
+      var pageMissing = false;
+      for (var k = 0; k < po.pending.length; k++) {
+        if (missingTextIds.contains(sliceAt[i] + k)) pageMissing = true;
+      }
+      if (pageMissing) {
+        // Retried later; caching it would freeze the untranslated lines.
+        settled[i] = true;
         continue;
       }
       var slice = po.pending.isEmpty || !batchOk
@@ -787,6 +804,10 @@ class ImageTranslationService with ChangeNotifier {
       }
     }
     onStage?.call(TranslationStage.rendering, completedPages());
+    // The reader decides whether a page is translated from [_completed]; that
+    // map just changed, so listeners must rebuild or the visible page keeps
+    // showing the pre-translation image until something else forces a rebuild.
+    if (success.any((ok) => ok)) notifyListeners();
     return success;
   }
 
