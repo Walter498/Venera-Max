@@ -526,7 +526,7 @@ class _GalleryModeState extends State<_GalleryMode>
             image: _createImageProviderFromKey(
               images[0],
               context,
-              startIndex + 1,
+              readerImagePageOrdinal(startIndex, 2, 0, reversed: reverse),
             ),
             fit: BoxFit.contain,
             alignment: axis == Axis.vertical
@@ -543,7 +543,7 @@ class _GalleryModeState extends State<_GalleryMode>
             image: _createImageProviderFromKey(
               images[1],
               context,
-              startIndex + 2,
+              readerImagePageOrdinal(startIndex, 2, 1, reversed: reverse),
             ),
             fit: BoxFit.contain,
             alignment: axis == Axis.vertical
@@ -555,12 +555,14 @@ class _GalleryModeState extends State<_GalleryMode>
         ),
       ];
     } else {
-      imageWidgets = images.map((imageKey) {
-        startIndex++;
+      imageWidgets = images.asMap().entries.map((entry) {
+        final imageKey = entry.value;
+        final ordinal = readerImagePageOrdinal(startIndex, images.length, entry.key,
+            reversed: reverse);
         ImageProvider imageProvider = _createImageProviderFromKey(
           imageKey,
           context,
-          startIndex,
+          ordinal,
         );
         return Expanded(
           child: ComicImage(
@@ -2661,7 +2663,7 @@ ImageProvider _createImageProviderFromKey(
       eid,
     );
     ImageTranslationService.instance.setReadingPosition(
-      reader.type.sourceKey, reader.cid, reader.eid, reader.page);
+      reader.type.sourceKey, reader.cid, reader.eid, reader.currentImagePage);
     translationConfig = TranslationConfig.of(
       reader.cid,
       reader.type.comicSource?.key,

@@ -367,7 +367,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     }
     final images = reader.images;
     if (images == null || images.isEmpty) return null;
-    var index = (reader.page - 1).clamp(0, images.length - 1);
+    var index = (reader.currentImagePage - 1).clamp(0, images.length - 1);
     return (
       cacheKey: ImageTranslationService.cacheKeyFor(
         reader.type.comicSource?.key,

@@ -411,8 +411,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
       return Padding(
         padding: const EdgeInsets.all(32),
         child: Center(
-          child: Text('沒有結果',
-              style: TextStyle(color: context.colorScheme.outline)),
+          child: _hasMore
+              ? TextButton(onPressed: _loadMore, child: const Text('本頁未命中，繼續篩選下一頁'))
+              : Text('沒有結果', style: TextStyle(color: context.colorScheme.outline)),
         ),
       );
     }
@@ -422,7 +423,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
         child: _hasMore
             ? (_loading
                 ? const CircularProgressIndicator()
-                : const SizedBox.shrink())
+                : TextButton(onPressed: _loadMore, child: const Text('載入更多')))
             : Text('沒有更多了',
                 style: TextStyle(
                     fontSize: 12, color: context.colorScheme.outline)),

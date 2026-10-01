@@ -802,7 +802,10 @@ class PreTranslationTaskManager with ChangeNotifier {
         (sourceLang == 'ja' || (sourceLang == 'auto' && hasJapaneseModel))) {
       return 1;
     }
-    return performance.llmConcurrency.clamp(1, 4);
+    // Bound buffered image/OCR state independently from network slots.
+    final pageBudget = isMobile ? 12 : 40;
+    final memoryGroups = (pageBudget ~/ performance.batchPages).clamp(1, 8);
+    return performance.llmConcurrency.clamp(1, memoryGroups);
   }
 
   /// Re-runs only the pages that failed, across every chapter that has any.

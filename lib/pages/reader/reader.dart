@@ -18,6 +18,7 @@ import 'package:venera/components/rich_comment_content.dart';
 import 'package:venera/components/window_frame.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/reader_page_plan.dart';
 import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/chapter_duplicates.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
@@ -558,10 +559,20 @@ class _ReaderState extends State<Reader>
           ) ==
           true;
 
+  /// First original image of the visible spread, not the gallery spread index.
+  int get currentImagePage {
+    final count = images?.length ?? 1;
+    if (page >= maxPage) return count;
+    final ordinal = !showSingleImageOnFirstPage() || imagesPerPage == 1
+        ? (page - 1) * imagesPerPage + 1
+        : page == 1 ? 1 : (page - 2) * imagesPerPage + 2;
+    return ordinal.clamp(1, count).toInt();
+  }
+
   @override
   void onPageChanged() {
     ImageTranslationService.instance.setReadingPosition(
-      type.sourceKey, cid, eid, page);
+      type.sourceKey, cid, eid, currentImagePage);
     updateHistory();
   }
 

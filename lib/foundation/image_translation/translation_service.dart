@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/reader_page_plan.dart';
 import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/image_translation/llm_translator.dart';
 import 'package:venera/foundation/image_translation/translation_config.dart';
@@ -193,11 +194,10 @@ class ImageTranslationService with ChangeNotifier {
     });
   }
 
-  int _priority(_TranslationTask task) {
-    if (_readerScope == null || !task.cacheKey.startsWith(_readerScope!)) return 1000000 + task.pageOrdinal;
-    final delta = task.pageOrdinal - _readerPage;
-    return delta >= 0 ? delta : 100000 + -delta;
-  }
+  int _priority(_TranslationTask task) => readerTranslationPriority(
+      task.pageOrdinal, _readerPage,
+      sameChapter: _readerScope != null && task.cacheKey.startsWith(_readerScope!));
+
 
 
   /// Whether detection/OCR models AND the user's LLM endpoint are usable for

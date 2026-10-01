@@ -53,7 +53,7 @@ void main() {
       expect(values.batchPages, lessThanOrEqualTo(8));
       expect(values.ocrWorkers, lessThanOrEqualTo(2));
       expect(values.imageConcurrency, lessThanOrEqualTo(3));
-      expect(values.llmConcurrency, lessThanOrEqualTo(3));
+      expect(values.llmConcurrency, lessThanOrEqualTo(6));
     }
   });
 
@@ -80,7 +80,17 @@ void main() {
     expect(values.batchPages, 8);
     expect(values.ocrWorkers, 2);
     expect(values.imageConcurrency, 3);
-    expect(values.llmConcurrency, 3);
+    expect(values.llmConcurrency, 4);
+  });
+
+  test('custom request concurrency can grow to six/eight, still bounded', () {
+    final previous = appdata.settings['imageTranslationLlmConcurrency'];
+    addTearDown(() => appdata.settings['imageTranslationLlmConcurrency'] = previous);
+    appdata.settings['imageTranslationLlmConcurrency'] = 99;
+    expect(TranslationPerformanceConfig.valuesFor(
+      TranslationPerformancePreset.custom, isDesktop: false).llmConcurrency, 6);
+    expect(TranslationPerformanceConfig.valuesFor(
+      TranslationPerformancePreset.custom, isDesktop: true).llmConcurrency, 8);
   });
 
   test('mobile Japanese pipeline keeps one group in flight', () {
@@ -108,7 +118,7 @@ void main() {
     );
   });
 
-  test('desktop pipeline follows LLM concurrency', () {
+  test('desktop batch pipeline obeys image memory budget', () {
     var performance = TranslationPerformanceConfig.valuesFor(
       TranslationPerformancePreset.fast,
       isDesktop: true,
@@ -120,7 +130,7 @@ void main() {
         sourceLang: 'ja',
         hasJapaneseModel: true,
       ),
-      performance.llmConcurrency,
+      5, // 40 buffered pages / 8 pages per group
     );
   });
 

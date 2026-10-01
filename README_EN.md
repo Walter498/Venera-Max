@@ -11,6 +11,17 @@
 - Primary comic source: **栗子漫画 / lizimh** — see [Walter498/Walter](https://github.com/Walter498/Walter)
 - Build: push to `main` → GitHub Actions workflow `venerax-ios` (~12 min) → grab the IPA from the run's **Artifacts**
 
+## 2026-10-01 update
+
+- Compact comments after each chapter (only when the source supplies an API), with full comments/replies navigation.
+- Multi-select search sources; multi-select region/status filters with OR within a row and AND between rows, paging and stale-response protection.
+- Short one-page chapters accept dragging; stationary taps no longer use a stale programmatic-scroll flag.
+- Locate-last-chapter action automatically expands and positions the grid; expand/order controls swapped.
+- Ported upstream v2.3.4 stable page-ordinal translation keys and legacy cache migration, AVIF frame guard, collection-download/picker and SAF WebDAV fixes.
+- Fixed RTL-spread ordinals and translated image cache identities. Current page is prioritized, then future pages in page order.
+- Fast LLM concurrency: mobile 4 / desktop 6; custom ceilings: mobile 6 / desktop 8. Shared API gate backs off on 429/503. OCR and buffered-page limits stay separate; Japanese heavy-model protection remains.
+- CI regression tests run before building iOS. Device interactions and actual model latency still require device verification; no fixed speedup claim.
+
 ## What we added
 
 - **Chapter panel**: list / cover-preview modes, a real collapse (3 rows + "show all (N)"), lazy chapter covers, asc/desc order, duplicate filtering
