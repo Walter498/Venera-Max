@@ -195,28 +195,123 @@ class _SearchResultPageState extends State<SearchResultPage> {
     );
   }
 
+  Map<String, List<String>> _sourceTagGroups() {
+    final data = ComicSource.find(sourceKey)?.categoryData;
+    if (data == null) return const {};
+    final groups = <String, List<String>>{};
+    for (final part in data.categories) {
+      if (part is! FixedCategoryPart) continue;
+      final labels = <String>[];
+      for (final item in part.categories) {
+        final label = item.label.trim();
+        final param = item.target.attributes?['param']?.toString();
+        if (label.isNotEmpty && param != null && param != 'rank') {
+          labels.add(label);
+        }
+      }
+      if (labels.isNotEmpty) groups[part.title] = labels.toSet().toList();
+    }
+    return groups;
+  }
+
+  bool _comicMatchesTag(Comic comic, String wanted) {
+    final normalized = wanted.trim().toLowerCase();
+    return (comic.tags ?? const <String>[]).any((tag) {
+      final value = tag.split(':').last.trim().toLowerCase();
+      return value == normalized;
+    });
+  }
+
   Future<void> _showTagFilter() async {
+    final groups = _sourceTagGroups();
+    final fallback = groups.isEmpty ? _availableTags.toList() : const <String>[];
     var picked = {..._tagFilter};
     await showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      builder: (sheet) => StatefulBuilder(builder: (context, setSheet) {
-        final tags = _availableTags.toList()..sort();
-        return SizedBox(
-          height: context.height * .6,
-          child: Column(children: [
-            ListTile(title: Text("Filter by tag".tl), trailing: TextButton(
-              onPressed: () => setSheet(picked.clear), child: Text("Clear".tl))),
-            Expanded(child: tags.isEmpty
-              ? Center(child: Text("The current results carry no tags from this source".tl))
-              : ListView(children: [for (final tag in tags) CheckboxListTile(
-                  value: picked.contains(tag), title: Text(tag),
-                  onChanged: (v) => setSheet(() => v == true ? picked.add(tag) : picked.remove(tag))) ])),
-            Padding(padding: const EdgeInsets.all(16), child: SizedBox(width: double.infinity,
-              child: FilledButton(onPressed: () { setState(() { _tagFilter..clear()..addAll(picked); }); Navigator.pop(sheet); }, child: Text("Apply".tl))))
-          ]),
-        );
-      }),
+      builder: (sheet) => StatefulBuilder(
+        builder: (context, setSheet) {
+          return SizedBox(
+            height: context.height * .68,
+            child: Column(children: [
+              ListTile(
+                title: Text("Filter by tag".tl),
+                subtitle: Text("Source categories".tl),
+                trailing: TextButton(
+                  onPressed: () => setSheet(picked.clear),
+                  child: Text("Clear".tl),
+                ),
+              ),
+              Expanded(
+                child: groups.isEmpty && fallback.isEmpty
+                    ? Center(
+                        child: Text(
+                          "This source provides no filter tags".tl,
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        children: [
+                          if (groups.isNotEmpty)
+                            for (final entry in groups.entries) ...[
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
+                                child: Text(
+                                  entry.key,
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  for (final tag in entry.value)
+                                    FilterChip(
+                                      label: Text(tag),
+                                      selected: picked.contains(tag),
+                                      onSelected: (on) => setSheet(() {
+                                        if (on) picked.add(tag); else picked.remove(tag);
+                                      }),
+                                    ),
+                                ],
+                              ),
+                            ]
+                          else
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                for (final tag in fallback)
+                                  FilterChip(
+                                    label: Text(tag),
+                                    selected: picked.contains(tag),
+                                    onSelected: (on) => setSheet(() {
+                                      if (on) picked.add(tag); else picked.remove(tag);
+                                    }),
+                                  ),
+                              ],
+                            ),
+                        ],
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      setState(() { _tagFilter..clear()..addAll(picked); });
+                      Navigator.pop(sheet);
+                    },
+                    child: Text("Apply".tl),
+                  ),
+                ),
+              ),
+            ]),
+          );
+        },
+      ),
     );
   }
 
@@ -245,7 +340,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
         Tooltip(
           message: "Settings".tl,
           child: IconButton(
-            icon: const Icon(Icons.filter_alt_outlined),
+            icon: const Icon(Icons.tune_rounded),
             onPressed: () async {
               if (suggestionOverlay != null) {
                 suggestionsController.remove();
