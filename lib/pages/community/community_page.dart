@@ -4,6 +4,7 @@ import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/foundation/lizi_community.dart';
 import 'package:venera/pages/community/post_detail_page.dart';
+import 'package:venera/utils/user_error.dart';
 
 /// 栗子漫畫社區（第一期：只讀瀏覽）。
 /// 資料來源：官方社區 API（ai.qsmm.fun），匿名可讀。
@@ -29,7 +30,7 @@ class _CommunityPageState extends State<CommunityPage> {
       final sections = await LiziCommunityApi.fetchSections();
       if (mounted) setState(() => _sections = sections);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = userFacingNetworkError(e));
     }
   }
 
@@ -157,7 +158,7 @@ class _PostListViewState extends State<_PostListView>
         _error = null;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = userFacingNetworkError(e));
     } finally {
       _loading = false;
     }

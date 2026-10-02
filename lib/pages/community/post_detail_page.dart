@@ -4,6 +4,7 @@ import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/foundation/lizi_community.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
+import 'package:venera/utils/user_error.dart';
 
 /// 栗子社區帖子詳情（第一期：只讀；點讚/評論等互動屬於第二期登入功能）。
 class PostDetailPage extends StatefulWidget {
@@ -56,7 +57,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
       });
     } catch (e) {
       if (mounted && _comments.isEmpty) {
-        setState(() => _error = e.toString());
+        setState(() => _error = userFacingNetworkError(e));
       }
     } finally {
       _loadingComments = false;

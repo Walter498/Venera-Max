@@ -9,6 +9,7 @@ import 'package:venera/foundation/image_provider/cached_image.dart';
 
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/home_source_feed.dart';
+import 'package:venera/utils/user_error.dart';
 
 /// 首頁「更新」「排行」兩個頁籤的內聯視圖（2026-09-18）。
 /// 不跳頁：直接嵌在首頁，跟首頁一樣是第一層級。
@@ -246,7 +247,7 @@ class _HomeUpdatesViewState extends State<HomeUpdatesView> {
           ];
         });
       } catch (e) {
-        if (mounted) setState(() => _error = e.toString());
+        if (mounted) setState(() => _error = userFacingNetworkError(e));
       }
       return;
     }
@@ -267,7 +268,7 @@ class _HomeUpdatesViewState extends State<HomeUpdatesView> {
         }
       });
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = userFacingNetworkError(e));
     }
   }
 
@@ -388,7 +389,7 @@ class _HomeRankViewState extends State<HomeRankView> {
           }
         });
       } catch (e) {
-        if (mounted) setState(() => _error = e.toString());
+        if (mounted) setState(() => _error = userFacingNetworkError(e));
       }
       return;
     }
@@ -416,7 +417,7 @@ class _HomeRankViewState extends State<HomeRankView> {
         }
       });
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = userFacingNetworkError(e));
     }
   }
 
