@@ -2093,6 +2093,8 @@ class ComicList extends StatefulWidget {
     this.enableSelection = false,
     this.scrollbar = true,
     this.scrollbarTopPadding = 0,
+    this.filterTags = const <String>{},
+    this.onAvailableTags,
   });
 
   final Future<Res<List<Comic>>> Function(int page)? loadPage;
@@ -2137,6 +2139,11 @@ class ComicList extends StatefulWidget {
   /// Top inset for the scrollbar thumb so it clears a top app bar (e.g. a
   /// pinned [Appbar] when [Scaffold.extendBodyBehindAppBar] is used).
   final double scrollbarTopPadding;
+
+  /// Generic local tag filter. It is source-agnostic and only uses tags the
+  /// source actually returned; missing tags never count as a match.
+  final Set<String> filterTags;
+  final ValueChanged<Set<String>>? onAvailableTags;
 
   @override
   State<ComicList> createState() => ComicListState();
@@ -2384,8 +2391,25 @@ class ComicListState extends State<ComicList> {
 
   /// SliverGridComics configured for the current (normal / selecting) mode.
   Widget _buildGrid(List<Comic> comics, {void Function()? onLastItemBuild}) {
+    final available = <String>{
+      for (final comic in comics)
+        for (final tag in comic.tags ?? const <String>[])
+          if (tag.trim().isNotEmpty) tag.trim(),
+    };
+    if (widget.onAvailableTags != null) {
+      Future.microtask(() => widget.onAvailableTags!(available));
+    }
+    final filtered = widget.filterTags.isEmpty
+        ? comics
+        : [
+            for (final comic in comics)
+              if (widget.filterTags.every((wanted) =>
+                  (comic.tags ?? const <String>[]).any((tag) =>
+                      tag.trim().toLowerCase() == wanted.toLowerCase())))
+                comic,
+          ];
     return SliverGridComics(
-      comics: comics,
+      comics: filtered,
       onLastItemBuild: onLastItemBuild,
       menuBuilder: _selecting
           ? null

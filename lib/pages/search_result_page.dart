@@ -36,6 +36,8 @@ class _SearchResultPageState extends State<SearchResultPage> {
   late List<String> options;
 
   late String text;
+  final Set<String> _tagFilter = {};
+  final Set<String> _availableTags = {};
 
   OverlayEntry? get suggestionOverlay => suggestionsController.entry;
 
@@ -165,6 +167,13 @@ class _SearchResultPageState extends State<SearchResultPage> {
     return ComicList(
       key: Key(text + options.toString() + sourceKey),
       enableSelection: true,
+      filterTags: _tagFilter,
+      onAvailableTags: (tags) {
+        if (!mounted) return;
+        setState(() => _availableTags
+          ..clear()
+          ..addAll(tags));
+      },
       selectionHandlerCallback: (fn) => _enterSelection = fn,
       scrollbarTopPadding: context.padding.top + 56,
       errorLeading: AppSearchBar(controller: controller, action: buildAction()),
@@ -186,6 +195,31 @@ class _SearchResultPageState extends State<SearchResultPage> {
     );
   }
 
+  Future<void> _showTagFilter() async {
+    var picked = {..._tagFilter};
+    await showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => StatefulBuilder(builder: (context, setSheet) {
+        final tags = _availableTags.toList()..sort();
+        return SizedBox(
+          height: context.height * .6,
+          child: Column(children: [
+            ListTile(title: Text("Filter by tag".tl), trailing: TextButton(
+              onPressed: () => setSheet(picked.clear), child: Text("Clear".tl))),
+            Expanded(child: tags.isEmpty
+              ? Center(child: Text("The current results carry no tags from this source".tl))
+              : ListView(children: [for (final tag in tags) CheckboxListTile(
+                  value: picked.contains(tag), title: Text(tag),
+                  onChanged: (v) => setSheet(() => v == true ? picked.add(tag) : picked.remove(tag))) ])),
+            Padding(padding: const EdgeInsets.all(16), child: SizedBox(width: double.infinity,
+              child: FilledButton(onPressed: () { setState(() { _tagFilter..clear()..addAll(picked); }); Navigator.pop(sheet); }, child: Text("Apply".tl))))
+          ]),
+        );
+      }),
+    );
+  }
+
   Widget buildAction() {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -195,6 +229,17 @@ class _SearchResultPageState extends State<SearchResultPage> {
           child: IconButton(
             icon: const Icon(Icons.checklist),
             onPressed: () => _enterSelection?.call(),
+          ),
+        ),
+        Tooltip(
+          message: "Filter by tag".tl,
+          child: IconButton(
+            icon: Badge(
+              isLabelVisible: _tagFilter.isNotEmpty,
+              label: Text('${_tagFilter.length}'),
+              child: const Icon(Icons.filter_alt_outlined),
+            ),
+            onPressed: _showTagFilter,
           ),
         ),
         Tooltip(

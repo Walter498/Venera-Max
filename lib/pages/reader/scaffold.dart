@@ -149,6 +149,11 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     final processed = activity?.liveProcessed(task) ?? task.done + task.failed;
     final total = task.total;
     final label = total > 0 ? '$processed/$total' : '…';
+    final elapsed = DateTime.now().difference(task.createdAt).inSeconds;
+    final remaining = processed > 0 && total > processed
+        ? (elapsed * (total - processed) / processed).round()
+        : null;
+    final eta = remaining == null ? '估算中' : '约 ${remaining}s';
     return Material(
       color: context.colorScheme.surfaceContainerHigh,
       elevation: 4,
@@ -160,7 +165,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             child: CircularProgressIndicator(value: progress <= 0 ? null : progress,
               strokeWidth: 2.4)),
           const SizedBox(width: 7),
-          Text('翻譯本章 $label', style: ts.s12),
+          Text('翻譯本章 $label · $eta', style: ts.s12),
           if (task.failed > 0) ...[
             const SizedBox(width: 5),
             Text('失敗 ${task.failed}', style: TextStyle(color: context.colorScheme.error, fontSize: 11)),
