@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import 'package:venera/foundation/lizi_api_client.dart';
 import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
@@ -6,7 +6,7 @@ import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/home_layout.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
-import 'package:venera/network/app_dio.dart';
+
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/home_source_feed.dart';
 
@@ -16,7 +16,6 @@ import 'package:venera/pages/home_source_feed.dart';
 /// 栗子源額外用官方 API 拿「更新時間」做徽章、排行榜分地區。
 /// 其他源走源的通用分類接口（有榜單分類就用，沒有就提示）。
 
-const _kLiziApi = 'http://ai.qsmm.fun';
 const _kLiziImg = 'https://cdn.lzimg.xyz';
 
 /// 當前首頁選中的源（找不到就退回第一個首頁顯示源）
@@ -35,15 +34,8 @@ ComicSource? _currentSource() {
 
 bool _isLizi(ComicSource? s) => s?.key == 'lizimh';
 
-Future<Map<String, dynamic>> _getJson(String path) async {
-  final dio = AppDio(
-      BaseOptions(responseType: ResponseType.json), const Duration(seconds: 15));
-  final res = await dio.get('$_kLiziApi$path');
-  final raw = res.data;
-  final map = Map<String, dynamic>.from(raw is Map ? raw : {});
-  final data = map['data'];
-  return data is Map ? Map<String, dynamic>.from(data) : {};
-}
+Future<Map<String, dynamic>> _getJson(String path) =>
+    LiziApiClient.instance.getJson(path);
 
 /// 栗子 API 漫畫 → Comic（機讀欄位塞進 description）
 Comic _comicFromApi(Map<String, dynamic> m) {

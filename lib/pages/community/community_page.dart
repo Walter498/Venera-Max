@@ -169,13 +169,18 @@ class _PostListViewState extends State<_PostListView>
     if (_posts.isEmpty) {
       if (_error != null) {
         return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('載入失敗：$_error'),
-              const SizedBox(height: 12),
-              FilledButton(onPressed: _refresh, child: const Text('重試')),
-            ],
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, color: context.colorScheme.error),
+                const SizedBox(height: 12),
+                Text('載入失敗：$_error', textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                FilledButton(onPressed: _refresh, child: const Text('重試')),
+              ],
+            ),
           ),
         );
       }

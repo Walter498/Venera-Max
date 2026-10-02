@@ -17,7 +17,7 @@ jobs:
       - name: Reader and upstream regression tests
         run: |
           set -o pipefail
-          flutter test test/reader_customizations_test.dart test/translation_performance_config_test.dart test/image_translation_rate_limiter_test.dart test/translation_config_per_comic_test.dart test/translation_store_schema_test.dart test/avif_fallback_test.dart test/avif_frame_decode_guard_test.dart test/collection_download_test.dart test/webdav_saf_upload_test.dart test/add_to_collection_test.dart 2>&1 | tee ios_build.log
+          flutter test test/lizi_api_client_test.dart test/reader_customizations_test.dart test/translation_performance_config_test.dart test/image_translation_rate_limiter_test.dart test/translation_config_per_comic_test.dart test/translation_store_schema_test.dart test/avif_fallback_test.dart test/avif_frame_decode_guard_test.dart test/collection_download_test.dart test/webdav_saf_upload_test.dart test/add_to_collection_test.dart 2>&1 | tee ios_build.log
       - name: Disable code signing in Xcode project
         run: |
           cd ios

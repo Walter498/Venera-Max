@@ -1,0 +1,108 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+import 'package:dio/dio.dart';
+import 'package:venera/network/app_dio.dart';
+
+/// Shared protocol for the App's native community/rank/update readers.
+/// This is isolated from ComicSource: other sources keep their own protocols.
+abstract final class LiziApiProtocol {
+  static const hosts = ['http://ai.xajtl.com', 'http://ai.qsmm.fun'];
+  // Public application protocol constant, never an account JWT.
+  static const _prefix = "q2sIObYXCp2uBZgCNBlY93J3z67hK0wS";
+
+  static Uri signedUri(String host, String target, {int? timestamp}) {
+    final relative = Uri.parse(target);
+    if (relative.hasScheme || relative.hasAuthority ||
+        !relative.path.startsWith('/app/api/')) {
+      throw ArgumentError('Expected a relative Lizi API path');
+    }
+    final t = timestamp ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final params = <String, List<String>>{
+      for (final entry in relative.queryParametersAll.entries)
+        if (entry.key != 'lzsign' && entry.key != 't')
+          entry.key: List<String>.from(entry.value),
+    };
+    if (relative.path == '/app/api/configv2' ||
+        relative.path == '/app/api/home/data') {
+      params.putIfAbsent('packname', () => ['com.jy.zyds']);
+      params.putIfAbsent('appsign256', () => ['']);
+    }
+    if (relative.path == '/app/api/configv2') {
+      params.putIfAbsent('platform', () => ['ios']);
+    }
+    params['t'] = ['$t'];
+    params['lzsign'] = [md5.convert(utf8.encode('$_prefix${relative.path}$t')).toString()];
+    return Uri.parse(host).replace(path: relative.path, queryParameters: params);
+  }
+}
+
+class LiziApiResponse {
+  const LiziApiResponse(this.status, this.body);
+  final int status;
+  final Object? body;
+}
+
+typedef LiziApiTransport = Future<LiziApiResponse> Function(Uri uri);
+
+/// Shared by community and the native home tabs. Only a validated successful
+/// reply pins the host; DNS/HTTP/HTML failures never become empty data.
+class LiziApiClient {
+  LiziApiClient({LiziApiTransport? transport, this.timestamp})
+      : _transport = transport ?? _networkRequest;
+
+  static final instance = LiziApiClient();
+  final LiziApiTransport _transport;
+  final int Function()? timestamp;
+  int _hostIndex = 0;
+  String get api => LiziApiProtocol.hosts[_hostIndex];
+
+  static Future<LiziApiResponse> _networkRequest(Uri uri) async {
+    final dio = AppDio(BaseOptions(
+      responseType: ResponseType.plain,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Dart/3.5 (dart:io)',
+      },
+      validateStatus: (_) => true,
+    ), const Duration(seconds: 15));
+    final response = await dio.get(uri.toString());
+    return LiziApiResponse(response.statusCode ?? 0, response.data);
+  }
+
+  Future<Map<String, dynamic>> getJson(String target) async {
+    final start = _hostIndex;
+    final errors = <String>[];
+    for (var i = 0; i < LiziApiProtocol.hosts.length; i++) {
+      final index = (start + i) % LiziApiProtocol.hosts.length;
+      final host = LiziApiProtocol.hosts[index];
+      final uri = LiziApiProtocol.signedUri(host, target, timestamp: timestamp?.call());
+      LiziApiResponse response;
+      try {
+        response = await _transport(uri);
+      } catch (_) {
+        errors.add('$host: 連線失敗');
+        continue;
+      }
+      if (response.status != 200) {
+        errors.add('$host: HTTP ${response.status}');
+        continue;
+      }
+      dynamic raw = response.body;
+      try { if (raw is String) raw = jsonDecode(raw); }
+      catch (_) { errors.add('$host: 非 JSON 回應'); continue; }
+      if (raw is! Map) { errors.add('$host: 回應格式錯誤'); continue; }
+      final code = raw['code'];
+      if (code != 201 && code != 200) {
+        errors.add('$host: API code $code');
+        continue;
+      }
+      final data = raw['data'];
+      if (data is! Map) { errors.add('$host: 資料格式錯誤'); continue; }
+      _hostIndex = index;
+      return Map<String, dynamic>.from(data);
+    }
+    // Never echo JWT, signatures or raw response content through our errors.
+    throw StateError('栗子接口 ${Uri.parse(target).path} 請求失敗 (${errors.join('; ')})');
+  }
+}
