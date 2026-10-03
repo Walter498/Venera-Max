@@ -1,7 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:venera/components/components.dart';
-import 'package:venera/pages/settings/reader.dart';
-import 'package:venera/utils/translations.dart';
+part of 'settings_page.dart';
 
 /// Convenience index for our added features. Original settings stay in place;
 /// this page only provides a second, compact entry point.
@@ -18,13 +15,13 @@ class MaxSettings extends StatelessWidget {
             leading: const Icon(Icons.translate_rounded),
             title: Text('AI translation'.tl),
             subtitle: Text('Whole-chapter translation, progress and performance controls'.tl),
-            onTap: () => context.to(() => const ReaderSettings()),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReaderSettings())),
           ),
           ListTile(
             leading: const Icon(Icons.swipe_up_rounded),
             title: Text('Chapter swipe distance'.tl),
             subtitle: Text('Adjust the distance for next/previous chapter gestures'.tl),
-            onTap: () => context.to(() => const ReaderSettings()),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReaderSettings())),
           ),
           ListTile(
             leading: const Icon(Icons.filter_alt_outlined),

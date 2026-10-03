@@ -220,7 +220,19 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
       _failedSources = failed;
       _loading = false;
     });
-    widget.onAvailableTags?.call(widget.sources.isEmpty ? const {} : {for (final source in widget.sources) for (final part in (source.categoryData?.categories ?? const []) if (part is FixedCategoryPart) part.title: {for (final item in part.categories) if (item.target.attributes?["param"] != null) item.label.trim()}});
+    final groups = <String, Set<String>>{};
+    for (final source in widget.sources) {
+      final data = source.categoryData;
+      if (data == null) continue;
+      for (final part in data.categories) {
+        if (part is! FixedCategoryPart) continue;
+        final tags = groups.putIfAbsent(part.title, () => <String>{});
+        for (final item in part.categories) {
+          if (item.target.attributes?["param"] != null) tags.add(item.label.trim());
+        }
+      }
+    }
+    widget.onAvailableTags?.call(groups);
     // 背景校準：同名組用 loadInfo 數【真實話數】重排（不阻塞首屏）
     _resolveChapterCounts();
   }

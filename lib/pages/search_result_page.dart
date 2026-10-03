@@ -16,6 +16,7 @@ class SearchResultPage extends StatefulWidget {
     required this.text,
     required this.sourceKey,
     this.options,
+    this.initialTags = const <String>{},
   });
 
   final String text;
@@ -23,6 +24,10 @@ class SearchResultPage extends StatefulWidget {
   final String sourceKey;
 
   final List<String>? options;
+
+  /// Category labels already selected on the category page; the result list
+  /// starts filtered by them so the search matches what the user is looking at.
+  final Set<String> initialTags;
 
   @override
   State<SearchResultPage> createState() => _SearchResultPageState();
@@ -127,6 +132,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
     text = checkAutoLanguage(widget.text);
     controller = SearchBarController(currentText: text, onSearch: search);
     options = widget.options ?? const [];
+    _tagFilter.addAll(widget.initialTags);
     validateOptions();
     appdata.addSearchHistory(text);
     suggestionsController = _SuggestionsController(controller, sourceKey);
@@ -170,9 +176,15 @@ class _SearchResultPageState extends State<SearchResultPage> {
       filterTags: _tagFilter,
       onAvailableTags: (tags) {
         if (!mounted) return;
-        setState(() => _availableTags
-          ..clear()
-          ..addAll(tags));
+        setState(() {
+          _availableTags
+            ..clear()
+            ..addAll(tags);
+          // Category labels carried over from the category page may not exist
+          // as result tags for this source; dropping them keeps the list from
+          // going empty when the label text does not match a comic tag.
+          _tagFilter.removeWhere((tag) => !tags.contains(tag));
+        });
       },
       selectionHandlerCallback: (fn) => _enterSelection = fn,
       scrollbarTopPadding: context.padding.top + 56,

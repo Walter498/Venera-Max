@@ -5,7 +5,7 @@ import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/home_layout.dart';
 import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/res.dart';
-import 'package:venera/pages/search_page.dart';
+import 'package:venera/pages/search_result_page.dart';
 import 'package:venera/utils/translations.dart';
 
 /// 分類頁（2026-09-16 改版：仿栗子官方 App 圖一佈局）
@@ -399,7 +399,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
-        onTap: () => context.to(() => const SearchPage()),
+        onTap: () => _searchSelectedSource(),
         child: Container(
           height: 44,
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -431,6 +431,52 @@ class _CategoriesPageState extends State<CategoriesPage> {
         ),
       ),
     );
+  }
+
+  /// Labels selected on this page, so a search launched from here starts with
+  /// the same tag constraints the user is looking at.
+  Set<String> get _selectedTagLabels => {
+    for (final param in _selectedTags)
+      if (param.startsWith('tag:')) param.substring(4),
+    for (final row in _rows)
+      if (row.title != _tagRowTitle)
+        for (final param in _selected[row.title] ?? const <String>{})
+          for (final option in row.options)
+            if (option.param == param && option.label.isNotEmpty) option.label,
+  };
+
+  Future<void> _searchSelectedSource() async {
+    final source = _source;
+    if (source == null) return;
+    final controller = TextEditingController();
+    final keyword = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text('Search'.tl),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(hintText: '搜漫畫 作者名'.tl),
+          onSubmitted: (value) => Navigator.pop(dialog, value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: Text('Cancel'.tl),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, controller.text),
+            child: Text('Search'.tl),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || keyword == null || keyword.trim().isEmpty) return;
+    context.to(() => SearchResultPage(
+          text: keyword.trim(),
+          sourceKey: source.key,
+          initialTags: _selectedTagLabels,
+        ));
   }
 
   Widget _buildRow(_FilterRow row) {
