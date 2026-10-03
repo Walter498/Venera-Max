@@ -61,9 +61,12 @@ class LiziApiClient {
   static Future<LiziApiResponse> _networkRequest(Uri uri) async {
     final dio = AppDio(BaseOptions(
       responseType: ResponseType.plain,
+      // Byte-for-byte the header set the official client sends: it does not
+      // send Accept, and it does send Content-Type and gzip.
       headers: {
-        'Accept': 'application/json',
         'User-Agent': 'Dart/3.5 (dart:io)',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept-Encoding': 'gzip',
       },
       validateStatus: (_) => true,
     ), const Duration(seconds: 15));
