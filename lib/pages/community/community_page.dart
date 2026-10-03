@@ -119,6 +119,10 @@ class _PostListViewState extends State<PostListView> {
         _hasMore = res.hasMore;
         _error = null;
         _loading = false;
+        if (_sortType == 1) {
+          // 最熱 = most liked first, regardless of when it was posted.
+          _posts.sort((a, b) => b.likeCount.compareTo(a.likeCount));
+        }
       });
     } catch (e) {
       if (mounted) {
