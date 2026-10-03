@@ -35,11 +35,11 @@ void main() {
     await LocalManager().saveCurrentDownloadingTasks();
     await appdata.saveData(false);
     App.dataPath = originalDataPath;
-    // Another test can clean the shared temp directory during async teardown.
-    // Deletion is cleanup-only and must not turn a passing test into a failure.
-    if (await directory.exists()) {
+    // Cleanup only: a concurrent test may already have removed this directory,
+    // and that must never turn a passing suite into a failure.
+    try {
       await directory.delete(recursive: true);
-    }
+    } catch (_) {}
   });
 
   tearDown(() {
