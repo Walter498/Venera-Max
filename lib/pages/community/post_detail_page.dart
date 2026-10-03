@@ -50,6 +50,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final text = _commentController.text.trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
+    String? failure;
     try {
       await LiziCommunityApi.createComment(
         postId: widget.postId,
@@ -67,10 +68,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
       });
       await _loadComments();
     } catch (e) {
-      if (mounted) {
-        setState(() => _sending = false);
-        context.showMessage(message: userFacingNetworkError(e));
-      }
+      failure = e is StateError ? e.message : userFacingNetworkError(e);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+    if (failure != null) {
+      context.showMessage(message: failure);
     }
   }
 
