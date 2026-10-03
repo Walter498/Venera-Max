@@ -2399,9 +2399,16 @@ class ComicListState extends State<ComicList> {
   Widget _buildGrid(List<Comic> comics, {void Function()? onLastItemBuild}) {
     final available = <String>{
       for (final comic in comics)
-        for (final tag in comic.tags ?? const <String>[])
+        for (final tag in ComicTagEnricher.instance.tagsFor(comic))
           if (tag.trim().isNotEmpty) tag.trim(),
     };
+    for (final comic in comics) {
+      unawaited(ComicTagEnricher.instance.enrich(comic).then((_) {
+        if (widget.onAvailableTags != null) {
+          widget.onAvailableTags!(ComicTagEnricher.instance.tagsFor(comic));
+        }
+      }));
+    }
     if (widget.onAvailableTags != null) {
       Future.microtask(() => widget.onAvailableTags!(available));
     }
@@ -2410,7 +2417,7 @@ class ComicListState extends State<ComicList> {
         : [
             for (final comic in comics)
               if (widget.filterTags.every((wanted) =>
-                  (comic.tags ?? const <String>[]).any((tag) {
+                  ComicTagEnricher.instance.tagsFor(comic).any((tag) {
                     final value = tag.split(':').last.trim().toLowerCase();
                     final target = wanted.trim().toLowerCase();
                     return value == target || value.contains(target);
