@@ -37,10 +37,7 @@ class _CommunityPageState extends State<CommunityPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: Appbar(
-        title: Text('社區'),
-        automaticallyImplyLeading: false,
-      ),
+      appBar: Appbar(title: Text('社區')),
       body: Column(children: [
         TabBar(
           controller: _tabs,
@@ -134,7 +131,7 @@ class _PostListViewState extends State<PostListView> {
   }
 
   Future<void> _openCreatePost() async {
-    var section = widget.sectionId;
+    var section = widget.sectionId ?? 3;
     int? comicId;
     String? comicName;
     String? collectionId;
