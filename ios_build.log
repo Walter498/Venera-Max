@@ -100,14 +100,7 @@ Try `flutter pub outdated` for more information.
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: saver uses one unit of every resource
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: mobile presets stay within mobile-safe ceilings
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: mobile custom values clamp desktop-sized synced settings
-::group::❌ /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: custom request concurrency can grow to six/eight, still bounded (failed)
-Expected: <8>
-  Actual: <12>
-
-package:matcher                                     expect
-package:flutter_test/src/widget_tester.dart 473:18  expect
-test/translation_performance_config_test.dart 92:5  main.<fn>
-::endgroup::
+✅ /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: custom request concurrency can grow to six/eight, still bounded
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: mobile Japanese pipeline keeps one group in flight
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: desktop batch pipeline obeys image memory budget
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: performance tuning is excluded from cross-device sync
@@ -178,6 +171,14 @@ test/translation_performance_config_test.dart 92:5  main.<fn>
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: selected grouped chapters expand without loading unselected members
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: genuine single-chapter members retain a null chapter argument
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: unavailable metadata preserves progress and can recover on retry
+::group::❌ /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: (tearDownAll) (failed)
+PathNotFoundException: Deletion failed, path = '/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/venera-collection-test-2Ct68V' (OS Error: No such file or directory, errno = 2)
+dart:io                                   FileSystemEntity.delete
+test/collection_download_test.dart 38:21  main.<fn>
+===== asynchronous gap ===========================
+dart:async                                _CustomZone.registerUnaryCallback
+test/collection_download_test.dart 35:5   main.<fn>
+::endgroup::
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: streams a file that has no openRead, and the server receives the bytes
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: re-reads from the start when the body is sent twice
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: rejects a body that came up short of the declared length
@@ -190,7 +191,7 @@ test/translation_performance_config_test.dart 92:5  main.<fn>
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: long titles and keyboard fit at width 320.0 with larger text
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: long titles and keyboard fit at width 900.0 with larger text
 ::group::✅ /Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: custom and borrowed covers retain collection identity and broken covers fall back
-[31mPathNotFoundException: Cannot open file, path = '/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/venera-collection-picker-q1k89q/missing.png' (OS Error: No such file or directory, errno = 2)
+[31mPathNotFoundException: Cannot open file, path = '/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/venera-collection-picker-1jSuld/missing.png' (OS Error: No such file or directory, errno = 2)
 #0      _checkForErrorResponse (dart:io/common.dart:58:9)
 #1      _File.open.<anonymous closure> (dart:io/file_impl.dart:438:7)
 #2      StackZoneSpecification._registerUnaryCallback.<anonymous closure>.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:127:36)
@@ -208,4 +209,4 @@ test/translation_performance_config_test.dart 92:5  main.<fn>
 [0m
 ::endgroup::
 
-::error::100 tests passed, 1 failed.
+::error::101 tests passed, 1 failed.
