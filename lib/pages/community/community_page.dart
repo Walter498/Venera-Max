@@ -120,8 +120,18 @@ class _PostListViewState extends State<PostListView> {
         _error = null;
         _loading = false;
         if (_sortType == 2) {
-          // 最熱 = most liked first, regardless of when it was posted.
-          _posts.sort((a, b) => b.likeCount.compareTo(a.likeCount));
+          // 最熱: likes first, then views, then comments — so the order is
+          // visibly different even when every post has zero likes.
+          _posts.sort((a, b) {
+            final byLike = b.likeCount.compareTo(a.likeCount);
+            if (byLike != 0) return byLike;
+            final byView = b.viewCount.compareTo(a.viewCount);
+            if (byView != 0) return byView;
+            final byComment = b.commentCount.compareTo(a.commentCount);
+            if (byComment != 0) return byComment;
+            return (b.createdAt ?? DateTime(0))
+                .compareTo(a.createdAt ?? DateTime(0));
+          });
         }
       });
     } catch (e) {
