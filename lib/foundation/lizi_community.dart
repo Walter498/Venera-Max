@@ -30,7 +30,11 @@ class LiziCommunityApi {
     final hook = ComicSource.find('lizimh')?.apiFetch;
     if (hook == null) throw StateError('此功能需要栗子源 v2.33.13 或以上');
     final res = await hook(path, jsonEncode(body));
-    if (res.error) throw StateError(res.errorMessage ?? '請求失敗');
+    if (res.error) {
+      // Show the server's own message: it distinguishes "not logged in" from
+      // a rejected body, which an app-side guess cannot.
+      throw StateError(res.errorMessage ?? '請求失敗');
+    }
     dynamic raw = res.data;
     if (raw is String) raw = jsonDecode(raw);
     if (raw is! Map) throw StateError('回應格式錯誤');
@@ -62,10 +66,12 @@ class LiziCommunityApi {
     required String content,
     int? parentId,
   }) async {
+    // The official client always sends parent_id (0 for a top-level comment);
+    // omitting it makes the server reject the request.
     await _postJson('/app/api/community/comment/create', {
       'post_id': postId,
       'content': content,
-      if (parentId != null) 'parent_id': parentId,
+      'parent_id': parentId ?? 0,
     });
     return true;
   }
