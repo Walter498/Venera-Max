@@ -19,6 +19,10 @@ class Res<T> {
 
   final dynamic subData;
 
+  /// Optional server-reported total for paged category / search results.
+  /// Null means the source does not report one; callers must not invent it.
+  final int? total;
+
   @override
   String toString() => _data.toString();
 
