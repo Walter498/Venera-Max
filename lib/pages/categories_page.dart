@@ -3,12 +3,8 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/home_layout.dart';
-import 'package:venera/foundation/category_filter_plan.dart';
-import 'package:venera/foundation/comic_tag_enricher.dart';
 import 'package:venera/foundation/res.dart';
-import 'package:venera/pages/search_result_page.dart';
 import 'package:venera/utils/translations.dart';
-import 'package:venera/utils/user_error.dart';
 
 /// 分類頁（2026-09-16 改版：仿栗子官方 App 圖一佈局）
 /// 頂部搜索框 → 題材 / 地區 / 狀態篩選 chips → 即時結果網格（可翻頁）。
@@ -53,16 +49,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
   bool _expanded = false;
   int _requestGeneration = 0;
 
-  /// Inline search: a non-empty keyword replaces the category listing with
-  /// results from the current source, still constrained by the selected tags.
-  final _searchController = TextEditingController();
-  String _searchKeyword = '';
-  List<Comic> _searchResults = [];
-  bool _searchLoading = false;
-  bool _searchHasMore = false;
-  int _searchPage = 1;
-  String? _searchError;
-
   List<Comic> _comics = [];
   int _page = 1;
   bool _loading = false;
@@ -76,11 +62,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
     _initSource();
     _scroll.addListener(() {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 400) {
-        if (_searchKeyword.isEmpty) {
-          _loadMore();
-        } else {
-          _loadMoreSearch();
-        }
+        _loadMore();
       }
     });
   }
@@ -88,7 +70,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
   @override
   void dispose() {
     _scroll.dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -354,6 +335,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
     } finally {
       if (mounted && generation == _requestGeneration) {
         setState(() => _loading = false);
+        if (_comics.isEmpty && _hasMore && _selectedPairs.isNotEmpty && _page < 50) {
+          Future.microtask(_loadMore);
+        }
       }
     }
   }
@@ -366,65 +350,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
         slivers: [
           if (_availableSources.length > 1)
             SliverToBoxAdapter(child: _buildSourceTabs()),
-          SliverToBoxAdapter(child: _buildSearchBar()),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
           const SliverToBoxAdapter(child: Divider(height: 24)),
-          if (_searchKeyword.isEmpty) ...[
-            if (_comics.isNotEmpty)
-              SliverGridComics(comics: _comics, forceBriefMode: true),
-            SliverToBoxAdapter(child: _buildFooter()),
-          ] else ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Text(
-                  '@k：@n 筆結果'.tlParams({
-                    'k': _searchKeyword,
-                    'n': _filteredSearchResults.length,
-                  }),
-                  style: TextStyle(color: context.colorScheme.outline),
-                ),
-              ),
-            ),
-            if (_searchError != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(_searchError!),
-                ),
-              ),
-            if (_searchResults.isNotEmpty &&
-                _filteredSearchResults.isEmpty &&
-                _selectedLabelsByGroup.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Center(
-                    child: Text(
-                      '沒有同時符合標籤和搜索結果的漫畫',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: context.colorScheme.outline),
-                    ),
-                  ),
-                ),
-              )
-            else
-              SliverGridComics(
-                  comics: _filteredSearchResults, forceBriefMode: true),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: _searchLoading
-                      ? const CircularProgressIndicator()
-                      : Text(
-                          _searchHasMore ? '載入更多'.tl : '沒有更多了'.tl,
-                          style: TextStyle(color: context.colorScheme.outline),
-                        ),
-                ),
-              ),
-            ),
-          ],
+          if (_comics.isNotEmpty)
+            SliverGridComics(comics: _comics, forceBriefMode: true),
+          SliverToBoxAdapter(child: _buildFooter()),
         ],
       ),
     );
@@ -468,176 +398,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
         },
       ),
     );
-  }
-
-  /// 就地搜索框：輸入後在下方直接顯示結果，不跳頁、不彈窗。
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: Row(children: [
-        Expanded(
-          child: TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _runSearch(),
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: context.colorScheme.surfaceContainerHigh,
-              hintText: '搜漫畫 作者名'.tl,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        FilledButton(
-          onPressed: _runSearch,
-          child: Text('搜索'.tl),
-        ),
-        if (_searchKeyword.isNotEmpty)
-          IconButton(
-            tooltip: 'Clear'.tl,
-            icon: const Icon(Icons.close),
-            onPressed: () {
-              _searchController.clear();
-              _runSearch();
-            },
-          ),
-      ]),
-    );
-  }
-
-  /// Labels selected on this page (tag params are stored as "tag:name").
-  Set<String> get _selectedTagLabels => {
-    for (final param in _selectedTags)
-      if (param.startsWith('tag:')) param.substring(4),
-    for (final row in _rows)
-      if (row.title != _tagRowTitle)
-        for (final param in _selected[row.title] ?? const <String>{})
-          for (final option in row.options)
-            if (option.param == param && option.label.isNotEmpty) option.label,
-  };
-
-  /// Selected labels per source category group. Inside a group the labels are
-  /// alternatives (OR); different groups must all match (AND) — the same rule
-  /// the category queries use.
-  Map<String, Set<String>> get _selectedLabelsByGroup {
-    final groups = <String, Set<String>>{};
-    for (final row in _rows) {
-      final labels = <String>{};
-      for (final param in _rowParams(row.title)) {
-        final option = row.options.firstWhere(
-          (o) => o.param == param,
-          orElse: () => _FilterOption('', '', nativeCategory: row.title),
-        );
-        if (option.label.trim().isNotEmpty) labels.add(option.label.trim());
-      }
-      if (labels.isNotEmpty) groups[row.title] = labels;
-    }
-    return groups;
-  }
-
-  bool _comicHasTag(Comic comic, String label) {
-    final wanted = label.trim().toLowerCase();
-    if (wanted.isEmpty) return true;
-    return ComicTagEnricher.instance.tagsFor(comic).any((tag) {
-      final value = tag.split(':').last.trim().toLowerCase();
-      return value == wanted || value.contains(wanted);
-    });
-  }
-
-  /// Search results narrowed by the selected labels.
-  ///
-  /// Inside one group the labels are alternatives (OR); every group must match
-  /// (AND). When the intersection is empty the list must say so instead of
-  /// showing unfiltered results.
-  List<Comic> get _filteredSearchResults {
-    final groups = _selectedLabelsByGroup;
-    if (groups.isEmpty) return _searchResults;
-    return [
-      for (final comic in _searchResults)
-        if (groups.values.every(
-            (labels) => labels.any((label) => _comicHasTag(comic, label))))
-          comic,
-    ];
-  }
-
-  Future<void> _runSearch() async {
-    final keyword = _searchController.text.trim();
-    final source = _source;
-    if (source == null) return;
-    if (keyword.isEmpty) {
-      setState(() {
-        _searchKeyword = '';
-        _searchResults = [];
-        _searchError = null;
-      });
-      return;
-    }
-    setState(() {
-      _searchKeyword = keyword;
-      _searchResults = [];
-      _searchPage = 1;
-      _searchHasMore = true;
-      _searchError = null;
-      _searchLoading = true;
-    });
-    await _loadMoreSearch();
-  }
-
-  Future<void> _loadMoreSearch() async {
-    final data = _source?.searchPageData;
-    if (data == null) {
-      setState(() {
-        _searchLoading = false;
-        _searchHasMore = false;
-        _searchError = '此來源不支援搜索';
-      });
-      return;
-    }
-    final options =
-        (data.searchOptions ?? []).map((e) => e.defaultValue).toList();
-    final page = _searchPage;
-    setState(() => _searchLoading = true);
-    try {
-      final res = data.loadPage != null
-          ? await data.loadPage!(_searchKeyword, page, options)
-          : await data.loadNext!(_searchKeyword, null, options);
-      if (!mounted) return;
-      setState(() {
-        if (res.error) {
-          _searchError = res.errorMessage ?? '搜尋失敗';
-          _searchHasMore = false;
-        } else {
-          final ids = {for (final c in _searchResults) '${c.sourceKey}:${c.id}'};
-          _searchResults = [
-            ..._searchResults,
-            for (final c in res.data)
-              if (ids.add('${c.sourceKey}:${c.id}')) c,
-          ];
-          _searchPage = page + 1;
-          _searchHasMore = res.data.isNotEmpty;
-          _searchError = null;
-        }
-        _searchLoading = false;
-      });
-      await Future.wait([
-        for (final comic in _searchResults) ComicTagEnricher.instance.enrich(comic),
-      ]);
-      if (mounted) setState(() {});
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _searchError = userFacingNetworkError(e);
-          _searchLoading = false;
-          _searchHasMore = false;
-        });
-      }
-    }
   }
 
   Widget _buildRow(_FilterRow row) {
