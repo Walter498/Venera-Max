@@ -486,6 +486,112 @@ class _CategoriesPageState extends State<CategoriesPage> {
     );
   }
 
+  /// Labels selected on this page (tag params are stored as "tag:name").
+  Set<String> get _selectedTagLabels => {
+    for (final param in _selectedTags)
+      if (param.startsWith('tag:')) param.substring(4),
+    for (final row in _rows)
+      if (row.title != _tagRowTitle)
+        for (final param in _selected[row.title] ?? const <String>{})
+          for (final option in row.options)
+            if (option.param == param && option.label.isNotEmpty) option.label,
+  };
+
+  bool _comicHasTag(Comic comic, String label) {
+    final wanted = label.trim().toLowerCase();
+    if (wanted.isEmpty) return true;
+    return (comic.tags ?? const <String>[]).any((tag) {
+      final value = tag.split(':').last.trim().toLowerCase();
+      return value == wanted || value.contains(wanted);
+    });
+  }
+
+  /// Search results narrowed by the tags selected above. A label the source
+  /// does not report is dropped instead of emptying the list.
+  List<Comic> get _filteredSearchResults {
+    final wanted = _selectedTagLabels;
+    if (wanted.isEmpty) return _searchResults;
+    final satisfiable = <String>{
+      for (final tag in wanted)
+        if (_searchResults.any((c) => _comicHasTag(c, tag))) tag,
+    };
+    if (satisfiable.isEmpty) return _searchResults;
+    return [
+      for (final comic in _searchResults)
+        if (satisfiable.every((tag) => _comicHasTag(comic, tag))) comic,
+    ];
+  }
+
+  Future<void> _runSearch() async {
+    final keyword = _searchController.text.trim();
+    final source = _source;
+    if (source == null) return;
+    if (keyword.isEmpty) {
+      setState(() {
+        _searchKeyword = '';
+        _searchResults = [];
+        _searchError = null;
+      });
+      return;
+    }
+    setState(() {
+      _searchKeyword = keyword;
+      _searchResults = [];
+      _searchPage = 1;
+      _searchHasMore = true;
+      _searchError = null;
+      _searchLoading = true;
+    });
+    await _loadMoreSearch();
+  }
+
+  Future<void> _loadMoreSearch() async {
+    final data = _source?.searchPageData;
+    if (data == null) {
+      setState(() {
+        _searchLoading = false;
+        _searchHasMore = false;
+        _searchError = '此來源不支援搜索';
+      });
+      return;
+    }
+    final options =
+        (data.searchOptions ?? []).map((e) => e.defaultValue).toList();
+    final page = _searchPage;
+    setState(() => _searchLoading = true);
+    try {
+      final res = data.loadPage != null
+          ? await data.loadPage!(_searchKeyword, page, options)
+          : await data.loadNext!(_searchKeyword, null, options);
+      if (!mounted) return;
+      setState(() {
+        if (res.error) {
+          _searchError = res.errorMessage ?? '搜尋失敗';
+          _searchHasMore = false;
+        } else {
+          final ids = {for (final c in _searchResults) '${c.sourceKey}:${c.id}'};
+          _searchResults = [
+            ..._searchResults,
+            for (final c in res.data)
+              if (ids.add('${c.sourceKey}:${c.id}')) c,
+          ];
+          _searchPage = page + 1;
+          _searchHasMore = res.data.isNotEmpty;
+          _searchError = null;
+        }
+        _searchLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _searchError = userFacingNetworkError(e);
+          _searchLoading = false;
+          _searchHasMore = false;
+        });
+      }
+    }
+  }
+
   Widget _buildRow(_FilterRow row) {
     final selectedParams = _selected[row.title] ?? <String>{};
     // 題材行（選項多）：預設顯示前 9 個 + 展開鈕；其他行全部平鋪
