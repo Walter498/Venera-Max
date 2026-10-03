@@ -477,8 +477,8 @@ class _PostCard extends StatelessWidget {
         children: [
           for (final c in collections)
             SimpleDialogOption(
-              onPressed: () => Navigator.pop(dialog, (c.id, c.displayName)),
-              child: Text(c.displayName,
+              onPressed: () => Navigator.pop(dialog, (c.id, c.name)),
+              child: Text(c.name,
                   maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
         ],
