@@ -235,22 +235,9 @@ class _HomeUpdatesViewState extends State<HomeUpdatesView> {
       setState(() => _error = '沒有可用的源');
       return;
     }
-    // 栗子：直調官方 API（帶更新時間，可做「N分鐘前」徽章）
-    if (_isLizi(source)) {
-      try {
-        final data = await _getJson('/app/api/category/list?page=1');
-        if (!mounted) return;
-        setState(() {
-          _latest = [
-            for (final c in (data['category_list'] as List? ?? const []))
-              _comicFromApi(Map<String, dynamic>.from(c as Map))
-          ];
-        });
-      } catch (e) {
-        if (mounted) setState(() => _error = userFacingNetworkError(e));
-      }
-      return;
-    }
+    // Every source, including Lizimh, loads through its own category loader.
+    // The direct API call this used to make was rejected by the CDN while the
+    // source's own request path worked, so the source is the single transport.
     // 其他源：走源的通用分類接口（無篩選 = 站的默認/最新列表）
     final loader = source.categoryComicsData?.load;
     if (loader == null) {
@@ -365,27 +352,21 @@ class _HomeRankViewState extends State<HomeRankView> {
       setState(() => _error = '沒有可用的源');
       return;
     }
-    // 栗子：官方 API，帶地區分組
-    if (_isLizi(source)) {
+    // The source performs this request itself: its path is the one that works
+    // from the device, while a direct Dart call is rejected by the CDN.
+    final rankLoader = source.categoryComicsData?.load;
+    if (rankLoader != null) {
       try {
-        final data = await _getJson('/app/api/rank/list');
-        final groups = <(String, List<Comic>)>[];
-        for (final g in (data['rank_list'] as List? ?? const [])) {
-          final gm = Map<String, dynamic>.from(g as Map);
-          final comics = [
-            for (final c in (gm['comic_list'] as List? ?? const []))
-              _comicFromApi(Map<String, dynamic>.from(c as Map))
-          ];
-          if (comics.isNotEmpty) {
-            groups.add((gm['name']?.toString() ?? '榜單', comics));
-          }
-        }
+        final res = await rankLoader('热门排行', 'rank', const <String>[], 1);
         if (!mounted) return;
         setState(() {
-          if (groups.isEmpty) {
+          if (res.error) {
+            _error = res.errorMessage ?? '榜單載入失敗';
+          } else if (res.data.isEmpty) {
             _error = '榜單為空';
           } else {
-            _groups = groups;
+            _groups = [('熱門排行', res.data)];
+            _error = null;
           }
         });
       } catch (e) {
@@ -393,7 +374,6 @@ class _HomeRankViewState extends State<HomeRankView> {
       }
       return;
     }
-    // 其他源：用源自己的榜單分類
     final loader = source.categoryComicsData?.load;
     final cats = _rankCategories(source);
     if (loader == null || cats.isEmpty) {
