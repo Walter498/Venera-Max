@@ -80,34 +80,14 @@ Got dependencies!
 76 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -131,34 +111,14 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -182,34 +142,14 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -249,34 +189,14 @@ dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: ConcurrencyGate no maxWait keeps the original unbounded behavior
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController starts at max, halves on rate limit, grows after cooldown
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController never drops below min
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -300,34 +220,14 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -351,34 +251,14 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -402,34 +282,14 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -453,34 +313,14 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -504,34 +344,14 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
@@ -555,34 +375,14 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                          ^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/community/community_page.dart:41:9: Error: No named parameter with the name 'bottom'.
-        bottom: TabBar(
-        ^^^^^^
-lib/components/appbar.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const Appbar({
-        ^^^^^^
-lib/pages/community/community_page.dart:391:55: Error: Too many positional arguments: 1 allowed, but 3 found.
-Try removing the extra positional arguments.
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
-                                                      ^
-lib/foundation/image_provider/cached_image.dart:16:9: Context: Found this candidate, but the arguments don't match.
-  const CachedImageProvider(this.url, {
-        ^^^^^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/community/community_page.dart:393:93: Error: The argument type 'int' can't be assigned to the parameter type 'String?'.
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                                                                                            ^
 .
 
 ::endgroup::
