@@ -392,7 +392,24 @@ class _CategoriesPageState extends State<CategoriesPage> {
                   child: Text(_searchError!),
                 ),
               ),
-            SliverGridComics(comics: _filteredSearchResults, forceBriefMode: true),
+            if (_searchResults.isNotEmpty &&
+                _filteredSearchResults.isEmpty &&
+                _selectedLabelsByGroup.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Center(
+                    child: Text(
+                      '沒有同時符合標籤和搜索結果的漫畫',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.colorScheme.outline),
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverGridComics(
+                  comics: _filteredSearchResults, forceBriefMode: true),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -534,24 +551,16 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   /// Search results narrowed by the selected labels.
   ///
-  /// A group none of whose labels exist in the results is skipped rather than
-  /// emptying the list: labels such as 地区/状态 are not comic tags, and an
-  /// unsatisfiable constraint must not read as "no results".
+  /// Inside one group the labels are alternatives (OR); every group must match
+  /// (AND). When the intersection is empty the list must say so instead of
+  /// showing unfiltered results.
   List<Comic> get _filteredSearchResults {
     final groups = _selectedLabelsByGroup;
     if (groups.isEmpty) return _searchResults;
-    var usable = <MapEntry<String, Set<String>>>[];
-    for (final entry in groups.entries) {
-      final matches = entry.value.where(
-        (label) => _searchResults.any((c) => _comicHasTag(c, label)),
-      );
-      if (matches.isEmpty) continue;
-      usable.add(MapEntry(entry.key, matches.toSet()));
-    }
-    if (usable.isEmpty) return _searchResults;
     return [
       for (final comic in _searchResults)
-        if (usable.every((e) => e.value.any((label) => _comicHasTag(comic, label))))
+        if (groups.values.every(
+            (labels) => labels.any((label) => _comicHasTag(comic, label))))
           comic,
     ];
   }
