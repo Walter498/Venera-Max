@@ -1215,7 +1215,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                 settingsIndex: "imageTranslationLlmConcurrency",
                 interval: 1,
                 min: 1,
-                max: App.isDesktop ? 8 : 6,
+                max: App.isDesktop ? 12 : 8,
                 onChanged: () {
                   _markTranslationCustom("imageTranslationLlmConcurrency");
                 },

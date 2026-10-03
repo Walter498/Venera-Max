@@ -292,11 +292,11 @@ abstract class LlmTranslator {
   /// share this gate — neither path can overrun the endpoint on its own. The
   /// effective limit is min(user setting, AIMD estimate); AIMD backs off on a
   /// 429/503 and recovers on success.
-  static final _aimd = AimdController(min: 1, max: 8);
+  static final _aimd = AimdController(min: 1, max: 12);
   static final _gate = ConcurrencyGate((bucket) {
     var userMax = TranslationPerformanceConfig.effective.llmConcurrency.clamp(
       1,
-      8,
+      12,
     );
     return math.min(userMax, _aimd.limitFor(bucket));
   });

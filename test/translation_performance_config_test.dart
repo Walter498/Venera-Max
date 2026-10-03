@@ -53,7 +53,7 @@ void main() {
       expect(values.batchPages, lessThanOrEqualTo(8));
       expect(values.ocrWorkers, lessThanOrEqualTo(2));
       expect(values.imageConcurrency, lessThanOrEqualTo(3));
-      expect(values.llmConcurrency, lessThanOrEqualTo(6));
+      expect(values.llmConcurrency, lessThanOrEqualTo(8));
     }
   });
 
@@ -88,7 +88,7 @@ void main() {
     addTearDown(() => appdata.settings['imageTranslationLlmConcurrency'] = previous);
     appdata.settings['imageTranslationLlmConcurrency'] = 99;
     expect(TranslationPerformanceConfig.valuesFor(
-      TranslationPerformancePreset.custom, isDesktop: false).llmConcurrency, 6);
+      TranslationPerformancePreset.custom, isDesktop: false).llmConcurrency, 8);
     expect(TranslationPerformanceConfig.valuesFor(
       TranslationPerformancePreset.custom, isDesktop: true).llmConcurrency, 8);
   });

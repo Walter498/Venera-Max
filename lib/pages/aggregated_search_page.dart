@@ -29,7 +29,7 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
   /// sheet says so instead of pretending the filter succeeded.
   final Set<String> _tagFilter = {};
 
-  final Set<String> _availableTags = {};
+  final Map<String, Set<String>> _availableTagGroups = {};
 
   /// Bumped whenever the results change so the panel rebuilds with new tags.
   int _resultsRevision = 0;
@@ -40,7 +40,7 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
 
   void _clearTagFilter() => setState(_tagFilter.clear);
 
-  Widget buildFilterAction(Set<String> availableTags) {
+  Widget buildFilterAction(Map<String, Set<String>> groups) {
     return IconButton(
       tooltip: "Filter by tag".tl,
       icon: Badge(
@@ -58,7 +58,7 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
           builder: (sheetContext) {
             return StatefulBuilder(
               builder: (context, setSheet) {
-                final tags = availableTags.toList()..sort();
+                final tags = groups.values.expand((e) => e).toSet().toList()..sort();
                 return SizedBox(
                   height: context.height * 0.6,
                   child: Column(children: [
@@ -176,7 +176,7 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
       slivers: [
         SliverSearchBar(
           controller: controller,
-          action: buildFilterAction(_availableTags),
+          action: buildFilterAction(_availableTagGroups),
         ),
         // 2026-09-16 改版：所有源結果合併成單一直落列表（不再按源分行橫滑）
         _MergedSearchResults(
@@ -187,9 +187,18 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
           onAvailableTags: (tags) {
             if (!mounted) return;
             setState(() {
-              _availableTags
-                ..clear()
-                ..addAll(tags);
+              _availableTagGroups.clear();
+              for (final source in sources) {
+                final data = source.categoryData;
+                if (data == null) continue;
+                for (final part in data.categories) {
+                  final labels = <String>{};
+                  for (final item in part.categories) {
+                    if (item.target.attributes?['param'] != null) labels.add(item.label.trim());
+                  }
+                  if (labels.isNotEmpty) _availableTagGroups.putIfAbsent(part.title, () => <String>{}).addAll(labels);
+                }
+              }
               // A selected tag that is no longer present must not keep
               // filtering everything out silently.
               _tagFilter.removeWhere((t) => !tags.contains(t));
