@@ -119,7 +119,7 @@ class _PostListViewState extends State<PostListView> {
         _hasMore = res.hasMore;
         _error = null;
         _loading = false;
-        if (_sortType == 1) {
+        if (_sortType == 2) {
           // 最熱 = most liked first, regardless of when it was posted.
           _posts.sort((a, b) => b.likeCount.compareTo(a.likeCount));
         }
@@ -329,7 +329,7 @@ class _PostListViewState extends State<PostListView> {
                 ),
               );
             }
-            return PostCard(post: _posts[index]);
+            return PostCard(post: _posts[index], onDelete: _refresh);
           },
         ),
       ),
@@ -337,10 +337,14 @@ class _PostListViewState extends State<PostListView> {
   }
 }
 
+String uf(Object e) =>
+    e is StateError ? e.message : '操作失敗，請稍後重試';
+
 class PostCard extends StatelessWidget {
-  const PostCard({super.key, required this.post});
+  const PostCard({super.key, required this.post, this.onDelete});
 
   final LiziCommunityPost post;
+  final Future<void> Function()? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -372,6 +376,22 @@ class PostCard extends StatelessWidget {
                 Text(liziRelativeTime(post.createdAt),
                     style: TextStyle(
                         fontSize: 11, color: context.colorScheme.outline)),
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert,
+                      size: 18, color: context.colorScheme.outline),
+                  onSelected: (v) async {
+                    if (v != 'delete') return;
+                    try {
+                      await LiziCommunityApi.deletePost(post.id);
+                      await onDelete?.call();
+                    } catch (e) {
+                      context.showMessage(message: uf(e));
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'delete', child: Text('刪除')),
+                  ],
+                ),
               ]),
               const SizedBox(height: 8),
               Text(post.content, maxLines: 5, overflow: TextOverflow.ellipsis),

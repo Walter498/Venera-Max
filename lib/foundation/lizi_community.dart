@@ -42,6 +42,18 @@ class LiziCommunityApi {
     return data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
   }
 
+  /// 刪除帖子（伺服器只允許自己的帖子）。
+  static Future<bool> deletePost(int postId) async {
+    await _postJson('/app/api/community/post/delete', {'id': postId});
+    return true;
+  }
+
+  /// 刪除評論。
+  static Future<bool> deleteComment(int commentId) async {
+    await _postJson('/app/api/community/comment/delete', {'id': commentId});
+    return true;
+  }
+
   /// 發帖：sectionId + 內容（+ 可選漫畫 id）。
   static Future<bool> createPost({
     required int sectionId,
