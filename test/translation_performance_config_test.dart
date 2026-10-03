@@ -90,7 +90,7 @@ void main() {
     expect(TranslationPerformanceConfig.valuesFor(
       TranslationPerformancePreset.custom, isDesktop: false).llmConcurrency, 8);
     expect(TranslationPerformanceConfig.valuesFor(
-      TranslationPerformancePreset.custom, isDesktop: true).llmConcurrency, 8);
+      TranslationPerformancePreset.custom, isDesktop: true).llmConcurrency, 12);
   });
 
   test('mobile Japanese pipeline keeps one group in flight', () {
