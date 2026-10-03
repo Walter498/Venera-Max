@@ -80,18 +80,218 @@ Got dependencies!
 76 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -115,18 +315,218 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -150,18 +550,218 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -201,18 +801,218 @@ dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: ConcurrencyGate no maxWait keeps the original unbounded behavior
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController starts at max, halves on rate limit, grows after cooldown
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController never drops below min
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -236,18 +1036,218 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -271,18 +1271,218 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -306,18 +1506,218 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -341,18 +1741,218 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -376,18 +1976,218 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
@@ -411,18 +2211,218 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/community/community_page.dart:255:40: Error: Can't find '}' to match '{'.
+    with AutomaticKeepAliveClientMixin {
+                                       ^
+lib/pages/community/community_page.dart:244:1: Error: Expected a declaration, but got '}'.
+}
+^
+lib/pages/community/community_page.dart:393:1: Error: Classes can't be declared inside other classes.
+Try moving the class to the top-level.
+class _PostCard extends StatelessWidget {
+^^^^^
+lib/pages/community/community_page.dart:393:17: Error: Expected a class member, but got 'extends'.
+class _PostCard extends StatelessWidget {
+                ^^^^^^^
+lib/pages/community/community_page.dart:393:25: Error: A method declaration needs an explicit list of parameters.
+Try adding a parameter list to the method declaration.
+class _PostCard extends StatelessWidget {
+                        ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:195:26: Error: The method '_refresh' isn't defined for the type '_CommunityPageState'.
  - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+      if (mounted) await _refresh();
+                         ^^^^^^^^
+lib/pages/community/community_page.dart:387:18: Error: The method '_PostCard' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_PostCard'.
+          return _PostCard(post: _posts[index]);
+                 ^^^^^^^^^
+lib/pages/community/community_page.dart:395:29: Error: Expected ',' before this.
+  const _PostCard({required this.post});
+                            ^^^^
+lib/pages/community/community_page.dart:395:9: Error: Not a constant expression.
+  const _PostCard({required this.post});
+        ^^^^^^^^^
+lib/pages/community/community_page.dart:481:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:53: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:50: Error: Local variable '_statStyle' can't be referenced before it is declared.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:500:13: Context: This is the declaration of the variable '_statStyle'.
+  TextStyle _statStyle(BuildContext context) =>
+            ^^^^^^^^^^
+lib/pages/community/community_page.dart:413:21: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    ^^^^
+lib/pages/community/community_page.dart:413:51: Error: Final variable 'post' must be assigned before it can be used.
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                                                  ^^^^
+lib/pages/community/community_page.dart:419:31: Error: Final variable 'post' must be assigned before it can be used.
+                  child: Text(post.nickname,
+                              ^^^^
+lib/pages/community/community_page.dart:425:39: Error: Final variable 'post' must be assigned before it can be used.
+                Text(liziRelativeTime(post.createdAt),
+                                      ^^^^
+lib/pages/community/community_page.dart:430:20: Error: Final variable 'post' must be assigned before it can be used.
+              Text(post.content,
+                   ^^^^
+lib/pages/community/community_page.dart:432:19: Error: Final variable 'post' must be assigned before it can be used.
+              if (post.comics.isNotEmpty) ...[
+                  ^^^^
+lib/pages/community/community_page.dart:438:32: Error: Final variable 'post' must be assigned before it can be used.
+                    itemCount: post.comics.length,
+                               ^^^^
+lib/pages/community/community_page.dart:441:33: Error: Final variable 'post' must be assigned before it can be used.
+                      final c = post.comics[i];
+                                ^^^^
+lib/pages/community/community_page.dart:481:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:481:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.likeCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:486:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:486:53: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.commentCount}', style: _statStyle(context)),
+                                                    ^^^^^^^^^^
+lib/pages/community/community_page.dart:491:25: Error: Final variable 'post' must be assigned before it can be used.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                        ^^^^
+lib/pages/community/community_page.dart:491:50: Error: The method '_statStyle' isn't defined for the type '_PostListViewState'.
+ - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_statStyle'.
+                Text('${post.viewCount}', style: _statStyle(context)),
+                                                 ^^^^^^^^^^
+lib/pages/community/community_page.dart:403:62: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                             ^^^^
+lib/pages/community/community_page.dart:403:80: Error: Final variable 'post' must be assigned before it can be used.
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+                                                                               ^^^^
 .
 
 ::endgroup::
