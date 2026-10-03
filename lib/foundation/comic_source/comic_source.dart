@@ -543,7 +543,7 @@ class ComicSource {
   /// features without a source hook (community, rank metadata) can go through
   /// the source's request path. Assigned by the parser when the script exposes
   /// [apiFetch]; null means the feature must use its own transport.
-  Future<Res<String>> Function(String path)? apiFetch;
+  Future<Res<String>> Function(String path, [Object? body])? apiFetch;
 
   final SendChapterCommentFunc? sendChapterCommentFunc;
 

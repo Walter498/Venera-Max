@@ -67,6 +67,10 @@ class _CommunityPageState extends State<CommunityPage> {
     return DefaultTabController(
       length: _sections!.length,
       child: Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: _openCreatePost,
+          child: const Icon(Icons.add),
+        ),
         // 無 Appbar：底部 tab 的 chrome 已顯示「社區」標題，
         // 這裡不再放帶返回箭頭的重複列（用戶要求刪除無用按鈕）
         body: Column(
@@ -148,6 +152,7 @@ class _PostListViewState extends State<_PostListView>
       final res = await LiziCommunityApi.fetchPosts(
         sectionId: widget.sectionId,
         page: page,
+        sortType: _sortType,
       );
       if (!mounted) return;
       setState(() {
@@ -192,8 +197,25 @@ class _PostListViewState extends State<_PostListView>
       child: ListView.builder(
         controller: _scroll,
         padding: const EdgeInsets.all(8),
-        itemCount: _posts.length + 1,
+        itemCount: _posts.length + 2,
         itemBuilder: (context, index) {
+          if (index == 0) {
+            return Row(children: [
+              for (final entry in <(int, String)>[(0, '最新'), (1, '最熱')])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(entry.$2),
+                    selected: _sortType == entry.$1,
+                    onSelected: (_) {
+                      setState(() => _sortType = entry.$1);
+                      _refresh();
+                    },
+                  ),
+                ),
+            ]);
+          }
+          index--;
           if (index == _posts.length) {
             return Padding(
               padding: const EdgeInsets.all(16),
@@ -324,4 +346,54 @@ class _PostCard extends StatelessWidget {
 
   TextStyle _statStyle(BuildContext context) =>
       TextStyle(fontSize: 12, color: context.colorScheme.outline);
+
+  Future<void> _openCreatePost() async {
+    const sections = <(int, String)>[(1, '分享'), (2, '求書'), (3, '日常')];
+    var section = sections.first.$1;
+    final controller = TextEditingController();
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+        builder: (context, setDialog) => AlertDialog(
+          title: const Text('發布帖子'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Wrap(spacing: 8, children: [
+              for (final entry in sections)
+                ChoiceChip(
+                  label: Text(entry.$2),
+                  selected: section == entry.$1,
+                  onSelected: (_) => setDialog(() => section = entry.$1),
+                ),
+            ]),
+            TextField(
+              controller: controller,
+              maxLines: 5,
+              maxLength: 512,
+              decoration: const InputDecoration(hintText: '分享你的想法…'),
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('發布'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (created != true || controller.text.trim().isEmpty) return;
+    try {
+      await LiziCommunityApi.createPost(
+        sectionId: section,
+        content: controller.text.trim(),
+      );
+      if (mounted) await _refresh();
+    } catch (e) {
+      if (mounted) context.showMessage(message: e.toString());
+    }
+  }
 }

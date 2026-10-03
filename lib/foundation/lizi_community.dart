@@ -20,6 +20,72 @@ class LiziCommunityApi {
 
   static List<LiziCommunitySection>? _sectionsCache;
 
+  /// POST through the same hook; needs the user's token, which the source
+  /// reads from its own settings, so the app never handles the credential.
+  static Future<Map<String, dynamic>> _postJson(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final hook = ComicSource.find('lizimh')?.apiFetch;
+    if (hook == null) throw StateError('此功能需要栗子源 v2.33.13 或以上');
+    final res = await hook(path, jsonEncode(body));
+    if (res.error) throw StateError(res.errorMessage ?? '請求失敗');
+    dynamic raw = res.data;
+    if (raw is String) raw = jsonDecode(raw);
+    if (raw is! Map) throw StateError('回應格式錯誤');
+    final data = raw['data'];
+    return data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+  }
+
+  /// 發帖：sectionId + 內容（+ 可選漫畫 id）。
+  static Future<bool> createPost({
+    required int sectionId,
+    required String content,
+    int? comicId,
+  }) async {
+    final body = <String, dynamic>{
+      'community_section_id': sectionId,
+      'content': content,
+      if (comicId != null) 'comic_ids': [comicId],
+    };
+    await _postJson('/app/api/community/post/create', body);
+    return true;
+  }
+
+  /// 發評論；[parentId] 非空即為回覆。
+  static Future<bool> createComment({
+    required int postId,
+    required String content,
+    int? parentId,
+  }) async {
+    await _postJson('/app/api/community/comment/create', {
+      'post_id': postId,
+      'content': content,
+      if (parentId != null) 'parent_id': parentId,
+    });
+    return true;
+  }
+
+  /// 點讚 / 取消點讚（帖子）。
+  static Future<bool> likePost(int postId, bool like) async {
+    await _postJson(
+      like ? '/app/api/community/post/like' : '/app/api/community/post/unlike',
+      {'id': postId},
+    );
+    return true;
+  }
+
+  /// 點讚 / 取消點讚（評論）。
+  static Future<bool> likeComment(int commentId, bool like) async {
+    await _postJson(
+      like
+          ? '/app/api/community/comment/like'
+          : '/app/api/community/comment/unlike',
+      {'id': commentId},
+    );
+    return true;
+  }
+
   static Future<Map<String, dynamic>> _getJson(String path) async {
     // Prefer the comic source's own request path: this host accepts it while
     // the app's standalone client can be rejected by the CDN.
@@ -72,12 +138,12 @@ class LiziCommunityApi {
   static Future<LiziListPage<LiziCommunityPost>> fetchPosts({
     int? sectionId,
     int page = 1,
+    int sortType = 0,
   }) async {
-    // The official client sends page_size/sort_type as well; the server
-    // accepts the combination, so requests read the same as the app's.
+    // 0 = 最新, 1 = 最熱 (official client's sort_type).
     final qs = sectionId == null
-        ? '?page=$page&page_size=20&sort_type=0'
-        : '?section_id=$sectionId&page=$page&page_size=20&sort_type=0';
+        ? '?page=$page&page_size=20&sort_type=$sortType'
+        : '?section_id=$sectionId&page=$page&page_size=20&sort_type=$sortType';
     final data = await _getJson('/app/api/community/posts$qs');
     final list = (data['list'] is List ? data['list'] as List : const [])
         .map((e) => LiziCommunityPost.fromJson(e))

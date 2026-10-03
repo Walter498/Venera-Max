@@ -221,9 +221,9 @@ class ComicSourceParser {
     var apiFetch = c["apiFetch"];
     if (apiFetch is JSInvokable) {
       final call = JSAutoFreeFunction(apiFetch);
-      source.apiFetch = (path) async {
+      source.apiFetch = (path, [body]) async {
         try {
-          final result = await call(path);
+          final result = await call(path, body);
           return Res(result?.toString() ?? "");
         } catch (e) {
           return Res.error(e.toString());
