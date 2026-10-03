@@ -261,8 +261,8 @@ class _PostListViewState extends State<PostListView> {
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
           child: Row(children: [
             for (final entry in const <List<Object>>[
-              [0, '最新'],
-              [1, '最熱'],
+              [1, '最新'],
+              [2, '最熱'],
             ])
               Padding(
                 padding: const EdgeInsets.only(right: 8),
