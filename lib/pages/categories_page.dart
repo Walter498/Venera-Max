@@ -513,19 +513,55 @@ class _CategoriesPageState extends State<CategoriesPage> {
     });
   }
 
-  /// Search results narrowed by the tags selected above. A label the source
-  /// does not report is dropped instead of emptying the list.
+  /// Selected labels per source category group. Inside a group the labels are
+  /// alternatives (OR); different groups must all match (AND) — the same rule
+  /// the category queries use.
+  Map<String, Set<String>> get _selectedLabelsByGroup {
+    final groups = <String, Set<String>>{};
+    for (final row in _rows) {
+      final labels = <String>{};
+      for (final param in _rowParams(row.title)) {
+        final option = row.options.firstWhere(
+          (o) => o.param == param,
+          orElse: () => _FilterOption('', '', nativeCategory: row.title),
+        );
+        if (option.label.trim().isNotEmpty) labels.add(option.label.trim());
+      }
+      if (labels.isNotEmpty) groups[row.title] = labels;
+    }
+    return groups;
+  }
+
+  bool _comicHasTag(Comic comic, String label) {
+    final wanted = label.trim().toLowerCase();
+    if (wanted.isEmpty) return true;
+    return (comic.tags ?? const <String>[]).any((tag) {
+      final value = tag.split(':').last.trim().toLowerCase();
+      return value == wanted || value.contains(wanted);
+    });
+  }
+
+  /// Search results narrowed by the selected labels.
+  ///
+  /// A group none of whose labels exist in the results is skipped rather than
+  /// emptying the list: labels such as 地区/状态 are not comic tags, and an
+  /// unsatisfiable constraint must not read as "no results".
   List<Comic> get _filteredSearchResults {
-    final wanted = _selectedTagLabels;
-    if (wanted.isEmpty) return _searchResults;
-    final satisfiable = <String>{
-      for (final tag in wanted)
-        if (_searchResults.any((c) => _comicHasTag(c, tag))) tag,
-    };
-    if (satisfiable.isEmpty) return _searchResults;
+    final groups = _selectedLabelsByGroup;
+    if (groups.isEmpty) return _searchResults;
+    var usable = <MapEntry<String, Set<String>>>[];
+    for (final entry in groups.entries) {
+      final matches = entry.value.where(
+        (label) => _searchResults.any((c) => _comicHasTag(c, label)),
+      );
+      if (matches.isEmpty) continue;
+      usable.add(MapEntry(entry.key, matches.toSet()));
+    }
+    if (usable.isEmpty) return _searchResults;
     return [
       for (final comic in _searchResults)
-        if (satisfiable.every((tag) => _comicHasTag(comic, tag))) comic,
+        if (usable.every((e) => e.value.any((label) => _comicHasTag(comic, label))))
+          comic,
     ];
   }
 
