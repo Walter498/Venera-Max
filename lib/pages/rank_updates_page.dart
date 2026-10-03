@@ -2,6 +2,7 @@ import 'package:venera/foundation/lizi_api_client.dart';
 import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
+import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/home_layout.dart';
@@ -21,6 +22,11 @@ const _kLiziImg = 'https://cdn.lzimg.xyz';
 
 /// 當前首頁選中的源（找不到就退回第一個首頁顯示源）
 ComicSource? _currentSource() {
+  final chosen = appdata.settings['rankUpdatesSourceKey'];
+  if (chosen is String && chosen.isNotEmpty) {
+    final picked = ComicSource.find(chosen);
+    if (picked != null) return picked;
+  }
   final key = HomeSourceScope.currentKey;
   if (key != null) {
     final s = ComicSource.find(key);
@@ -34,6 +40,39 @@ ComicSource? _currentSource() {
 }
 
 bool _isLizi(ComicSource? s) => s?.key == 'lizimh';
+
+/// Source chips for the updates / rank sections, so the two can follow a
+/// source of their own instead of whatever the home feed is set to.
+Widget sourceSelectorChips(BuildContext context, VoidCallback onChanged) {
+  final keys = effectiveHomeDisplaySourceKeys();
+  final current = appdata.settings['rankUpdatesSourceKey'];
+  return SizedBox(
+    height: 40,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      itemCount: keys.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 8),
+      itemBuilder: (context, i) {
+        final key = keys[i];
+        final source = ComicSource.find(key);
+        if (source == null) return const SizedBox();
+        final selected = (current is String && current == key) ||
+            (current == null && HomeSourceScope.currentKey == key);
+        return ChoiceChip(
+          label: Text(source.name, style: const TextStyle(fontSize: 12)),
+          selected: selected,
+          onSelected: (_) {
+            appdata.settings['rankUpdatesSourceKey'] = key;
+            appdata.saveData();
+            onChanged();
+          },
+        );
+      },
+    ),
+  );
+}
+
 
 Future<Map<String, dynamic>> _getJson(String path) =>
     LiziApiClient.instance.getJson(path);
@@ -267,6 +306,14 @@ class _HomeUpdatesViewState extends State<HomeUpdatesView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        sourceSelectorChips(context, () {
+          setState(() {
+            _latest = null;
+            _error = null;
+          });
+          _load();
+        }),
+        const SizedBox(height: 8),
         _sectionTitle(context, '最近觀看'),
         if (recentTop.isEmpty)
           _hint(context, '還沒有閱讀記錄')
@@ -414,6 +461,14 @@ class _HomeRankViewState extends State<HomeRankView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        sourceSelectorChips(context, () {
+          setState(() {
+            _groups = null;
+            _error = null;
+          });
+          _load();
+        }),
+        const SizedBox(height: 8),
         DefaultTabController(
           length: groups.length,
           child: Column(children: [
