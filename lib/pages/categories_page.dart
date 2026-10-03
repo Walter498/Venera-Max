@@ -439,9 +439,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                   }
                 }
                 setState(() {});
-                if (_searchKeyword.isEmpty) {
-                  _reload();
-                }
+                _reload();
               },
             ),
           if (expandable)
