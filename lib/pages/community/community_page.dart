@@ -658,5 +658,3 @@ class _PostEditorPageState extends State<PostEditorPage> {
     );
   }
 }
-}
-}
