@@ -23,12 +23,99 @@ class _PostDetailPageState extends State<PostDetailPage> {
   int _commentPage = 0;
   bool _loadingComments = false;
   String? _error;
+  final _commentController = TextEditingController();
+  bool _sending = false;
+  int? _replyToId;
+  String? _replyToName;
+  bool _liked = false;
+  int _likeCount = 0;
+  final Set<int> _likedComments = {};
 
   @override
   void initState() {
     super.initState();
     _post = widget.initial;
+    _liked = widget.initial?.isLiked == true;
+    _likeCount = widget.initial?.likeCount ?? 0;
     _load();
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      await LiziCommunityApi.createComment(
+        postId: widget.postId,
+        content: text,
+        parentId: _replyToId,
+      );
+      _commentController.clear();
+      setState(() {
+        _replyToId = null;
+        _replyToName = null;
+        _sending = false;
+        _comments.clear();
+        _commentPage = 0;
+        _commentsHasMore = false;
+      });
+      await _loadComments();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sending = false);
+        context.showMessage(message: userFacingNetworkError(e));
+      }
+    }
+  }
+
+  Future<void> _togglePostLike() async {
+    final next = !_liked;
+    setState(() {
+      _liked = next;
+      _likeCount += next ? 1 : -1;
+    });
+    try {
+      await LiziCommunityApi.likePost(widget.postId, next);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _liked = !next;
+          _likeCount += next ? -1 : 1;
+        });
+        context.showMessage(message: userFacingNetworkError(e));
+      }
+    }
+  }
+
+  Future<void> _toggleCommentLike(LiziCommunityComment c) async {
+    final id = c.id;
+    final liked = _likedComments.contains(id);
+    setState(() {
+      if (liked) {
+        _likedComments.remove(id);
+      } else {
+        _likedComments.add(id);
+      }
+    });
+    try {
+      await LiziCommunityApi.likeComment(id, !liked);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          if (liked) {
+            _likedComments.add(id);
+          } else {
+            _likedComments.remove(id);
+          }
+        });
+      }
+    }
   }
 
   Future<void> _load() async {
@@ -69,6 +156,44 @@ class _PostDetailPageState extends State<PostDetailPage> {
     final post = _post;
     return Scaffold(
       appBar: Appbar(title: Text(post?.sectionName ?? '帖子')),
+      bottomNavigationBar: post == null
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                child: Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _commentController,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText: _replyToName == null
+                            ? '寫評論…'
+                            : '回覆 @$_replyToName',
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  if (_replyToName != null)
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() {
+                        _replyToId = null;
+                        _replyToName = null;
+                      }),
+                    ),
+                  IconButton(
+                    icon: _sending
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.send),
+                    onPressed: _sending ? null : _sendComment,
+                  ),
+                ]),
+              ),
+            ),
       body: post == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -117,10 +242,18 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   fontSize: 12, color: context.colorScheme.outline)),
         ]),
       ),
-      Icon(Icons.favorite_border,
-          size: 16, color: context.colorScheme.outline),
-      const SizedBox(width: 4),
-      Text('${post.likeCount}'),
+      InkWell(
+        onTap: _togglePostLike,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(_liked ? Icons.favorite : Icons.favorite_border,
+              size: 16,
+              color: _liked
+                  ? context.colorScheme.primary
+                  : context.colorScheme.outline),
+          const SizedBox(width: 4),
+          Text('$_likeCount'),
+        ]),
+      ),
       const SizedBox(width: 12),
       Icon(Icons.visibility_outlined,
           size: 16, color: context.colorScheme.outline),
@@ -259,19 +392,40 @@ class _PostDetailPageState extends State<PostDetailPage> {
                       fontSize: 11, color: context.colorScheme.primary)),
             const SizedBox(height: 2),
             Text(c.content),
-            if (c.likeCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Row(children: [
-                  Icon(Icons.favorite_border,
-                      size: 12, color: context.colorScheme.outline),
-                  const SizedBox(width: 3),
-                  Text('${c.likeCount}',
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Row(children: [
+                InkWell(
+                  onTap: () => _toggleCommentLike(c),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(
+                      _likedComments.contains(c.id)
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                      size: 12,
+                      color: _likedComments.contains(c.id)
+                          ? context.colorScheme.primary
+                          : context.colorScheme.outline,
+                    ),
+                    const SizedBox(width: 3),
+                    Text('${c.likeCount}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: context.colorScheme.outline)),
+                  ]),
+                ),
+                const SizedBox(width: 12),
+                InkWell(
+                  onTap: () => setState(() {
+                    _replyToId = c.id;
+                    _replyToName = c.nickname;
+                  }),
+                  child: Text('回覆',
                       style: TextStyle(
-                          fontSize: 11,
-                          color: context.colorScheme.outline)),
-                ]),
-              ),
+                          fontSize: 11, color: context.colorScheme.primary)),
+                ),
+              ]),
+            ),
           ]),
         ),
       ]),
