@@ -7,6 +7,7 @@ import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/res.dart';
 import 'package:venera/pages/search_result_page.dart';
 import 'package:venera/utils/translations.dart';
+import 'package:venera/utils/user_error.dart';
 
 /// 分類頁（2026-09-16 改版：仿栗子官方 App 圖一佈局）
 /// 頂部搜索框 → 題材 / 地區 / 狀態篩選 chips → 即時結果網格（可翻頁）。
@@ -51,6 +52,16 @@ class _CategoriesPageState extends State<CategoriesPage> {
   bool _expanded = false;
   int _requestGeneration = 0;
 
+  /// Inline search: a non-empty keyword replaces the category listing with
+  /// results from the current source, still constrained by the selected tags.
+  final _searchController = TextEditingController();
+  String _searchKeyword = '';
+  List<Comic> _searchResults = [];
+  bool _searchLoading = false;
+  bool _searchHasMore = false;
+  int _searchPage = 1;
+  String? _searchError;
+
   List<Comic> _comics = [];
   int _page = 1;
   bool _loading = false;
@@ -64,7 +75,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
     _initSource();
     _scroll.addListener(() {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 400) {
-        _loadMore();
+        if (_searchKeyword.isEmpty) {
+          _loadMore();
+        } else {
+          _loadMoreSearch();
+        }
       }
     });
   }
@@ -72,6 +87,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   @override
   void dispose() {
     _scroll.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -345,9 +361,45 @@ class _CategoriesPageState extends State<CategoriesPage> {
           SliverToBoxAdapter(child: _buildSearchBar()),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
           const SliverToBoxAdapter(child: Divider(height: 24)),
-          if (_comics.isNotEmpty)
-            SliverGridComics(comics: _comics, forceBriefMode: true),
-          SliverToBoxAdapter(child: _buildFooter()),
+          if (_searchKeyword.isEmpty) ...[
+            if (_comics.isNotEmpty)
+              SliverGridComics(comics: _comics, forceBriefMode: true),
+            SliverToBoxAdapter(child: _buildFooter()),
+          ] else ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Text(
+                  '@k：@n 筆結果'.tlParams({
+                    'k': _searchKeyword,
+                    'n': _filteredSearchResults.length,
+                  }),
+                  style: TextStyle(color: context.colorScheme.outline),
+                ),
+              ),
+            ),
+            if (_searchError != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(_searchError!),
+                ),
+              ),
+            SliverGridComics(comics: _filteredSearchResults, forceBriefMode: true),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: _searchLoading
+                      ? const CircularProgressIndicator()
+                      : Text(
+                          _searchHasMore ? '載入更多'.tl : '沒有更多了'.tl,
+                          style: TextStyle(color: context.colorScheme.outline),
+                        ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -393,90 +445,45 @@ class _CategoriesPageState extends State<CategoriesPage> {
     );
   }
 
-  /// 假搜索框：點了跳真正的搜索頁
+  /// 就地搜索框：輸入後在下方直接顯示結果，不跳頁、不彈窗。
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: () => _searchSelectedSource(),
-        child: Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: context.colorScheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(children: [
-            Icon(Icons.search, size: 20, color: context.colorScheme.outline),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '搜漫畫 作者名',
-                style: TextStyle(color: context.colorScheme.outline),
+      child: Row(children: [
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _runSearch(),
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: context.colorScheme.surfaceContainerHigh,
+              hintText: '搜漫畫 作者名'.tl,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
               ),
             ),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: context.colorScheme.primary,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Text('搜索'.tl,
-                  style: TextStyle(
-                      color: context.colorScheme.onPrimary, fontSize: 13)),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
-
-  /// Labels selected on this page, so a search launched from here starts with
-  /// the same tag constraints the user is looking at.
-  Set<String> get _selectedTagLabels => {
-    for (final param in _selectedTags)
-      if (param.startsWith('tag:')) param.substring(4),
-    for (final row in _rows)
-      if (row.title != _tagRowTitle)
-        for (final param in _selected[row.title] ?? const <String>{})
-          for (final option in row.options)
-            if (option.param == param && option.label.isNotEmpty) option.label,
-  };
-
-  Future<void> _searchSelectedSource() async {
-    final source = _source;
-    if (source == null) return;
-    final controller = TextEditingController();
-    final keyword = await showDialog<String>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: Text('Search'.tl),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: '搜漫畫 作者名'.tl),
-          onSubmitted: (value) => Navigator.pop(dialog, value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog),
-            child: Text('Cancel'.tl),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialog, controller.text),
-            child: Text('Search'.tl),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(
+          onPressed: _runSearch,
+          child: Text('搜索'.tl),
+        ),
+        if (_searchKeyword.isNotEmpty)
+          IconButton(
+            tooltip: 'Clear'.tl,
+            icon: const Icon(Icons.close),
+            onPressed: () {
+              _searchController.clear();
+              _runSearch();
+            },
           ),
-        ],
-      ),
+      ]),
     );
-    if (!mounted || keyword == null || keyword.trim().isEmpty) return;
-    context.to(() => SearchResultPage(
-          text: keyword.trim(),
-          sourceKey: source.key,
-          initialTags: _selectedTagLabels,
-        ));
   }
 
   Widget _buildRow(_FilterRow row) {
@@ -518,7 +525,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
                   }
                 }
                 setState(() {});
-                _reload();
+                if (_searchKeyword.isEmpty) {
+                  _reload();
+                }
               },
             ),
           if (expandable)

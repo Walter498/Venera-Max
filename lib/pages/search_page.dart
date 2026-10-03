@@ -306,6 +306,24 @@ class _SearchPageState extends State<SearchPage> {
                 );
               }).toList(),
             ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text("Aggregated Search".tl),
+              leading: Checkbox(
+                value: aggregatedSearch,
+                onChanged: (value) {
+                  setState(() {
+                    aggregatedSearch = value ?? false;
+                    _selectedSourceKeys.clear();
+                    if (aggregatedSearch) {
+                      _selectedSourceKeys.addAll(searchSources);
+                    } else if (searchTarget.isNotEmpty) {
+                      _selectedSourceKeys.add(searchTarget);
+                    }
+                  });
+                },
+              ),
+            ),
           ],
         ),
       ),

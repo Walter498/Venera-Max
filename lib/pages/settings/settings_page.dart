@@ -43,7 +43,6 @@ import 'package:venera/utils/sync_config_transfer.dart';
 import 'package:venera/utils/translations.dart';
 
 part 'reader.dart';
-part 'max.dart';
 part 'translation_models_settings.dart';
 part 'llm_providers_settings.dart';
 part 'translation_prompt_settings.dart';
@@ -72,7 +71,6 @@ const _settingsCategories = <String>[
   "Network",
   "Debug",
   "About",
-  "Max",
 ];
 
 const _settingsCategoryIcons = <IconData>[
@@ -84,7 +82,6 @@ const _settingsCategoryIcons = <IconData>[
   Icons.public,
   Icons.bug_report,
   Icons.info,
-  Icons.auto_awesome,
 ];
 
 class SettingsPage extends StatefulWidget {
@@ -313,7 +310,6 @@ class _SettingsPageState extends State<SettingsPage> {
       5 => const NetworkSettings(),
       6 => const DebugPage(),
       7 => const AboutSettings(),
-      8 => const MaxSettings(),
       _ => throw UnimplementedError(),
     };
   }
@@ -339,7 +335,6 @@ class _SettingsDetailPage extends StatelessWidget {
       5 => const NetworkSettings(),
       6 => const DebugPage(),
       7 => const AboutSettings(),
-      8 => const MaxSettings(),
       _ => throw UnimplementedError(),
     };
   }
