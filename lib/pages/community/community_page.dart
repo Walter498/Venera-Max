@@ -437,6 +437,7 @@ class PostCard extends StatelessWidget {
       ),
     );
   }
+}
 
 class PostEditorPage extends StatefulWidget {
   const PostEditorPage({super.key, required this.initialSection, this.onPosted});
