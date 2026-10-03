@@ -43,93 +43,23 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
   Widget buildFilterAction(Map<String, Set<String>> groups) {
     return IconButton(
       tooltip: "Filter by tag".tl,
-      icon: Badge(
-        isLabelVisible: _tagFilter.isNotEmpty,
-        label: Text('${_tagFilter.length}'),
-        child: Icon(
-          _tagFilter.isEmpty ? Icons.filter_alt_outlined : Icons.filter_alt,
-        ),
-      ),
+      icon: Badge(isLabelVisible: _tagFilter.isNotEmpty, label: Text('${_tagFilter.length}'), child: Icon(_tagFilter.isEmpty ? Icons.filter_alt_outlined : Icons.filter_alt)),
       onPressed: () async {
         var picked = {..._tagFilter};
         await showModalBottomSheet(
-          context: context,
-          showDragHandle: true,
-          builder: (sheetContext) {
-            return StatefulBuilder(
-              builder: (context, setSheet) {
-                final tags = groups.values.expand((e) => e).toSet().toList()..sort();
-                return SizedBox(
-                  height: context.height * 0.6,
-                  child: Column(children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(children: [
-                        Expanded(
-                          child: Text("Filter by tag".tl, style: ts.s18),
-                        ),
-                        TextButton(
-                          onPressed: () => setSheet(picked.clear),
-                          child: Text("Clear".tl),
-                        ),
-                      ]),
-                    ),
-                    if (tags.isEmpty)
-                      Expanded(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(
-                              // Honest empty state: no source supplied tags.
-                              "The current results carry no tags from any source"
-                                  .tl,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: ListView(
-                          children: [
-                            for (final tag in tags)
-                              CheckboxListTile(
-                                dense: true,
-                                value: picked.contains(tag),
-                                title: Text(tag),
-                                onChanged: (v) => setSheet(() {
-                                  if (v == true) {
-                                    picked.add(tag);
-                                  } else {
-                                    picked.remove(tag);
-                                  }
-                                }),
-                              ),
-                          ],
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () {
-                            setState(() {
-                              _tagFilter
-                                ..clear()
-                                ..addAll(picked);
-                            });
-                            Navigator.of(sheetContext).pop();
-                          },
-                          child: Text("Apply".tl),
-                        ),
-                      ),
-                    ),
-                  ]),
-                );
-              },
-            );
-          },
+          context: context, showDragHandle: true,
+          builder: (sheet) => StatefulBuilder(builder: (context, setSheet) {
+            return SizedBox(height: context.height * .68, child: Column(children: [
+              ListTile(title: Text('Filter by tag'.tl), subtitle: Text('Source categories'.tl), trailing: TextButton(onPressed: () => setSheet(picked.clear), child: Text('Clear'.tl))),
+              Expanded(child: groups.isEmpty ? Center(child: Text('This source provides no filter tags'.tl)) : ListView(padding: const EdgeInsets.symmetric(horizontal: 12), children: [
+                for (final entry in groups.entries) ...[
+                  Padding(padding: const EdgeInsets.fromLTRB(4,10,4,4), child: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w700))),
+                  Wrap(spacing: 6, runSpacing: 6, children: [for (final tag in entry.value) FilterChip(label: Text(tag), selected: picked.contains(tag), onSelected: (on) => setSheet(() { if (on) picked.add(tag); else picked.remove(tag); }))]),
+                ],
+              ])),
+              Padding(padding: const EdgeInsets.fromLTRB(16,4,16,16), child: SizedBox(width: double.infinity, child: FilledButton(onPressed: () { setState(() { _tagFilter..clear()..addAll(picked); }); Navigator.pop(sheet); }, child: Text('Apply'.tl))))
+            ]));
+          }),
         );
       },
     );
@@ -201,7 +131,8 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
               }
               // A selected tag that is no longer present must not keep
               // filtering everything out silently.
-              _tagFilter.removeWhere((t) => !tags.contains(t));
+              final allTags = _availableTagGroups.values.expand((e) => e).toSet();
+              _tagFilter.removeWhere((t) => !allTags.contains(t));
             });
           },
           onChanged: _onResultsChanged,
@@ -232,7 +163,7 @@ class _MergedSearchResults extends StatefulWidget {
   final List<ComicSource> sources;
   final String keyword;
   final Set<String> tagFilter;
-  final void Function(Set<String> tags)? onAvailableTags;
+  final void Function(Map<String, Set<String>> groups)? onAvailableTags;
   final VoidCallback? onChanged;
   final Widget Function(Map<String, Set<String>> availableGroups)? filterActionBuilder;
 
@@ -289,7 +220,7 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
       _failedSources = failed;
       _loading = false;
     });
-    widget.onAvailableTags?.call(_collectTags());
+    widget.onAvailableTags?.call(widget.sources.isEmpty ? const {} : {for (final source in widget.sources) for (final part in (source.categoryData?.categories ?? const []) if (part is FixedCategoryPart) part.title: {for (final item in part.categories) if (item.target.attributes?["param"] != null) item.label.trim()}});
     // 背景校準：同名組用 loadInfo 數【真實話數】重排（不阻塞首屏）
     _resolveChapterCounts();
   }
