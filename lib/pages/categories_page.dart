@@ -4,6 +4,7 @@ import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/home_layout.dart';
 import 'package:venera/foundation/category_filter_plan.dart';
+import 'package:venera/foundation/comic_tag_enricher.dart';
 import 'package:venera/foundation/res.dart';
 import 'package:venera/pages/search_result_page.dart';
 import 'package:venera/utils/translations.dart';
@@ -543,7 +544,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   bool _comicHasTag(Comic comic, String label) {
     final wanted = label.trim().toLowerCase();
     if (wanted.isEmpty) return true;
-    return (comic.tags ?? const <String>[]).any((tag) {
+    return ComicTagEnricher.instance.tagsFor(comic).any((tag) {
       final value = tag.split(':').last.trim().toLowerCase();
       return value == wanted || value.contains(wanted);
     });
@@ -624,6 +625,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
         }
         _searchLoading = false;
       });
+      await Future.wait([
+        for (final comic in _searchResults) ComicTagEnricher.instance.enrich(comic),
+      ]);
+      if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         setState(() {

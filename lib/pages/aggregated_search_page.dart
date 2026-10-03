@@ -3,6 +3,7 @@ import "package:venera/components/components.dart";
 import "package:venera/foundation/app.dart";
 import "package:venera/foundation/appdata.dart";
 import "package:venera/foundation/comic_source/comic_source.dart";
+import 'package:venera/foundation/comic_tag_enricher.dart';
 import "package:venera/utils/translations.dart";
 
 class AggregatedSearchPage extends StatefulWidget {
@@ -233,6 +234,9 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
       }
     }
     widget.onAvailableTags?.call(groups);
+    // Detail tags are source-agnostic and may be richer than search cards.
+    await Future.wait([for (final comic in _merged) ComicTagEnricher.instance.enrich(comic)]);
+    if (mounted) setState(() {});
     // 背景校準：同名組用 loadInfo 數【真實話數】重排（不阻塞首屏）
     _resolveChapterCounts();
   }
@@ -282,7 +286,8 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
   bool _matchesTags(Comic c) {
     if (widget.tagFilter.isEmpty) return true;
     final own = {
-      for (final tag in c.tags ?? const <String>[]) tag.trim().toLowerCase(),
+      for (final tag in ComicTagEnricher.instance.tagsFor(c))
+        tag.trim().toLowerCase(),
     };
     return widget.tagFilter.every((t) => own.contains(t.toLowerCase()));
   }
