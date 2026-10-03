@@ -945,6 +945,7 @@ class ComicSourceParser {
                 (index) => Comic.fromJson(res["comics"][index], _key!),
               ),
               subData: res["maxPage"],
+              total: res["total"] is num ? (res["total"] as num).toInt() : null,
             );
           } catch (e, s) {
             Log.error("Network", "$e\n$s");

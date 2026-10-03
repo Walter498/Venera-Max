@@ -22,15 +22,16 @@ class Res<T> {
   @override
   String toString() => _data.toString();
 
-  Res.fromErrorRes(Res another, {this.subData})
+  Res.fromErrorRes(Res another, {this.subData, this.total})
       : _data = null,
         errorMessage = another.errorMessage;
 
   /// network result
-  const Res(this._data, {this.errorMessage, this.subData});
+  const Res(this._data, {this.errorMessage, this.subData, this.total});
 
   const Res.error(String err)
       : _data = null,
         subData = null,
+        total = null,
         errorMessage = err;
 }

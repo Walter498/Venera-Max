@@ -54,6 +54,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   bool _loading = false;
   bool _hasMore = true;
   String? _error;
+  int? _total;
   final _scroll = ScrollController();
 
   @override
@@ -279,6 +280,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _hasMore = true;
       _loading = false;
       _error = null;
+      _total = null;
     });
     await _loadOptionsForRows();
     await _loadMore();
@@ -316,6 +318,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
         if (!mounted || generation != _requestGeneration) return;
         if (!res.success) throw StateError(res.errorMessage ?? '載入失敗');
         (_byQuery[key] ??= []).addAll(res.data);
+        _total ??= res.total;
         final more = res.data.isNotEmpty &&
             (res.subData is! int || page < (res.subData as int));
         _queryHasMore[key] = more;
@@ -351,6 +354,14 @@ class _CategoriesPageState extends State<CategoriesPage> {
           if (_availableSources.length > 1)
             SliverToBoxAdapter(child: _buildSourceTabs()),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
+          if (_total != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Text('共 $_total 本 · 已載入 ${_comics.length} 本',
+                    style: TextStyle(color: context.colorScheme.outline)),
+              ),
+            ),
           const SliverToBoxAdapter(child: Divider(height: 24)),
           if (_comics.isNotEmpty)
             SliverGridComics(comics: _comics, forceBriefMode: true),
