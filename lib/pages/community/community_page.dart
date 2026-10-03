@@ -239,116 +239,6 @@ class _PostListViewState extends State<_PostListView>
   }
 }
 
-class _PostCard extends StatelessWidget {
-  final LiziCommunityPost post;
-  const _PostCard({required this.post});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 5),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                CircleAvatar(
-                  radius: 14,
-                  child: Text(
-                    post.nickname.isEmpty ? '?' : post.nickname[0],
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(post.nickname,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
-                ),
-                Text(liziRelativeTime(post.createdAt),
-                    style: TextStyle(
-                        fontSize: 11, color: context.colorScheme.outline)),
-              ]),
-              const SizedBox(height: 8),
-              Text(post.content,
-                  maxLines: 5, overflow: TextOverflow.ellipsis),
-              if (post.comics.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 96,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: post.comics.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) {
-                      final c = post.comics[i];
-                      return Column(children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image(
-                            image: CachedImageProvider(
-                              c.cover,
-                              sourceKey: 'lizimh',
-                              cid: c.id.toString(),
-                            ),
-                            width: 56,
-                            height: 72,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 56,
-                              height: 72,
-                              color: context.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.broken_image, size: 18),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        SizedBox(
-                          width: 60,
-                          child: Text(c.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 10)),
-                        ),
-                      ]);
-                    },
-                  ),
-                ),
-              ],
-              const SizedBox(height: 8),
-              Row(children: [
-                Icon(Icons.favorite_border,
-                    size: 15, color: context.colorScheme.outline),
-                const SizedBox(width: 3),
-                Text('${post.likeCount}', style: _statStyle(context)),
-                const SizedBox(width: 16),
-                Icon(Icons.mode_comment_outlined,
-                    size: 15, color: context.colorScheme.outline),
-                const SizedBox(width: 3),
-                Text('${post.commentCount}', style: _statStyle(context)),
-                const SizedBox(width: 16),
-                Icon(Icons.visibility_outlined,
-                    size: 15, color: context.colorScheme.outline),
-                const SizedBox(width: 3),
-                Text('${post.viewCount}', style: _statStyle(context)),
-              ]),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  TextStyle _statStyle(BuildContext context) =>
-      TextStyle(fontSize: 12, color: context.colorScheme.outline);
-
   Future<void> _openCreatePost() async {
     const sections = <(int, String)>[(1, '分享'), (2, '求書'), (3, '日常')];
     var section = sections.first.$1;
@@ -486,3 +376,113 @@ class _PostCard extends StatelessWidget {
     );
   }
 }
+
+class _PostCard extends StatelessWidget {
+  final LiziCommunityPost post;
+  const _PostCard({required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.to(() => PostDetailPage(postId: post.id, initial: post)),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                CircleAvatar(
+                  radius: 14,
+                  child: Text(
+                    post.nickname.isEmpty ? '?' : post.nickname[0],
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(post.nickname,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                ),
+                Text(liziRelativeTime(post.createdAt),
+                    style: TextStyle(
+                        fontSize: 11, color: context.colorScheme.outline)),
+              ]),
+              const SizedBox(height: 8),
+              Text(post.content,
+                  maxLines: 5, overflow: TextOverflow.ellipsis),
+              if (post.comics.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 96,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: post.comics.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final c = post.comics[i];
+                      return Column(children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image(
+                            image: CachedImageProvider(
+                              c.cover,
+                              sourceKey: 'lizimh',
+                              cid: c.id.toString(),
+                            ),
+                            width: 56,
+                            height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 56,
+                              height: 72,
+                              color: context.colorScheme.surfaceContainerHighest,
+                              child: const Icon(Icons.broken_image, size: 18),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        SizedBox(
+                          width: 60,
+                          child: Text(c.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 10)),
+                        ),
+                      ]);
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Row(children: [
+                Icon(Icons.favorite_border,
+                    size: 15, color: context.colorScheme.outline),
+                const SizedBox(width: 3),
+                Text('${post.likeCount}', style: _statStyle(context)),
+                const SizedBox(width: 16),
+                Icon(Icons.mode_comment_outlined,
+                    size: 15, color: context.colorScheme.outline),
+                const SizedBox(width: 3),
+                Text('${post.commentCount}', style: _statStyle(context)),
+                const SizedBox(width: 16),
+                Icon(Icons.visibility_outlined,
+                    size: 15, color: context.colorScheme.outline),
+                const SizedBox(width: 3),
+                Text('${post.viewCount}', style: _statStyle(context)),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  TextStyle _statStyle(BuildContext context) =>
+      TextStyle(fontSize: 12, color: context.colorScheme.outline);
