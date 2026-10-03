@@ -42,11 +42,14 @@ class LiziCommunityApi {
     required int sectionId,
     required String content,
     int? comicId,
+    String? collectionId,
   }) async {
+    // A post carries either one attached comic or one collection, never both.
     final body = <String, dynamic>{
       'community_section_id': sectionId,
       'content': content,
       if (comicId != null) 'comic_ids': [comicId],
+      if (collectionId != null) 'comic_collection_id': collectionId,
     };
     await _postJson('/app/api/community/post/create', body);
     return true;
