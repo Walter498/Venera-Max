@@ -218,7 +218,7 @@ class ComicSourceParser {
 
     // A script may expose apiFetch(path) so the app can reuse the source's
     // own request path for hosts that reject the app's client.
-    var apiFetch = c["apiFetch"];
+    var apiFetch = _getValue("apiFetch");
     if (apiFetch is JSInvokable) {
       final call = JSAutoFreeFunction(apiFetch);
       source.apiFetch = (path, [body]) async {

@@ -504,15 +504,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
             if (option.param == param && option.label.isNotEmpty) option.label,
   };
 
-  bool _comicHasTag(Comic comic, String label) {
-    final wanted = label.trim().toLowerCase();
-    if (wanted.isEmpty) return true;
-    return (comic.tags ?? const <String>[]).any((tag) {
-      final value = tag.split(':').last.trim().toLowerCase();
-      return value == wanted || value.contains(wanted);
-    });
-  }
-
   /// Selected labels per source category group. Inside a group the labels are
   /// alternatives (OR); different groups must all match (AND) — the same rule
   /// the category queries use.
