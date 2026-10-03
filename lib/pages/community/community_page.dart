@@ -390,7 +390,7 @@ class PostCard extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: Image(
-                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: '${c.id}'),
                             width: 64,
                             height: 64,
                             fit: BoxFit.cover,
