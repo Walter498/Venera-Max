@@ -174,16 +174,15 @@ class _SearchResultPageState extends State<SearchResultPage> {
       key: Key(text + options.toString() + sourceKey),
       enableSelection: true,
       filterTags: _tagFilter,
+      emptyFilterText: '沒有同時符合標籤和搜索結果的漫畫',
       onAvailableTags: (tags) {
         if (!mounted) return;
         setState(() {
           _availableTags
             ..clear()
             ..addAll(tags);
-          // Category labels carried over from the category page may not exist
-          // as result tags for this source; dropping them keeps the list from
-          // going empty when the label text does not match a comic tag.
-          _tagFilter.removeWhere((tag) => !tags.contains(tag));
+          // Selections are kept: a label a result does not carry is reported by
+          // the empty-message below instead of being silently unselected.
         });
       },
       selectionHandlerCallback: (fn) => _enterSelection = fn,

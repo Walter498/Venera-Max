@@ -96,6 +96,30 @@ class LiziApiClient {
         '${isHtml ? ' (HTML 錯誤頁)' : ''}',
       );
       if (response.status != 200) {
+        // PWS/CDN intermittently answers a signed request with its own HTML
+        // 403; one short retry against the same host clears it.
+        if (response.status == 403 && isHtml) {
+          await Future<void>.delayed(const Duration(milliseconds: 700));
+          try {
+            final retry = await _transport(uri);
+            final retryHtml =
+                retry.body is String && (retry.body as String).trimLeft().startsWith('<');
+            Log.info('LiziAPI', 'retry ${uri.path} @ $host -> HTTP ${retry.status}');
+            if (retry.status == 200) {
+              _hostIndex = index;
+              dynamic raw1 = retry.body;
+              if (raw1 is String) raw1 = jsonDecode(raw1);
+              if (raw1 is Map) {
+                final data1 = raw1['data'];
+                if (data1 is Map) return Map<String, dynamic>.from(data1);
+              }
+            }
+            if (!retryHtml && retry.status != 200) {
+              errors.add('$host: HTTP ${retry.status}');
+              continue;
+            }
+          } catch (_) {}
+        }
         errors.add('$host: HTTP ${response.status}${isHtml ? ' (HTML)' : ''}');
         continue;
       }

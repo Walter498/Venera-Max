@@ -226,10 +226,17 @@ class _CategoriesPageState extends State<CategoriesPage> {
     }
   }
 
+  /// Params selected in [row]. The tag row keeps its selection in
+  /// [_selectedTags]; every other row in [_selected]. Both are read here so a
+  /// tag pick actually reaches the source and the intersection.
+  Set<String> _rowParams(String title) => title == _tagRowTitle
+      ? _selectedTags
+      : (_selected[title] ?? const <String>{});
+
   /// Selected (row, param) pairs, in row order.
   List<({_FilterRow row, String param})> get _selectedPairs => [
     for (final row in _rows)
-      for (final param in _selected[row.title] ?? const <String>{})
+      for (final param in _rowParams(row.title))
         (row: row, param: param),
   ];
 
@@ -247,7 +254,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   List<Comic> _applyFilters() {
     final rows = <List<Comic>>[];
     for (final row in _rows) {
-      final params = _selected[row.title] ?? const <String>{};
+      final params = _rowParams(row.title);
       if (params.isEmpty) continue;
       final union = <String, Comic>{};
       for (final param in params) {

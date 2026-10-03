@@ -2094,6 +2094,7 @@ class ComicList extends StatefulWidget {
     this.scrollbar = true,
     this.scrollbarTopPadding = 0,
     this.filterTags = const <String>{},
+    this.emptyFilterText,
     this.onAvailableTags,
   });
 
@@ -2143,6 +2144,11 @@ class ComicList extends StatefulWidget {
   /// Generic local tag filter. It is source-agnostic and only uses tags the
   /// source actually returned; missing tags never count as a match.
   final Set<String> filterTags;
+
+  /// Shown when [filterTags] is set but no loaded comic matches, so an
+  /// impossible constraint reads as "no match" instead of an unchanged list.
+  final String? emptyFilterText;
+
   final ValueChanged<Set<String>>? onAvailableTags;
 
   @override
@@ -2404,10 +2410,26 @@ class ComicListState extends State<ComicList> {
         : [
             for (final comic in comics)
               if (widget.filterTags.every((wanted) =>
-                  (comic.tags ?? const <String>[]).any((tag) =>
-                      tag.trim().toLowerCase() == wanted.toLowerCase())))
+                  (comic.tags ?? const <String>[]).any((tag) {
+                    final value = tag.split(':').last.trim().toLowerCase();
+                    final target = wanted.trim().toLowerCase();
+                    return value == target || value.contains(target);
+                  })))
                 comic,
           ];
+    if (widget.filterTags.isNotEmpty && filtered.isEmpty && comics.isNotEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+            child: Text(
+              widget.emptyFilterText ?? 'No result matches all selected tags'.tl,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
     return SliverGridComics(
       comics: filtered,
       onLastItemBuild: onLastItemBuild,
