@@ -36,19 +36,21 @@ class _CommunityPageState extends State<CommunityPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: Appbar(
-        title: Text('社區'),
-        bottom: TabBar(
+      appBar: Appbar(title: Text('社區')),
+      body: Column(children: [
+        TabBar(
           controller: _tabs,
           tabs: [for (final s in _kSections) Tab(text: s[1] as String)],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabs,
-        children: [
-          for (final s in _kSections) PostListView(sectionId: s[0] as int),
-        ],
-      ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabs,
+            children: [
+              for (final s in _kSections) PostListView(sectionId: s[0] as int),
+            ],
+          ),
+        ),
+      ]),
     );
   }
 }
@@ -388,7 +390,7 @@ class PostCard extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: Image(
-                            image: CachedImageProvider(c.cover, 'lizimh', c.id),
+                            image: CachedImageProvider(c.cover, sourceKey: 'lizimh', cid: c.id),
                             width: 64,
                             height: 64,
                             fit: BoxFit.cover,
