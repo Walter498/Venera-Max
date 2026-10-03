@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:venera/foundation/log.dart';
 import 'package:venera/network/app_dio.dart';
 
 /// Shared protocol for the App's native community/rank/update readers.
@@ -80,12 +81,22 @@ class LiziApiClient {
       LiziApiResponse response;
       try {
         response = await _transport(uri);
-      } catch (_) {
+      } catch (e) {
+        Log.info('LiziAPI', 'GET ${uri.path} @ $host failed: $e');
         errors.add('$host: 連線失敗');
         continue;
       }
+      // Server replies with an HTML error page for a rejected request; the
+      // status alone does not say whether it was the CDN or the API.
+      final raw0 = response.body;
+      final isHtml = raw0 is String && raw0.trimLeft().startsWith('<');
+      Log.info(
+        'LiziAPI',
+        'GET ${uri.path} @ $host -> HTTP ${response.status}'
+        '${isHtml ? ' (HTML 錯誤頁)' : ''}',
+      );
       if (response.status != 200) {
-        errors.add('$host: HTTP ${response.status}');
+        errors.add('$host: HTTP ${response.status}${isHtml ? ' (HTML)' : ''}');
         continue;
       }
       dynamic raw = response.body;
