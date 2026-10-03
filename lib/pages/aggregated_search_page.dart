@@ -234,7 +234,7 @@ class _MergedSearchResults extends StatefulWidget {
   final Set<String> tagFilter;
   final void Function(Set<String> tags)? onAvailableTags;
   final VoidCallback? onChanged;
-  final Widget Function(Set<String> availableTags)? filterActionBuilder;
+  final Widget Function(Map<String, Set<String>> availableGroups)? filterActionBuilder;
 
   @override
   State<_MergedSearchResults> createState() => _MergedSearchResultsState();
