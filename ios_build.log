@@ -80,11 +80,12 @@ Got dependencies!
 76 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -100,61 +101,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -170,52 +154,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -241,11 +207,12 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -261,61 +228,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -331,52 +281,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -402,11 +334,12 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -422,61 +355,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -492,52 +408,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -579,11 +477,12 @@ dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: ConcurrencyGate no maxWait keeps the original unbounded behavior
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController starts at max, halves on rate limit, grows after cooldown
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController never drops below min
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -599,61 +498,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -669,52 +551,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -740,11 +604,12 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -760,61 +625,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -830,52 +678,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -901,11 +731,12 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -921,61 +752,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -991,52 +805,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -1062,11 +858,12 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -1082,61 +879,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -1152,52 +932,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -1223,11 +985,12 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -1243,61 +1006,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -1313,52 +1059,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -1384,11 +1112,12 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -1404,61 +1133,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -1474,52 +1186,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
@@ -1545,11 +1239,12 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -1565,61 +1260,44 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/community/community_page.dart:73:22: Error: The getter '_openCreatePost' isn't defined for the type '_CommunityPageState'.
- - '_CommunityPageState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named '_openCreatePost'.
-          onPressed: _openCreatePost,
-                     ^^^^^^^^^^^^^^^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/community/community_page.dart:380:41: Error: Can't find '}' to match '{'.
+class _PostCard extends StatelessWidget {
+                                        ^
+lib/pages/community/community_page.dart:378:1: Error: Expected a declaration, but got '}'.
+}
+^
 lib/pages/community/community_page.dart:157:19: Error: The getter '_sortType' isn't defined for the type '_PostListViewState'.
  - '_PostListViewState' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
 Try correcting the name to the name of an existing getter, or defining a getter or field named '_sortType'.
@@ -1635,52 +1313,34 @@ lib/pages/community/community_page.dart:213:38: Error: The setter '_sortType' is
 Try correcting the name to the name of an existing setter, or defining a setter or field named '_sortType'.
                       setState(() => _sortType = entry.$1);
                                      ^^^^^^^^^
-lib/pages/community/community_page.dart:361:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:251:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:384:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
-                        comicId = picked.id;
-                                         ^
-lib/pages/community/community_page.dart:440:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:330:11: Error: Undefined name 'mounted'.
       if (mounted) await _refresh();
           ^^^^^^^
-lib/pages/community/community_page.dart:440:26: Error: The method '_refresh' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_refresh'.
+lib/pages/community/community_page.dart:330:26: Error: Method not found: '_refresh'.
       if (mounted) await _refresh();
                          ^^^^^^^^
-lib/pages/community/community_page.dart:442:11: Error: The getter 'mounted' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'mounted'.
+lib/pages/community/community_page.dart:332:11: Error: Undefined name 'mounted'.
       if (mounted) context.showMessage(message: e.toString());
           ^^^^^^^
-lib/pages/community/community_page.dart:442:20: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:332:20: Error: Undefined name 'context'.
       if (mounted) context.showMessage(message: e.toString());
                    ^^^^^^^
-lib/pages/community/community_page.dart:449:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:274:42: Error: A value of type 'String' can't be assigned to a variable of type 'int?'.
+                        comicId = picked.id;
+                                         ^
+lib/pages/community/community_page.dart:339:7: Error: Undefined name 'context'.
       context.showMessage(message: '收藏是空的');
       ^^^^^^^
-lib/pages/community/community_page.dart:453:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:343:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
-lib/pages/community/community_page.dart:470:7: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:360:7: Error: Undefined name 'context'.
       context.showMessage(message: '沒有漫單');
       ^^^^^^^
-lib/pages/community/community_page.dart:474:16: Error: The getter 'context' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:venera/pages/community/community_page.dart' ('lib/pages/community/community_page.dart').
-Try correcting the name to the name of an existing getter, or defining a getter or field named 'context'.
+lib/pages/community/community_page.dart:364:16: Error: Undefined name 'context'.
       context: context,
                ^^^^^^^
 .
