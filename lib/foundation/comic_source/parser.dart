@@ -223,7 +223,7 @@ class ComicSourceParser {
       final call = JSAutoFreeFunction(apiFetch);
       source.apiFetch = (path, [body]) async {
         try {
-          final result = await call(path, body);
+          final result = await call([path, body]);
           return Res(result?.toString() ?? "");
         } catch (e) {
           return Res.error(e.toString());
