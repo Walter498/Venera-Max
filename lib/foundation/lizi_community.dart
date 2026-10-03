@@ -1,3 +1,4 @@
+import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/lizi_api_client.dart';
 
 /// 栗子漫畫官方社區 API（ai.qsmm.fun）。
@@ -19,8 +20,31 @@ class LiziCommunityApi {
 
   static List<LiziCommunitySection>? _sectionsCache;
 
-  static Future<Map<String, dynamic>> _getJson(String path) =>
-      LiziApiClient.instance.getJson(path);
+  static Future<Map<String, dynamic>> _getJson(String path) async {
+    // Prefer the comic source's own request path: this host accepts it while
+    // the app's standalone client can be rejected by the CDN.
+    final hook = ComicSource.find('lizimh')?.apiFetch;
+    if (hook != null) {
+      final res = await hook(path);
+      if (!res.error) {
+        dynamic raw = res.data;
+        try {
+          if (raw is String) raw = jsonDecode(raw);
+        } catch (_) {
+          raw = null;
+        }
+        if (raw is Map) {
+          final code = raw['code'];
+          if (code == 201 || code == 200) {
+            final data = raw['data'];
+            return data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+          }
+          throw StateError('栗子接口回傳 code=$code');
+        }
+      }
+    }
+    return LiziApiClient.instance.getJson(path);
+  }
 
   /// 社區版塊（來自 configv2 的 cfg_general.community_sections）
   static Future<List<LiziCommunitySection>> fetchSections() async {

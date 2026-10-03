@@ -537,6 +537,14 @@ class ComicSource {
 
   final ChapterCommentsLoader? chapterCommentsLoader;
 
+  /// Optional: lets the source perform an HTTP GET for the app.
+  ///
+  /// Some hosts reject the app's own client while accepting the source's, so
+  /// features without a source hook (community, rank metadata) can go through
+  /// the source's request path. Assigned by the parser when the script exposes
+  /// [apiFetch]; null means the feature must use its own transport.
+  Future<Res<String>> Function(String path)? apiFetch;
+
   final SendChapterCommentFunc? sendChapterCommentFunc;
 
   final RegExp? idMatcher;
