@@ -155,12 +155,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Widget build(BuildContext context) {
     final post = _post;
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: Appbar(title: Text(post?.sectionName ?? '帖子')),
       bottomNavigationBar: post == null
           ? null
           : SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                padding: EdgeInsets.fromLTRB(
+                    12, 6, 12, 6 + MediaQuery.viewInsetsOf(context).bottom),
                 child: Row(children: [
                   Expanded(
                     child: TextField(

@@ -9,7 +9,8 @@ import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/community/post_detail_page.dart';
 import 'package:venera/utils/user_error.dart';
 
-const _kSections = <List<Object>>[
+const _kSections = <List<Object?>>[
+  [null, '推薦'],
   [3, '日常'],
   [2, '求書'],
   [1, '分享'],
@@ -36,7 +37,10 @@ class _CommunityPageState extends State<CommunityPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: Appbar(title: Text('社區')),
+      appBar: Appbar(
+        title: Text('社區'),
+        automaticallyImplyLeading: false,
+      ),
       body: Column(children: [
         TabBar(
           controller: _tabs,
@@ -46,7 +50,8 @@ class _CommunityPageState extends State<CommunityPage>
           child: TabBarView(
             controller: _tabs,
             children: [
-              for (final s in _kSections) PostListView(sectionId: s[0] as int),
+              for (final s in _kSections)
+                PostListView(sectionId: s[0] as int?),
             ],
           ),
         ),
@@ -58,7 +63,8 @@ class _CommunityPageState extends State<CommunityPage>
 class PostListView extends StatefulWidget {
   const PostListView({super.key, required this.sectionId});
 
-  final int sectionId;
+  /// null = 推薦 (all sections).
+  final int? sectionId;
 
   @override
   State<PostListView> createState() => _PostListViewState();
@@ -236,15 +242,73 @@ class _PostListViewState extends State<PostListView> {
     }
     return showDialog<FavoriteItem>(
       context: context,
-      builder: (dialog) => SimpleDialog(
-        title: const Text('選擇漫畫'),
-        children: [
-          for (final item in items.take(200))
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(dialog, item),
-              child:
-                  Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
+      builder: (dialog) => AlertDialog(
+        title: Text('選擇漫畫（${items.length}）'),
+        content: SizedBox(
+          width: 420,
+          height: context.height * 0.7,
+          child: ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, i) {
+              final item = items[i];
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image(
+                    image: CachedImageProvider(item.coverPath,
+                        sourceKey: item.type.sourceKey, cid: item.id),
+                    width: 48,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, st) => Container(
+                      width: 48,
+                      height: 64,
+                      color: context.colorScheme.surfaceContainerHighest,
+                    ),
+                  ),
+                ),
+                title: Text(item.name,
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (item.author.trim().isNotEmpty)
+                      Text(item.author,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if (item.tags.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: [
+                            for (final tag in item.tags.take(5))
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.surfaceContainerHigh,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(tag,
+                                    style: const TextStyle(fontSize: 11)),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                onTap: () => Navigator.pop(dialog, item),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('取消'),
+          ),
         ],
       ),
     );
