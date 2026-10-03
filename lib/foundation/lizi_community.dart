@@ -49,9 +49,11 @@ class LiziCommunityApi {
     int? sectionId,
     int page = 1,
   }) async {
+    // The official client sends page_size/sort_type as well; the server
+    // accepts the combination, so requests read the same as the app's.
     final qs = sectionId == null
-        ? '?page=$page'
-        : '?section_id=$sectionId&page=$page';
+        ? '?page=$page&page_size=20&sort_type=0'
+        : '?section_id=$sectionId&page=$page&page_size=20&sort_type=0';
     final data = await _getJson('/app/api/community/posts$qs');
     final list = (data['list'] is List ? data['list'] as List : const [])
         .map((e) => LiziCommunityPost.fromJson(e))
@@ -68,8 +70,10 @@ class LiziCommunityApi {
     int postId, {
     int page = 1,
   }) async {
-    final data =
-        await _getJson('/app/api/community/comments?post_id=$postId&page=$page');
+    final data = await _getJson(
+      '/app/api/community/comments?post_id=$postId&page=$page'
+      '&page_size=20&sort_type=0',
+    );
     final list = (data['list'] is List ? data['list'] as List : const [])
         .map((e) => LiziCommunityComment.fromJson(e))
         .toList();
