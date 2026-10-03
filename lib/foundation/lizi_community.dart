@@ -50,8 +50,11 @@ class LiziCommunityApi {
     String? collectionId,
   }) async {
     // A post carries either one attached comic or one collection, never both.
+    // Official body: {"section_id":N,"content":"..."} — the 32-byte request in
+    // the captured traffic matches this exactly; community_section_id is
+    // rejected with 400 请求参数解析失败.
     final body = <String, dynamic>{
-      'community_section_id': sectionId,
+      'section_id': sectionId,
       'content': content,
       if (comicId != null) 'comic_ids': [comicId],
       if (collectionId != null) 'comic_collection_id': collectionId,
