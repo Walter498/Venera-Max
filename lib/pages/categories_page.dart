@@ -152,6 +152,50 @@ class _CategoriesPageState extends State<CategoriesPage> {
       }
     }
     setState(() => _rows = rows);
+    Future.microtask(_loadTagCounts);
+  }
+
+  /// One first-page request per tag (bounded), reading only the server total.
+  Future<void> _loadTagCounts() async {
+    if (_countingInFlight) return;
+    final loader = _source?.categoryComicsData?.load;
+    if (loader == null) return;
+    _countingInFlight = true;
+    try {
+      final pending = <({String category, String? param, String optionsKey})>[];
+      for (final row in _rows) {
+        for (final option in row.options) {
+          if (option.param == null) continue;
+          final key = _countKey(option.nativeCategory, option.param);
+          if (_counts.containsKey(key)) continue;
+          pending.add((
+            category: option.nativeCategory,
+            param: option.param,
+            optionsKey: row.title,
+          ));
+        }
+      }
+      for (var start = 0; start < pending.length; start += 3) {
+        final batch = pending.skip(start).take(3);
+        final results = await Future.wait([
+          for (final item in batch)
+            loader(item.category, item.param, _optionsFor(item.optionsKey), 1)
+                .then((res) => (item, res))
+                .catchError((_) => (item, Res<List<Comic>>.error('failed'))),
+        ]);
+        var changed = false;
+        for (final (item, res) in results) {
+          final total = res.success ? res.total : null;
+          if (total != null && total >= 0) {
+            _counts[_countKey(item.category, item.param)] = total;
+            changed = true;
+          }
+        }
+        if (changed && mounted) setState(() {});
+      }
+    } finally {
+      _countingInFlight = false;
+    }
   }
 
   /// One source-native query: the category name and param the source itself
@@ -174,7 +218,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   /// The source's own option defaults (first value of each option list), so a
   /// loader that reads `options[0]` receives a real value instead of nothing.
-  final Map<String, List<String>> _optionsCache = {};
+  /// Server-reported total per tag ('category\u0000param'). Filled by one
+  /// first-page query per tag, so a chip can show the real count without the
+  /// user opening it; sources that report no total are simply left unknown.
+  final Map<String, int> _counts = {};
+  bool _countingInFlight = false;
 
   List<String> _optionsFor(String rowTitle) => _optionsCache[rowTitle] ?? const [];
 
@@ -228,6 +276,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
   /// selections and different rows intersect without losing pagination.
   final Map<String, List<Comic>> _byQuery = {};
   final Map<String, bool> _queryHasMore = {};
+
+  static String _countKey(String category, String? param) =>
+      '$category\u0000${param ?? ''}';
 
   static String _queryKey(String category, String? param) =>
       '$category\u0000${param ?? ''}';
@@ -338,9 +389,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
     } finally {
       if (mounted && generation == _requestGeneration) {
         setState(() => _loading = false);
-        if (_comics.isEmpty && _hasMore && _selectedPairs.isNotEmpty && _page < 50) {
-          Future.microtask(_loadMore);
-        }
       }
     }
   }
@@ -426,7 +474,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
         children: [
           for (final opt in visible)
             _chip(
-              opt.label,
+              opt.param == null
+                  ? opt.label
+                  : (_counts[_countKey(opt.nativeCategory, opt.param)] != null
+                      ? '${opt.label} ${_counts[_countKey(opt.nativeCategory, opt.param)]}'
+                      : opt.label),
               selected: row.title == _tagRowTitle
                   ? (opt.param == null
                       ? _selectedTags.isEmpty
