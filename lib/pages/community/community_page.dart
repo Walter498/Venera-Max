@@ -93,6 +93,154 @@ class _CommunityPageState extends State<CommunityPage> {
       ),
     );
   }
+
+  Future<void> _openCreatePost() async {
+    const sections = <List<Object>>[
+      [1, '分享'],
+      [2, '求書'],
+      [3, '日常'],
+    ];
+    var section = 1;
+    int? comicId;
+    String? comicName;
+    String? collectionId;
+    String? collectionName;
+    final field = TextEditingController();
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+        builder: (context, setDialog) => AlertDialog(
+          title: const Text('發布帖子'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Wrap(spacing: 8, children: [
+                for (final entry in sections)
+                  ChoiceChip(
+                    label: Text(entry[1] as String),
+                    selected: section == entry[0],
+                    onSelected: (_) =>
+                        setDialog(() => section = entry[0] as int),
+                  ),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.menu_book_outlined, size: 18),
+                    label: Text(comicName ?? '添加漫畫',
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    onPressed: () async {
+                      final picked = await _pickFavoriteComic();
+                      if (picked == null) return;
+                      setDialog(() {
+                        comicId = int.tryParse(picked.id);
+                        comicName = picked.name;
+                        collectionId = null;
+                        collectionName = null;
+                      });
+                      if (comicId == null) {
+                        context.showMessage(message: '這個漫畫沒有數字 id，無法關聯');
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.collections_bookmark_outlined, size: 18),
+                    label: Text(collectionName ?? '添加漫單',
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    onPressed: () async {
+                      final picked = await _pickCollection();
+                      if (picked == null) return;
+                      setDialog(() {
+                        collectionId = picked.$1;
+                        collectionName = picked.$2;
+                        comicId = null;
+                        comicName = null;
+                      });
+                    },
+                  ),
+                ),
+              ]),
+              TextField(
+                controller: field,
+                maxLines: 5,
+                maxLength: 512,
+                decoration: const InputDecoration(hintText: '分享你的想法…'),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('發布'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (created != true || field.text.trim().isEmpty) return;
+    try {
+      await LiziCommunityApi.createPost(
+        sectionId: section,
+        content: field.text.trim(),
+        comicId: comicId,
+        collectionId: collectionId,
+      );
+      if (mounted) await _refresh();
+    } catch (e) {
+      if (mounted) context.showMessage(message: userFacingNetworkError(e));
+    }
+  }
+
+  Future<FavoriteItem?> _pickFavoriteComic() async {
+    final items = LocalFavoritesManager().getAllComics();
+    if (items.isEmpty) {
+      context.showMessage(message: '收藏是空的');
+      return null;
+    }
+    return showDialog<FavoriteItem>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: const Text('選擇漫畫'),
+        children: [
+          for (final item in items.take(200))
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialog, item),
+              child:
+                  Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<(String, String)?> _pickCollection() async {
+    final collections = ComicCollectionStore.all();
+    if (collections.isEmpty) {
+      context.showMessage(message: '沒有漫單');
+      return null;
+    }
+    return showDialog<(String, String)>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: const Text('選擇漫單'),
+        children: [
+          for (final c in collections)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialog, (c.id, c.name)),
+              child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+        ],
+      ),
+    );
+  }
+}
 }
 
 class _PostListView extends StatefulWidget {
@@ -241,153 +389,6 @@ class _PostListViewState extends State<_PostListView>
       ),
     );
   }
-  Future<void> _openCreatePost() async {
-    const sections = <List<Object>>[
-      [1, '分享'],
-      [2, '求書'],
-      [3, '日常'],
-    ];
-    var section = 1;
-    int? comicId;
-    String? comicName;
-    String? collectionId;
-    String? collectionName;
-    final field = TextEditingController();
-    final created = await showDialog<bool>(
-      context: context,
-      builder: (dialog) => StatefulBuilder(
-        builder: (context, setDialog) => AlertDialog(
-          title: const Text('發布帖子'),
-          content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Wrap(spacing: 8, children: [
-                for (final entry in sections)
-                  ChoiceChip(
-                    label: Text(entry[1] as String),
-                    selected: section == entry[0],
-                    onSelected: (_) =>
-                        setDialog(() => section = entry[0] as int),
-                  ),
-              ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.menu_book_outlined, size: 18),
-                    label: Text(comicName ?? '添加漫畫',
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    onPressed: () async {
-                      final picked = await _pickFavoriteComic();
-                      if (picked == null) return;
-                      setDialog(() {
-                        comicId = int.tryParse(picked.id);
-                        comicName = picked.name;
-                        collectionId = null;
-                        collectionName = null;
-                      });
-                      if (comicId == null) {
-                        context.showMessage(message: '這個漫畫沒有數字 id，無法關聯');
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.collections_bookmark_outlined, size: 18),
-                    label: Text(collectionName ?? '添加漫單',
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    onPressed: () async {
-                      final picked = await _pickCollection();
-                      if (picked == null) return;
-                      setDialog(() {
-                        collectionId = picked.$1;
-                        collectionName = picked.$2;
-                        comicId = null;
-                        comicName = null;
-                      });
-                    },
-                  ),
-                ),
-              ]),
-              TextField(
-                controller: field,
-                maxLines: 5,
-                maxLength: 512,
-                decoration: const InputDecoration(hintText: '分享你的想法…'),
-              ),
-            ]),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialog, false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialog, true),
-              child: const Text('發布'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (created != true || field.text.trim().isEmpty) return;
-    try {
-      await LiziCommunityApi.createPost(
-        sectionId: section,
-        content: field.text.trim(),
-        comicId: comicId,
-        collectionId: collectionId,
-      );
-      if (mounted) await _refresh();
-    } catch (e) {
-      if (mounted) context.showMessage(message: userFacingNetworkError(e));
-    }
-  }
-
-  Future<FavoriteItem?> _pickFavoriteComic() async {
-    final items = LocalFavoritesManager().getAllComics();
-    if (items.isEmpty) {
-      context.showMessage(message: '收藏是空的');
-      return null;
-    }
-    return showDialog<FavoriteItem>(
-      context: context,
-      builder: (dialog) => SimpleDialog(
-        title: const Text('選擇漫畫'),
-        children: [
-          for (final item in items.take(200))
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(dialog, item),
-              child:
-                  Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Future<(String, String)?> _pickCollection() async {
-    final collections = ComicCollectionStore.all();
-    if (collections.isEmpty) {
-      context.showMessage(message: '沒有漫單');
-      return null;
-    }
-    return showDialog<(String, String)>(
-      context: context,
-      builder: (dialog) => SimpleDialog(
-        title: const Text('選擇漫單'),
-        children: [
-          for (final c in collections)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(dialog, (c.id, c.name)),
-              child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 class _PostCard extends StatelessWidget {
   final LiziCommunityPost post;
