@@ -271,11 +271,30 @@ class _CategoriesPageState extends State<CategoriesPage> {
       : (_selected[title] ?? const <String>{});
 
   /// Selected (row, param) pairs, in row order.
-  List<({_FilterRow row, String param})> get _selectedPairs => [
-    for (final row in _rows)
-      for (final param in _rowParams(row.title))
-        (row: row, param: param),
-  ];
+  ///
+  /// Keyword selections ("search:") are merged into a single request: the
+  /// source passes them to its own search, so the server filters every keyword
+  /// at once and can report one accurate total. Sending each keyword as its own
+  /// request and intersecting page 1 client-side returns almost nothing.
+  List<({_FilterRow row, String param})> get _selectedPairs {
+    final pairs = <({_FilterRow row, String param})>[];
+    final keywords = <String>[];
+    _FilterRow? keywordRow;
+    for (final row in _rows) {
+      for (final param in _rowParams(row.title)) {
+        if (param.startsWith('search:')) {
+          keywords.add(param.substring(7));
+          keywordRow ??= row;
+        } else {
+          pairs.add((row: row, param: param));
+        }
+      }
+    }
+    if (keywords.isNotEmpty && keywordRow != null) {
+      pairs.insert(0, (row: keywordRow, param: 'search:${keywords.join(' ')}'));
+    }
+    return pairs;
+  }
 
   /// Per-query accumulated results, keyed by 'category\u0000param'. Keeping
   /// them per query (rather than one merged list) is what lets a row union its
@@ -377,8 +396,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
         if (!res.success) throw StateError(res.errorMessage ?? '載入失敗');
         (_byQuery[key] ??= []).addAll(res.data);
         _total ??= res.total;
-        _trace.add('${opt.nativeCategory} / ${opt.param} → ${res.data.length}'
-            '${res.total != null ? ' (共 ${res.total})' : ''}');
+        if (_trace.length < 4) {
+          _trace.add('${opt.nativeCategory} / ${opt.param} → ${res.data.length}'
+              '${res.total != null ? ' (共 ${res.total})' : ''}');
+        }
         final more = res.data.isNotEmpty &&
             (res.subData is! int || page < (res.subData as int));
         _queryHasMore[key] = more;
