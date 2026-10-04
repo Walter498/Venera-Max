@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:venera/components/components.dart";
 import "package:venera/foundation/app.dart";
 import "package:venera/foundation/appdata.dart";
+import "package:venera/foundation/category_filter_plan.dart";
 import "package:venera/foundation/comic_source/comic_source.dart";
 import 'package:venera/foundation/comic_tag_enricher.dart';
 import "package:venera/utils/translations.dart";
@@ -285,11 +286,10 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
 
   bool _matchesTags(Comic c) {
     if (widget.tagFilter.isEmpty) return true;
-    final own = {
-      for (final tag in ComicTagEnricher.instance.tagsFor(c))
-        tag.trim().toLowerCase(),
-    };
-    return widget.tagFilter.every((t) => own.contains(t.toLowerCase()));
+    return widget.tagFilter.every((wanted) =>
+        ComicTagEnricher.instance
+            .tagsFor(c)
+            .any((actual) => categoryTagMatches(actual, wanted)));
   }
 
   /// 真實話數：loadInfo → 章節表條目數；loadInfo 失敗退回文字解析

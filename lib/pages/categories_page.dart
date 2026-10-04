@@ -3,13 +3,13 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/home_layout.dart';
+import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/res.dart';
 import 'package:venera/utils/translations.dart';
 
-/// 分類頁（2026-09-16 改版：仿栗子官方 App 圖一佈局）
-/// 頂部搜索框 → 題材 / 地區 / 狀態篩選 chips → 即時結果網格（可翻頁）。
-/// 篩選條件可組合（tag: X|class: Y|isend: Z），組合參數由源端解析
-/// （栗子源 v2.25.0+ 支援；其他源選單一條件時正常，多條件視源而定）。
+/// Category page: source-native filter groups with one paged result query.
+/// The host preserves each source's category/param values and delegates
+/// multi-condition translation to the source when it explicitly supports it.
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
 
@@ -33,7 +33,8 @@ class _FilterOption {
 class _FilterRow {
   final String title;
   final List<_FilterOption> options;
-  const _FilterRow(this.title, this.options);
+  final bool allowsMulti;
+  const _FilterRow(this.title, this.options, {this.allowsMulti = false});
 }
 
 class _CategoriesPageState extends State<CategoriesPage> {
@@ -42,10 +43,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
   int _sourceIndex = 0;
   ComicSource? _source;
   List<_FilterRow> _rows = const [];
-  final Map<String, Set<String>> _selected = {}; // rowTitle -> param（單選行用）
-  /// 題材行（tag:）多選集合（2026-09-17 用戶要求：標籤可多選）
-  final Set<String> _selectedTags = {};
-  String? _tagRowTitle;
+  /// Row title -> selected source-native params.
+  /// Each row declares whether it is a multi-select group.
+  final Map<String, Set<String>> _selected = {};
   bool _expanded = false;
   int _requestGeneration = 0;
 
@@ -108,10 +108,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _sourceIndex = index;
       _source = _availableSources[index];
       _selected.clear();
-      _selectedTags.clear();
-      _tagRowTitle = null;
       _expanded = false;
       _rows = const [];
+      _optionsCache.clear();
     });
     _buildRows();
     _reload();
@@ -142,93 +141,20 @@ class _CategoriesPageState extends State<CategoriesPage> {
         if (param != null) hasRealParam = true;
       }
       if (hasRealParam && options.length > 1) {
-        rows.add(_FilterRow(part.title, options));
+        final allowsMulti = options.any((o) {
+          final p = o.param;
+          return p?.startsWith('tag:') == true || p?.startsWith('search:') == true;
+        });
+        rows.add(_FilterRow(part.title, options, allowsMulti: allowsMulti));
         _selected[part.title] = <String>{};
-        // 題材行（參數是 tag: 開頭的）支持多選
-        if (_tagRowTitle == null &&
-            options.any((o) => o.param?.startsWith('tag:') == true)) {
-          _tagRowTitle = part.title;
-        }
       }
     }
     setState(() => _rows = rows);
-    Future.microtask(_loadTagCounts);
   }
 
-  /// One first-page request per tag (bounded), reading only the server total.
-  Future<void> _loadTagCounts() async {
-    if (_countingInFlight) return;
-    final loader = _source?.categoryComicsData?.load;
-    if (loader == null) return;
-    _countingInFlight = true;
-    try {
-      final pending = <({String category, String? param, String optionsKey})>[];
-      for (final row in _rows) {
-        for (final option in row.options) {
-          if (option.param == null) continue;
-          final key = _countKey(option.nativeCategory, option.param);
-          if (_counts.containsKey(key)) continue;
-          pending.add((
-            category: option.nativeCategory,
-            param: option.param,
-            optionsKey: row.title,
-          ));
-        }
-      }
-      for (var start = 0; start < pending.length; start += 3) {
-        final batch = pending.skip(start).take(3);
-        final results = await Future.wait([
-          for (final item in batch)
-            loader(item.category, item.param, _optionsFor(item.optionsKey), 1)
-                .then((res) => (item, res))
-                .catchError((_) => (item, Res<List<Comic>>.error('failed'))),
-        ]);
-        var changed = false;
-        for (final (item, res) in results) {
-          final total = res.success ? res.total : null;
-          if (total != null && total >= 0) {
-            _counts[_countKey(item.category, item.param)] = total;
-            changed = true;
-          }
-        }
-        if (changed && mounted) setState(() {});
-      }
-    } finally {
-      _countingInFlight = false;
-    }
-  }
-
-  /// One source-native query: the category name and param the source itself
-  /// defines, plus the options list that source expects. Nothing here is
-  /// synthesized from another source's protocol.
-  ({String category, String? param, List<String> options})? _queryFor(
-    _FilterRow row,
-    String param,
-  ) {
-    final opt = row.options.firstWhere(
-      (o) => o.param == param,
-      orElse: () => _FilterOption('', '', nativeCategory: row.title),
-    );
-    return (
-      category: opt.nativeCategory,
-      param: opt.param,
-      options: _optionsFor(row.title),
-    );
-  }
-
-  /// The source's own option defaults (first value of each option list), so a
-  /// loader that reads `options[0]` receives a real value instead of nothing.
-  /// Server-reported total per tag ('category\u0000param'). Filled by one
-  /// first-page query per tag, so a chip can show the real count without the
-  /// user opening it; sources that report no total are simply left unknown.
+  /// The source's own option defaults (first value of each option list).
+  /// These are loaded once per source/category page, not once per chip.
   final Map<String, List<String>> _optionsCache = {};
-
-  final Map<String, int> _counts = {};
-
-  /// One line per query that ran this round, so an empty result can be told
-  /// apart from a query the source rejected or returned nothing for.
-  final List<String> _trace = [];
-  bool _countingInFlight = false;
 
   List<String> _optionsFor(String rowTitle) => _optionsCache[rowTitle] ?? const [];
 
@@ -263,109 +189,31 @@ class _CategoriesPageState extends State<CategoriesPage> {
     }
   }
 
-  /// Params selected in [row]. The tag row keeps its selection in
-  /// [_selectedTags]; every other row in [_selected]. Both are read here so a
-  /// tag pick actually reaches the source and the intersection.
-  Set<String> _rowParams(String title) => title == _tagRowTitle
-      ? _selectedTags
-      : (_selected[title] ?? const <String>{});
-
-  /// Selected (row, param) pairs, in row order.
-  ///
-  /// Keyword selections ("search:") are merged into a single request: the
-  /// source passes them to its own search, so the server filters every keyword
-  /// at once and can report one accurate total. Sending each keyword as its own
-  /// request and intersecting page 1 client-side returns almost nothing.
-  List<({_FilterRow row, String param, String category})> get _selectedPairs {
-    final pairs = <({_FilterRow row, String param, String category})>[];
-    final keywords = <String>[];
-    // Category a keyword query must be addressed to (the row's own category,
-    // never a synthesized one).
-    var keywordCategory = '';
+  /// Current selections keep the source-native values intact. The host does
+  /// not merge params or intersect pages from unrelated requests.
+  List<CategoryFilterSelection> get _selections {
+    final result = <CategoryFilterSelection>[];
     for (final row in _rows) {
-      for (final param in _rowParams(row.title)) {
-        if (param.startsWith('search:')) {
-          keywords.add(param.substring(7));
-          if (keywordCategory.isEmpty) {
-            keywordCategory = row.options
-                .firstWhere((o) => o.param == param,
-                    orElse: () => _FilterOption('', '', nativeCategory: row.title))
-                .nativeCategory;
-          }
-        } else {
-          final option = row.options.firstWhere((o) => o.param == param,
-              orElse: () => _FilterOption('', '', nativeCategory: row.title));
-          pairs.add((row: row, param: param, category: option.nativeCategory));
-        }
-      }
-    }
-    if (keywords.isNotEmpty) {
-      pairs.insert(
-        0,
-        (
-          row: _rows.first,
-          param: 'search:${keywords.join(' ')}',
-          category: keywordCategory.isEmpty ? _rows.first.title : keywordCategory,
-        ),
-      );
-    }
-    return pairs;
-  }
-
-  /// Per-query accumulated results, keyed by 'category\u0000param'. Keeping
-  /// them per query (rather than one merged list) is what lets a row union its
-  /// selections and different rows intersect without losing pagination.
-  final Map<String, List<Comic>> _byQuery = {};
-  final Map<String, bool> _queryHasMore = {};
-
-  static String _countKey(String category, String? param) =>
-      '$category\u0000${param ?? ''}';
-
-  static String _queryKey(String category, String? param) =>
-      '$category\u0000${param ?? ''}';
-
-  /// Union within each row, intersect across rows. A row with nothing selected
-  /// is not a constraint.
-  List<Comic> _applyFilters() {
-    final rows = <List<Comic>>[];
-    for (final row in _rows) {
-      final params = _rowParams(row.title);
-      if (params.isEmpty) continue;
-      final union = <String, Comic>{};
-      for (final param in params) {
-        final opt = row.options.firstWhere(
+      final selected = _selected[row.title] ?? const <String>{};
+      for (final param in selected) {
+        final option = row.options.firstWhere(
           (o) => o.param == param,
-          orElse: () => _FilterOption('', '', nativeCategory: row.title),
+          orElse: () => _FilterOption('', null, nativeCategory: row.title),
         );
-        for (final c in _byQuery[_queryKey(opt.nativeCategory, opt.param)] ?? const <Comic>[]) {
-          union['${c.sourceKey}:${c.id}'] = c;
-        }
+        if (option.param == null || option.param!.trim().isEmpty) continue;
+        result.add(CategoryFilterSelection(
+          group: row.title,
+          label: option.label,
+          param: option.param,
+          category: option.nativeCategory,
+        ));
       }
-      rows.add(union.values.toList());
     }
-    if (rows.isEmpty) {
-      final all = <String, Comic>{};
-      for (final list in _byQuery.values) {
-        for (final c in list) {
-          all['${c.sourceKey}:${c.id}'] = c;
-        }
-      }
-      return all.values.toList();
-    }
-    var kept = rows.first;
-    for (var i = 1; i < rows.length; i++) {
-      final keys = {for (final c in rows[i]) '${c.sourceKey}:${c.id}'};
-      kept = [for (final c in kept) if (keys.contains('${c.sourceKey}:${c.id}')) c];
-    }
-    return kept;
+    return normalizeCategorySelections(result);
   }
-
-  bool get _anyQueryHasMore => _queryHasMore.values.any((v) => v);
 
   Future<void> _reload() async {
     ++_requestGeneration;
-    _byQuery.clear();
-    _queryHasMore.clear();
     setState(() {
       _comics = [];
       _page = 1;
@@ -373,7 +221,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _loading = false;
       _error = null;
       _total = null;
-      _trace.clear();
     });
     await _loadOptionsForRows();
     await _loadMore();
@@ -381,52 +228,54 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   Future<void> _loadMore() async {
     if (_loading || !_hasMore) return;
-    final loader = _source?.categoryComicsData?.load;
-    if (loader == null) return;
+    final data = _source?.categoryComicsData;
+    if (data == null || _rows.isEmpty) return;
     final generation = _requestGeneration;
     final page = _page;
-    var pairs = _selectedPairs;
-    if (pairs.isEmpty) {
-      // Nothing selected: the source's own default listing, unchanged.
-      final first = _rows.isNotEmpty ? _rows.first : null;
-      if (first == null) return;
-      pairs = [(row: first, param: '')];
+    final selections = _selections;
+    final options = _optionsFor(_rows.first.title);
+    if (selections.length > 1 && data.loadWithFilters == null) {
+      setState(() {
+        _error = '此來源未提供多條件分類查詢，請一次選擇一個條件';
+        _hasMore = false;
+      });
+      return;
     }
     setState(() => _loading = true);
     try {
-      var anyMore = false;
-      for (final pair in pairs) {
-        final key = _queryKey(pair.category, pair.param);
-        if (_queryHasMore[key] == false) continue;
-        final res = await loader(
-          pair.category,
-          pair.param,
-          _optionsFor(pair.row.title),
+      final Res<List<Comic>> res;
+      if (data.loadWithFilters != null) {
+        res = await data.loadWithFilters!(CategoryFilterRequest(
+          selections: selections,
+          options: options,
+          page: page,
+        ));
+      } else {
+        final selected = selections.firstOrNull;
+        res = await data.load(
+          selected?.category ?? _rows.first.title,
+          selected?.param,
+          options,
           page,
         );
-        if (!mounted || generation != _requestGeneration) return;
-        if (!res.success) throw StateError(res.errorMessage ?? '載入失敗');
-        (_byQuery[key] ??= []).addAll(res.data);
-        _total ??= res.total;
-        if (_trace.length < 4) {
-          _trace.add('${pair.category} / ${pair.param} → ${res.data.length}'
-              '${res.total != null ? ' (共 ${res.total})' : ''}');
-        }
-        final more = res.data.isNotEmpty &&
-            (res.subData is! int || page < (res.subData as int));
-        _queryHasMore[key] = more;
-        if (more) anyMore = true;
       }
       if (!mounted || generation != _requestGeneration) return;
+      if (!res.success) throw StateError(res.errorMessage ?? '載入失敗');
+      _comics = [..._comics, ...res.data];
+      _total = res.total;
+      final more = res.data.isNotEmpty &&
+          (res.subData is! int || page < (res.subData as int));
       setState(() {
-        _comics = _applyFilters();
-        _hasMore = anyMore;
+        _hasMore = more;
         _page = page + 1;
         _error = null;
       });
     } catch (e) {
       if (mounted && generation == _requestGeneration) {
-        setState(() { _error = e.toString(); _hasMore = false; });
+        setState(() {
+          _error = e.toString();
+          _hasMore = false;
+        });
       }
     } finally {
       if (mounted && generation == _requestGeneration) {
@@ -445,17 +294,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
             SliverToBoxAdapter(child: _buildSourceTabs()),
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
-          if (_trace.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                child: Text(
-                  _trace.join('\n'),
-                  style: TextStyle(
-                      fontSize: 11, color: context.colorScheme.outline),
-                ),
-              ),
-            ),
           if (_total != null)
             SliverToBoxAdapter(
               child: Padding(
@@ -514,7 +352,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
   }
 
   Widget _buildRow(_FilterRow row) {
+    final allowsMulti = row.allowsMulti;
     final selectedParams = _selected[row.title] ?? <String>{};
+    // Only a source-marked tag row is multi-select. Other rows mirror a
+    // native single-select filter; the host must not guess their semantics.
     // 題材行（選項多）：預設顯示前 9 個 + 展開鈕；其他行全部平鋪
     final expandable = row.options.length > 10;
     final visible = (expandable && !_expanded)
@@ -528,32 +369,26 @@ class _CategoriesPageState extends State<CategoriesPage> {
         children: [
           for (final opt in visible)
             _chip(
-              opt.param == null
-                  ? opt.label
-                  : (_counts[_countKey(opt.nativeCategory, opt.param)] != null
-                      ? '${opt.label} ${_counts[_countKey(opt.nativeCategory, opt.param)]}'
-                      : opt.label),
-              selected: row.title == _tagRowTitle
-                  ? (opt.param == null
-                      ? _selectedTags.isEmpty
-                      : _selectedTags.contains(opt.param))
-                  : (opt.param == null ? selectedParams.isEmpty : selectedParams.contains(opt.param)),
+              opt.label,
+              selected: opt.param == null
+                  ? selectedParams.isEmpty
+                  : selectedParams.contains(opt.param),
               onTap: () {
-                if (row.title == _tagRowTitle) {
-                  // 題材行：多選切換；「全部」= 清空選擇
-                  if (opt.param == null) {
-                    _selectedTags.clear();
-                  } else if (!_selectedTags.remove(opt.param)) {
-                    _selectedTags.add(opt.param!);
-                  }
-                  _selected[row.title] = <String>{};
-                } else {
+                if (allowsMulti) {
+                  // Explicit multi-select group: "全部" clears the group.
                   final selected = _selected.putIfAbsent(row.title, () => <String>{});
                   if (opt.param == null) {
                     selected.clear();
                   } else if (!selected.remove(opt.param)) {
                     selected.add(opt.param!);
                   }
+                } else {
+                  // Native single-select group: selecting a new item replaces
+                  // the previous value instead of creating a guessed OR/AND.
+                  final selected = _selected.putIfAbsent(row.title, () => <String>{});
+                  selected
+                    ..clear()
+                    ..addAll(opt.param == null ? const <String>{} : {opt.param!});
                 }
                 setState(() {});
                 _reload();

@@ -2417,11 +2417,8 @@ class ComicListState extends State<ComicList> {
         : [
             for (final comic in comics)
               if (widget.filterTags.every((wanted) =>
-                  ComicTagEnricher.instance.tagsFor(comic).any((tag) {
-                    final value = tag.split(':').last.trim().toLowerCase();
-                    final target = wanted.trim().toLowerCase();
-                    return value == target || value.contains(target);
-                  })))
+                  ComicTagEnricher.instance.tagsFor(comic).any((tag) =>
+                      categoryTagMatches(tag, wanted))))
                 comic,
           ];
     if (widget.filterTags.isNotEmpty && filtered.isEmpty && comics.isNotEmpty) {

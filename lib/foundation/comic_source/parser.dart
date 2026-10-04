@@ -678,6 +678,33 @@ class ComicSourceParser {
       };
     }
 
+    CategoryComicsFilterLoader? loadWithFilters;
+    if (_checkExists("categoryComics.loadWithFilters")) {
+      loadWithFilters = (request) async {
+        try {
+          var res = await JsEngine().runCode("""
+            ComicSource.sources.$_key.categoryComics.loadWithFilters(
+              ${jsonEncode(request.toJson())}
+            )
+          """);
+          if (res is! Map || res["comics"] is! List) {
+            return Res.error("Invalid filtered category response");
+          }
+          return Res(
+            List.generate(
+              res["comics"].length,
+              (index) => Comic.fromJson(res["comics"][index], _key!),
+            ),
+            subData: res["maxPage"],
+            total: res["total"] is num ? (res["total"] as num).toInt() : null,
+          );
+        } catch (e, s) {
+          Log.error("Network", "$e\n$s");
+          return Res.error(e.toString());
+        }
+      };
+    }
+
     RankingData? rankingData;
     if (_checkExists("categoryComics.ranking")) {
       var options = <String, String>{};
@@ -758,12 +785,14 @@ class ComicSourceParser {
               (index) => Comic.fromJson(res["comics"][index], _key!),
             ),
             subData: res["maxPage"],
+            total: res["total"] is num ? (res["total"] as num).toInt() : null,
           );
         } catch (e, s) {
           Log.error("Network", "$e\n$s");
           return Res.error(e.toString());
         }
       },
+      loadWithFilters: loadWithFilters,
       rankingData: rankingData,
     );
   }
@@ -809,6 +838,7 @@ class ComicSourceParser {
               (index) => Comic.fromJson(res["comics"][index], _key!),
             ),
             subData: res["maxPage"],
+            total: res["total"] is num ? (res["total"] as num).toInt() : null,
           );
         } catch (e, s) {
           Log.error("Network", "$e\n$s");

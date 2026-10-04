@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/comic_collection_store.dart';
+import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/comic_source/collection_source.dart';
 import 'package:venera/foundation/comic_source/source_library.dart';
 import 'package:venera/foundation/comic_source/webdav_source.dart';
@@ -845,6 +846,9 @@ typedef CategoryOptionsLoader =
       String? param,
     );
 
+typedef CategoryComicsFilterLoader =
+    Future<Res<List<Comic>>> Function(CategoryFilterRequest request);
+
 class CategoryComicsData {
   /// options
   final List<CategoryComicsOptions>? options;
@@ -858,12 +862,17 @@ class CategoryComicsData {
   /// [Res.subData] should be maxPage or null if there is no limit.
   final CategoryComicsLoader load;
 
+  /// Optional source-native server-side loader for a complete filter state.
+  /// The host must not synthesize a combined param when this is absent.
+  final CategoryComicsFilterLoader? loadWithFilters;
+
   final RankingData? rankingData;
 
   const CategoryComicsData({
     this.options,
     this.optionsLoader,
     required this.load,
+    this.loadWithFilters,
     this.rankingData,
   });
 }

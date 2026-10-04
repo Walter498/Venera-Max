@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/global_state.dart';
 import 'package:venera/pages/aggregated_search_page.dart';
@@ -226,11 +227,9 @@ class _SearchResultPageState extends State<SearchResultPage> {
   }
 
   bool _comicMatchesTag(Comic comic, String wanted) {
-    final normalized = wanted.trim().toLowerCase();
-    return (comic.tags ?? const <String>[]).any((tag) {
-      final value = tag.split(':').last.trim().toLowerCase();
-      return value == normalized;
-    });
+    return ComicTagEnricher.instance
+        .tagsFor(comic)
+        .any((tag) => categoryTagMatches(tag, wanted));
   }
 
   Future<void> _showTagFilter() async {

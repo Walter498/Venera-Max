@@ -30,7 +30,7 @@ class _ShelfPageState extends State<ShelfPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Material(
         child: Column(
           children: [
@@ -42,6 +42,7 @@ class _ShelfPageState extends State<ShelfPage> {
                       child: TabBar(
                         tabs: [
                           Tab(text: '收藏'),
+                          Tab(text: '網絡收藏'),
                           Tab(text: '足跡'),
                         ],
                       ),
@@ -80,6 +81,7 @@ class _ShelfPageState extends State<ShelfPage> {
                 child: TabBarView(
                   children: [
                     _ShelfFavTab(),
+                    _ShelfNetworkFavTab(),
                     _ShelfHistoryTab(),
                   ],
               ),
@@ -463,6 +465,149 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// ==================== Tab 2: 網絡收藏（來源原生 FavoriteData） ====================
+class _ShelfNetworkFavTab extends StatefulWidget {
+  const _ShelfNetworkFavTab();
+
+  @override
+  State<_ShelfNetworkFavTab> createState() => _ShelfNetworkFavTabState();
+}
+
+class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
+  late final List<ComicSource> _sources;
+  ComicSource? _source;
+  Map<String, String> _folders = const {};
+  String? _folder;
+  String? _error;
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _sources = [
+      for (final source in ComicSource.all())
+        if (source.favoriteData?.loadComic != null) source,
+    ];
+    _source = _sources.isEmpty ? null : _sources.first;
+    _loadFolders();
+  }
+
+  Future<void> _loadFolders() async {
+    final source = _source;
+    final load = source?.favoriteData?.loadFolders;
+    final generation = ++_generation;
+    if (source == null || load == null) {
+      if (mounted) setState(() => _folders = const {});
+      return;
+    }
+    setState(() => _error = null);
+    try {
+      final result = await load();
+      if (!mounted || generation != _generation) return;
+      if (!result.success) throw StateError(result.errorMessage ?? '收藏夾載入失敗');
+      final folders = Map<String, String>.from(result.data);
+      final allId = source.favoriteData?.allFavoritesId;
+      final selected = _folder != null && folders.containsKey(_folder)
+          ? _folder
+          : (allId != null && folders.containsKey(allId)
+              ? allId
+              : folders.keys.firstOrNull);
+      setState(() {
+        _folders = folders;
+        _folder = selected;
+      });
+    } catch (e) {
+      if (mounted && generation == _generation) {
+        setState(() => _error = e.toString());
+      }
+    }
+  }
+
+  void _selectSource(ComicSource source) {
+    if (_source?.key == source.key) return;
+    setState(() {
+      _source = source;
+      _folders = const {};
+      _folder = null;
+    });
+    _loadFolders();
+  }
+
+  Widget _controls(BuildContext context) {
+    final source = _source;
+    if (source == null) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Text('沒有可用的網絡收藏來源'),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _sources.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, index) {
+                final item = _sources[index];
+                return ChoiceChip(
+                  label: Text(item.name),
+                  selected: item.key == source.key,
+                  onSelected: (_) => _selectSource(item),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_folders.isNotEmpty)
+            SizedBox(
+              height: 38,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _folders.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, index) {
+                  final id = _folders.keys.elementAt(index);
+                  return ChoiceChip(
+                    label: Text(_folders[id] ?? id),
+                    selected: id == _folder,
+                    onSelected: (_) => setState(() => _folder = id),
+                  );
+                },
+              ),
+            ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(_error!, style: TextStyle(color: context.colorScheme.error)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final source = _source;
+    final favorite = source?.favoriteData;
+    final load = favorite?.loadComic;
+    if (source == null || load == null) {
+      return _controls(context);
+    }
+    return ComicList(
+      key: ValueKey('${source.key}:$_folder'),
+      enableSelection: true,
+      leadingSliver: _controls(context).toSliver(),
+      scrollbarTopPadding: context.padding.top + 48,
+      loadPage: (page) => load(page, _folder),
     );
   }
 }
