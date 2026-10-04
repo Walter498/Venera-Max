@@ -144,7 +144,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
         // Multi-select is allowed only when this source exposes the
         // structured server-side filter loader. Otherwise one row remains a
         // native single-select field; different rows can still combine.
-        final allowsMulti = _source?.categoryComicsData?.loadWithFilters != null;
+        final data = _source?.categoryComicsData;
+        final allowsMulti = data?.loadWithFilters != null &&
+            data!.multiSelectGroups.contains(part.title);
         rows.add(_FilterRow(part.title, options, allowsMulti: allowsMulti));
         _selected[part.title] = <String>{};
       }
@@ -294,12 +296,16 @@ class _CategoriesPageState extends State<CategoriesPage> {
             SliverToBoxAdapter(child: _buildSourceTabs()),
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
-          if (_total != null)
+          if (_total != null || _comics.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Text('共 $_total 本 · 已載入 ${_comics.length} 本',
-                    style: TextStyle(color: context.colorScheme.outline)),
+                child: Text(
+                  _total == null
+                      ? '已載入 ${_comics.length} 本'
+                      : '共 $_total 本 · 已載入 ${_comics.length} 本',
+                  style: TextStyle(color: context.colorScheme.outline),
+                ),
               ),
             ),
           const SliverToBoxAdapter(child: Divider(height: 24)),

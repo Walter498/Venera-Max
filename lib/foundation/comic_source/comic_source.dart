@@ -877,6 +877,10 @@ class CategoryComicsData {
   /// The host must not synthesize a combined param when this is absent.
   final CategoryComicsFilterLoader? loadWithFilters;
 
+  /// Groups whose source API supports multiple values from the same row.
+  /// Different rows can still be combined whenever loadWithFilters exists.
+  final Set<String> multiSelectGroups;
+
   final RankingData? rankingData;
 
   const CategoryComicsData({
@@ -884,6 +888,7 @@ class CategoryComicsData {
     this.optionsLoader,
     required this.load,
     this.loadWithFilters,
+    this.multiSelectGroups = const <String>{},
     this.rankingData,
   });
 }

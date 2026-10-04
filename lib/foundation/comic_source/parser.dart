@@ -679,6 +679,9 @@ class ComicSourceParser {
     }
 
     CategoryComicsFilterLoader? loadWithFilters;
+    final multiSelectGroups = _checkExists("categoryComics.multiSelectGroups")
+        ? Set<String>.from(List<dynamic>.from(_getValue("categoryComics.multiSelectGroups")))
+        : const <String>{};
     if (_checkExists("categoryComics.loadWithFilters")) {
       loadWithFilters = (request) async {
         try {
@@ -793,6 +796,7 @@ class ComicSourceParser {
         }
       },
       loadWithFilters: loadWithFilters,
+      multiSelectGroups: multiSelectGroups,
       rankingData: rankingData,
     );
   }

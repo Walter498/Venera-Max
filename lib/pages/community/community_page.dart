@@ -37,7 +37,6 @@ class _CommunityPageState extends State<CommunityPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: Appbar(title: Text('社區'), leading: const SizedBox.shrink()),
       body: Column(children: [
         TabBar(
           controller: _tabs,
@@ -119,20 +118,6 @@ class _PostListViewState extends State<PostListView> {
         _hasMore = res.hasMore;
         _error = null;
         _loading = false;
-        if (false) {
-          // 最熱: likes first, then views, then comments — so the order is
-          // visibly different even when every post has zero likes.
-          _posts.sort((a, b) {
-            final byLike = b.likeCount.compareTo(a.likeCount);
-            if (byLike != 0) return byLike;
-            final byView = b.viewCount.compareTo(a.viewCount);
-            if (byView != 0) return byView;
-            final byComment = b.commentCount.compareTo(a.commentCount);
-            if (byComment != 0) return byComment;
-            return (b.createdAt ?? DateTime(0))
-                .compareTo(a.createdAt ?? DateTime(0));
-          });
-        }
       });
     } catch (e) {
       if (mounted) {
@@ -267,22 +252,6 @@ class _PostListViewState extends State<PostListView> {
     }
     if (_posts.isEmpty) {
       return Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-          child: Row(children: [
-            for (final entry in const <List<Object>>[
-              [1, '最新'],
-            ])
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(entry[1] as String),
-                  selected: _sortType == entry[0],
-                  onSelected: (_) => _refresh(),
-                ),
-              ),
-          ]),
-        ),
         Expanded(
           child: _error != null
               ? Center(child: Text('載入失敗：$_error'))
@@ -300,24 +269,8 @@ class _PostListViewState extends State<PostListView> {
         child: ListView.builder(
           controller: _scroll,
           padding: const EdgeInsets.all(8),
-          itemCount: _posts.length + 2,
+          itemCount: _posts.length + 1,
           itemBuilder: (context, index) {
-            if (index == 0) {
-              return Row(children: [
-                for (final entry in const <List<Object>>[
-                  [0, '最新'],
-                ])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(entry[1] as String),
-                      selected: _sortType == entry[0],
-                      onSelected: (_) => _refresh(),
-                    ),
-                  ),
-              ]);
-            }
-            index--;
             if (index == _posts.length) {
               return Padding(
                 padding: const EdgeInsets.all(16),
