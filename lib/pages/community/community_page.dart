@@ -278,10 +278,7 @@ class _PostListViewState extends State<PostListView> {
                 child: ChoiceChip(
                   label: Text(entry[1] as String),
                   selected: _sortType == entry[0],
-                  onSelected: (_) {
-                    setState(() => _sortType = entry[0] as int);
-                    _refresh();
-                  },
+                  onSelected: (_) => _refresh(),
                 ),
               ),
           ]),
@@ -315,10 +312,7 @@ class _PostListViewState extends State<PostListView> {
                     child: ChoiceChip(
                       label: Text(entry[1] as String),
                       selected: _sortType == entry[0],
-                      onSelected: (_) {
-                        setState(() => _sortType = entry[0] as int);
-                        _refresh();
-                      },
+                      onSelected: (_) => _refresh(),
                     ),
                   ),
               ]);
