@@ -221,6 +221,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
   /// Server-reported total per tag ('category\u0000param'). Filled by one
   /// first-page query per tag, so a chip can show the real count without the
   /// user opening it; sources that report no total are simply left unknown.
+  final Map<String, List<String>> _optionsCache = {};
+
   final Map<String, int> _counts = {};
   bool _countingInFlight = false;
 
