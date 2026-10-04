@@ -70,7 +70,7 @@ class PostListView extends StatefulWidget {
 class _PostListViewState extends State<PostListView> {
   final List<LiziCommunityPost> _posts = [];
   final ScrollController _scroll = ScrollController();
-  int _sortType = 0;
+  static const int _sortType = 1; // newest only
   int _page = 0;
   bool _loading = false;
   bool _hasMore = true;
@@ -119,7 +119,7 @@ class _PostListViewState extends State<PostListView> {
         _hasMore = res.hasMore;
         _error = null;
         _loading = false;
-        if (_sortType == 2) {
+        if (false) {
           // 最熱: likes first, then views, then comments — so the order is
           // visibly different even when every post has zero likes.
           _posts.sort((a, b) {
@@ -272,7 +272,6 @@ class _PostListViewState extends State<PostListView> {
           child: Row(children: [
             for (final entry in const <List<Object>>[
               [1, '最新'],
-              [2, '最熱'],
             ])
               Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -310,7 +309,6 @@ class _PostListViewState extends State<PostListView> {
               return Row(children: [
                 for (final entry in const <List<Object>>[
                   [0, '最新'],
-                  [1, '最熱'],
                 ])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
