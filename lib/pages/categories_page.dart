@@ -141,12 +141,13 @@ class _CategoriesPageState extends State<CategoriesPage> {
         if (param != null) hasRealParam = true;
       }
       if (hasRealParam && options.length > 1) {
-        // Multi-select is allowed only when this source exposes the
-        // structured server-side filter loader. Otherwise one row remains a
-        // native single-select field; different rows can still combine.
         final data = _source?.categoryComicsData;
-        final allowsMulti = data?.loadWithFilters != null &&
-            data!.multiSelectGroups.contains(part.title);
+        final allowsMulti = filterGroupAllowsMultiple(
+          hasServerLoader: data?.loadWithFilters != null,
+          group: part.title,
+          params: options.map((option) => option.param),
+          declaredGroups: data?.multiSelectGroups,
+        );
         rows.add(_FilterRow(part.title, options, allowsMulti: allowsMulti));
         _selected[part.title] = <String>{};
       }

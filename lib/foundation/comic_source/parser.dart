@@ -679,9 +679,15 @@ class ComicSourceParser {
     }
 
     CategoryComicsFilterLoader? loadWithFilters;
-    final multiSelectGroups = _checkExists("categoryComics.multiSelectGroups")
-        ? Set<String>.from(List<dynamic>.from(_getValue("categoryComics.multiSelectGroups")))
-        : const <String>{};
+    final rawGroups = _checkExists("categoryComics.multiSelectGroups")
+        ? _getValue("categoryComics.multiSelectGroups")
+        : null;
+    if (rawGroups != null && rawGroups is! List) {
+      throw ComicSourceParseException("categoryComics.multiSelectGroups must be a List");
+    }
+    final Set<String>? multiSelectGroups = rawGroups is List
+        ? rawGroups.whereType<String>().toSet()
+        : null;
     if (_checkExists("categoryComics.loadWithFilters")) {
       loadWithFilters = (request) async {
         try {

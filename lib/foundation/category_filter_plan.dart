@@ -62,6 +62,21 @@ class SearchFilterRequest {
       };
 }
 
+/// Missing metadata is different from an explicit empty set. Older sources
+/// with structured loaders already accept required search-tag selections.
+/// Native category ids are NOT proof of same-row multi-value API support.
+bool filterGroupAllowsMultiple({
+  required bool hasServerLoader,
+  required String group,
+  required Iterable<String?> params,
+  Set<String>? declaredGroups,
+}) {
+  if (!hasServerLoader) return false;
+  if (declaredGroups != null) return declaredGroups.contains(group);
+  final values = params.whereType<String>().where((p) => p.isNotEmpty).toList();
+  return values.isNotEmpty && values.every((p) => p.startsWith('search:'));
+}
+
 List<CategoryFilterSelection> normalizeCategorySelections(
   Iterable<CategoryFilterSelection> input,
 ) {

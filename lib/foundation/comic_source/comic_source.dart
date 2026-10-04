@@ -879,7 +879,7 @@ class CategoryComicsData {
 
   /// Groups whose source API supports multiple values from the same row.
   /// Different rows can still be combined whenever loadWithFilters exists.
-  final Set<String> multiSelectGroups;
+  final Set<String>? multiSelectGroups;
 
   final RankingData? rankingData;
 
@@ -888,7 +888,7 @@ class CategoryComicsData {
     this.optionsLoader,
     required this.load,
     this.loadWithFilters,
-    this.multiSelectGroups = const <String>{},
+    this.multiSelectGroups,
     this.rankingData,
   });
 }

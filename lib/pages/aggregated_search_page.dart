@@ -42,9 +42,27 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
 
   void _clearTagFilter() => setState(_tagFilter.clear);
 
-  bool get _allSourcesSupportServerFilters =>
-      sources.isNotEmpty &&
-      sources.every((source) => source.searchPageData?.loadWithFilters != null);
+  bool _canMultiSelectGroup(String group) {
+    var relevant = false;
+    for (final source in sources) {
+      final params = <String?>[];
+      for (final part in source.categoryData?.categories ?? const <BaseCategoryPart>[]) {
+        if (part.title != group) continue;
+        for (final item in part.categories) {
+          params.add(item.target.attributes?['param']?.toString());
+        }
+      }
+      if (params.isEmpty) continue;
+      relevant = true;
+      if (!filterGroupAllowsMultiple(
+        hasServerLoader: source.searchPageData?.loadWithFilters != null,
+        group: group,
+        params: params,
+        declaredGroups: source.categoryComicsData?.multiSelectGroups,
+      )) return false;
+    }
+    return relevant;
+  }
 
   String? _groupForTag(String tag) {
     for (final entry in _availableTagGroups.entries) {
@@ -69,7 +87,7 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
                   Padding(padding: const EdgeInsets.fromLTRB(4,10,4,4), child: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w700))),
                   Wrap(spacing: 6, runSpacing: 6, children: [for (final tag in entry.value) FilterChip(label: Text(tag), selected: picked.contains(tag), onSelected: (on) => setSheet(() {
                                       if (on) {
-                                        if (!_allSourcesSupportServerFilters) {
+                                        if (!_canMultiSelectGroup(entry.key)) {
                                           picked.removeWhere((existing) =>
                                               _groupForTag(existing) == entry.key);
                                         }

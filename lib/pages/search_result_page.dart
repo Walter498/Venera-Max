@@ -239,7 +239,22 @@ class _SearchResultPageState extends State<SearchResultPage> {
     return groups;
   }
 
-  bool _canServerFilter() => _searchData?.loadWithFilters != null;
+  bool _canMultiSelectGroup(String group) {
+    final source = ComicSource.find(sourceKey);
+    final params = <String?>[];
+    for (final part in source?.categoryData?.categories ?? const <BaseCategoryPart>[]) {
+      if (part.title != group) continue;
+      for (final item in part.categories) {
+        params.add(item.target.attributes?['param']?.toString());
+      }
+    }
+    return filterGroupAllowsMultiple(
+      hasServerLoader: _searchData?.loadWithFilters != null,
+      group: group,
+      params: params,
+      declaredGroups: source?.categoryComicsData?.multiSelectGroups,
+    );
+  }
 
   String? _tagGroupFor(String label) {
     final data = ComicSource.find(sourceKey)?.categoryData;
@@ -332,7 +347,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
                                       selected: picked.contains(tag),
                                       onSelected: (on) => setSheet(() {
                                         if (on) {
-                                          if (!_canServerFilter()) {
+                                          if (!_canMultiSelectGroup(entry.key)) {
                                             picked.removeWhere((existing) =>
                                                 _tagGroupFor(existing) == entry.key);
                                           }
