@@ -80,16 +80,30 @@ Got dependencies!
 76 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -113,16 +127,30 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -146,16 +174,30 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -195,16 +237,30 @@ dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: ConcurrencyGate no maxWait keeps the original unbounded behavior
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController starts at max, halves on rate limit, grows after cooldown
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController never drops below min
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -228,16 +284,30 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -261,16 +331,30 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -294,16 +378,30 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -327,16 +425,30 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -360,16 +472,30 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
@@ -393,16 +519,30 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/categories_page.dart:393:16: Error: A value of type '({String param, _FilterRow row})' can't be assigned to a variable of type '({String category, String param, _FilterRow row})'.
- - '_FilterRow' is from 'package:venera/pages/categories_page.dart' ('lib/pages/categories_page.dart').
-      pairs = [(row: first, param: '')];
-               ^
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/search_result_page.dart:230:12: Error: The getter 'ComicTagEnricher' isn't defined for the type '_SearchResultPageState'.
+ - '_SearchResultPageState' is from 'package:venera/pages/search_result_page.dart' ('lib/pages/search_result_page.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ComicTagEnricher'.
+    return ComicTagEnricher.instance
+           ^^^^^^^^^^^^^^^^
+lib/pages/community/community_page.dart:282:36: Error: Setter not found: '_sortType'.
+                    setState(() => _sortType = entry[0] as int);
+                                   ^^^^^^^^^
+lib/pages/community/community_page.dart:319:40: Error: Setter not found: '_sortType'.
+                        setState(() => _sortType = entry[0] as int);
+                                       ^^^^^^^^^
 .
 
 ::endgroup::
