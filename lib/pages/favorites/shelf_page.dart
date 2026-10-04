@@ -484,6 +484,8 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
   String? _folder;
   String? _error;
   int _generation = 0;
+  bool _foldersReady = false;
+  bool _foldersLoading = false;
 
   @override
   void initState() {
@@ -500,11 +502,29 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
     final source = _source;
     final load = source?.favoriteData?.loadFolders;
     final generation = ++_generation;
-    if (source == null || load == null) {
-      if (mounted) setState(() => _folders = const {});
+    if (source == null) {
+      if (mounted) setState(() {
+        _folders = const {};
+        _folder = null;
+        _foldersReady = false;
+        _foldersLoading = false;
+      });
       return;
     }
-    setState(() => _error = null);
+    if (load == null) {
+      if (mounted) setState(() {
+        _folders = const {};
+        _folder = null;
+        _foldersReady = true;
+        _foldersLoading = false;
+      });
+      return;
+    }
+    setState(() {
+      _error = null;
+      _foldersReady = false;
+      _foldersLoading = true;
+    });
     try {
       final result = await load();
       if (!mounted || generation != _generation) return;
@@ -519,10 +539,16 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
       setState(() {
         _folders = folders;
         _folder = selected;
+        _foldersReady = true;
+        _foldersLoading = false;
       });
     } catch (e) {
       if (mounted && generation == _generation) {
-        setState(() => _error = e.toString());
+        setState(() {
+          _error = e.toString();
+          _foldersReady = false;
+          _foldersLoading = false;
+        });
       }
     }
   }
@@ -533,6 +559,8 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
       _source = source;
       _folders = const {};
       _folder = null;
+      _foldersReady = false;
+      _foldersLoading = false;
     });
     _loadFolders();
   }
@@ -584,6 +612,11 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
                 },
               ),
             ),
+          if (_foldersLoading)
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -599,7 +632,7 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
     final source = _source;
     final favorite = source?.favoriteData;
     final load = favorite?.loadComic;
-    if (source == null || load == null) {
+    if (source == null || load == null || !_foldersReady) {
       return _controls(context);
     }
     return ComicList(
