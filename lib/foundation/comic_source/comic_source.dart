@@ -807,6 +807,9 @@ typedef SearchNextFunction =
       List<String> searchOption,
     );
 
+typedef SearchFilterLoader =
+    Future<Res<List<Comic>>> Function(SearchFilterRequest request);
+
 class SearchPageData {
   /// If this is not null, the default value of search options will be first element.
   final List<SearchOptions>? searchOptions;
@@ -815,7 +818,15 @@ class SearchPageData {
 
   final SearchNextFunction? loadNext;
 
-  const SearchPageData(this.searchOptions, this.loadPage, this.loadNext);
+  /// Optional source-native search + tag filter request.
+  final SearchFilterLoader? loadWithFilters;
+
+  const SearchPageData(
+    this.searchOptions,
+    this.loadPage,
+    this.loadNext, {
+    this.loadWithFilters,
+  });
 }
 
 class SearchOptions {

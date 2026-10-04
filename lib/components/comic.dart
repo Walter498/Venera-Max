@@ -2081,6 +2081,7 @@ class ComicList extends StatefulWidget {
     super.key,
     this.loadPage,
     this.loadNext,
+    this.loadWithFilters,
     this.leadingSliver,
     this.trailingSliver,
     this.errorLeading,
@@ -2101,6 +2102,10 @@ class ComicList extends StatefulWidget {
   final Future<Res<List<Comic>>> Function(int page)? loadPage;
 
   final Future<Res<List<Comic>>> Function(String? next)? loadNext;
+
+  /// Source-native search/category filter request. When set, paging uses it
+  /// instead of the plain loadPage path.
+  final Future<Res<List<Comic>>> Function(int page)? loadWithFilters;
 
   final Widget? leadingSliver;
 
@@ -2608,8 +2613,10 @@ class ComicListState extends State<ComicList> {
   }
 
   Future<void> _loadPage(int page) async {
-    if (widget.loadPage == null && widget.loadNext == null) {
-      _error = "loadPage and loadNext can't be null at the same time";
+    if (widget.loadPage == null &&
+        widget.loadWithFilters == null &&
+        widget.loadNext == null) {
+      _error = "No comic list loader configured";
       Future.microtask(() {
         setState(() {});
       });
@@ -2619,7 +2626,21 @@ class ComicListState extends State<ComicList> {
     }
     _loading[page] = true;
     try {
-      if (widget.loadPage != null) {
+      if (widget.loadWithFilters != null) {
+        var res = await widget.loadWithFilters!(page);
+        if (!mounted) return;
+        if (res.success) {
+          setState(() {
+            _data[page] = res.data;
+            if (res.subData != null && res.subData is int) {
+              _maxPage = res.subData;
+            }
+          });
+          _mirrorComicsToDomain(res.data);
+        } else {
+          setState(() => _error = res.errorMessage ?? "Unknown error".tl);
+        }
+      } else if (widget.loadPage != null) {
         var res = await widget.loadPage!(page);
         if (!mounted) return;
         if (res.success) {

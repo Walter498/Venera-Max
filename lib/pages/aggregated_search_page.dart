@@ -42,6 +42,17 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
 
   void _clearTagFilter() => setState(_tagFilter.clear);
 
+  bool get _allSourcesSupportServerFilters =>
+      sources.isNotEmpty &&
+      sources.every((source) => source.searchPageData?.loadWithFilters != null);
+
+  String? _groupForTag(String tag) {
+    for (final entry in _availableTagGroups.entries) {
+      if (entry.value.contains(tag)) return entry.key;
+    }
+    return null;
+  }
+
   Widget buildFilterAction(Map<String, Set<String>> groups) {
     return IconButton(
       tooltip: "Filter by tag".tl,
@@ -56,7 +67,17 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
               Expanded(child: groups.isEmpty ? Center(child: Text('This source provides no filter tags'.tl)) : ListView(padding: const EdgeInsets.symmetric(horizontal: 12), children: [
                 for (final entry in groups.entries) ...[
                   Padding(padding: const EdgeInsets.fromLTRB(4,10,4,4), child: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w700))),
-                  Wrap(spacing: 6, runSpacing: 6, children: [for (final tag in entry.value) FilterChip(label: Text(tag), selected: picked.contains(tag), onSelected: (on) => setSheet(() { if (on) picked.add(tag); else picked.remove(tag); }))]),
+                  Wrap(spacing: 6, runSpacing: 6, children: [for (final tag in entry.value) FilterChip(label: Text(tag), selected: picked.contains(tag), onSelected: (on) => setSheet(() {
+                                      if (on) {
+                                        if (!_allSourcesSupportServerFilters) {
+                                          picked.removeWhere((existing) =>
+                                              _groupForTag(existing) == entry.key);
+                                        }
+                                        picked.add(tag);
+                                      } else {
+                                        picked.remove(tag);
+                                      }
+                                    }))]),
                 ],
               ])),
               Padding(padding: const EdgeInsets.fromLTRB(16,4,16,16), child: SizedBox(width: double.infinity, child: FilledButton(onPressed: () { setState(() { _tagFilter..clear()..addAll(picked); }); Navigator.pop(sheet); }, child: Text('Apply'.tl))))
@@ -180,6 +201,30 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
 
   /// 同名組成員的【真實話數】（loadInfo 數出來的）：'sourceKey:id' -> 話數
   final Map<String, int> _chapterCounts = {};
+  final Set<String> _serverFilteredSources = {};
+
+  List<CategoryFilterSelection> _filtersFor(ComicSource source) {
+    final data = source.categoryData;
+    if (data == null) return const [];
+    final result = <CategoryFilterSelection>[];
+    for (final part in data.categories) {
+      if (part is! FixedCategoryPart) continue;
+      for (final item in part.categories) {
+        final label = item.label.trim();
+        if (!widget.tagFilter.contains(label)) continue;
+        final attr = item.target.attributes;
+        final param = attr?["param"]?.toString();
+        if (param == null || param == 'rank') continue;
+        result.add(CategoryFilterSelection(
+          group: part.title,
+          label: label,
+          param: param,
+          category: attr?["category"]?.toString() ?? part.title,
+        ));
+      }
+    }
+    return normalizeCategorySelections(result);
+  }
 
   @override
   void initState() {
@@ -192,6 +237,17 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
       final data = source.searchPageData!;
       final options =
           (data.searchOptions ?? []).map((e) => e.defaultValue).toList();
+      final filters = _filtersFor(source);
+      if (filters.isNotEmpty && data.loadWithFilters != null) {
+        _serverFilteredSources.add(source.key);
+        final res = await data.loadWithFilters!(SearchFilterRequest(
+          keyword: widget.keyword,
+          selections: filters,
+          options: options,
+          page: 1,
+        ));
+        return res.error ? null : res.data;
+      }
       if (data.loadPage != null) {
         final res = await data.loadPage!(widget.keyword, 1, options);
         return res.error ? null : res.data;
@@ -285,7 +341,9 @@ class _MergedSearchResultsState extends State<_MergedSearchResults> {
   };
 
   bool _matchesTags(Comic c) {
-    if (widget.tagFilter.isEmpty) return true;
+    if (widget.tagFilter.isEmpty || _serverFilteredSources.contains(c.sourceKey)) {
+      return true;
+    }
     return widget.tagFilter.every((wanted) =>
         ComicTagEnricher.instance
             .tagsFor(c)

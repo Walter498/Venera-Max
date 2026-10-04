@@ -172,10 +172,14 @@ class _SearchResultPageState extends State<SearchResultPage> {
         ],
       );
     }
+    final serverFilter = _tagFilter.isNotEmpty && searchData.loadWithFilters != null;
+    final filterKey = [..._tagFilter]..sort();
     return ComicList(
-      key: Key(text + options.toString() + sourceKey),
+      key: Key(text + options.toString() + sourceKey + filterKey.toString()),
       enableSelection: true,
-      filterTags: _tagFilter,
+      // Server-filtered results have already satisfied every selected tag.
+      // Local fallback is used only when the source has no filter loader.
+      filterTags: serverFilter ? const <String>{} : _tagFilter,
       emptyFilterText: '沒有同時符合標籤和搜索結果的漫畫',
       onAvailableTags: (tags) {
         if (!mounted) return;
@@ -195,11 +199,19 @@ class _SearchResultPageState extends State<SearchResultPage> {
         onChanged: onChanged,
         action: buildAction(),
       ),
-      loadPage: searchData.loadPage == null
+      loadPage: serverFilter
           ? null
-          : (i) {
-              return searchData.loadPage!(text, i, options);
-            },
+          : (searchData.loadPage == null
+              ? null
+              : (i) => searchData.loadPage!(text, i, options)),
+      loadWithFilters: serverFilter
+          ? (i) => searchData.loadWithFilters!(SearchFilterRequest(
+                keyword: text,
+                selections: _selectedSearchFilters(),
+                options: options,
+                page: i,
+              ))
+          : null,
       loadNext: searchData.loadNext == null
           ? null
           : (i) {
@@ -225,6 +237,43 @@ class _SearchResultPageState extends State<SearchResultPage> {
       if (labels.isNotEmpty) groups[part.title] = labels.toSet().toList();
     }
     return groups;
+  }
+
+  bool _canServerFilter() => _searchData?.loadWithFilters != null;
+
+  String? _tagGroupFor(String label) {
+    final data = ComicSource.find(sourceKey)?.categoryData;
+    if (data == null) return null;
+    for (final part in data.categories) {
+      if (part is! FixedCategoryPart) continue;
+      for (final item in part.categories) {
+        if (item.label.trim() == label.trim()) return part.title;
+      }
+    }
+    return null;
+  }
+
+  List<CategoryFilterSelection> _selectedSearchFilters() {
+    final data = ComicSource.find(sourceKey)?.categoryData;
+    if (data == null) return const [];
+    final selected = <CategoryFilterSelection>[];
+    for (final part in data.categories) {
+      if (part is! FixedCategoryPart) continue;
+      for (final item in part.categories) {
+        final label = item.label.trim();
+        if (!_tagFilter.contains(label)) continue;
+        final attr = item.target.attributes;
+        final param = attr?['param']?.toString();
+        if (param == null || param == 'rank') continue;
+        selected.add(CategoryFilterSelection(
+          group: part.title,
+          label: label,
+          param: param,
+          category: attr?['category']?.toString() ?? part.title,
+        ));
+      }
+    }
+    return normalizeCategorySelections(selected);
   }
 
   bool _comicMatchesTag(Comic comic, String wanted) {
@@ -282,7 +331,15 @@ class _SearchResultPageState extends State<SearchResultPage> {
                                       label: Text(tag),
                                       selected: picked.contains(tag),
                                       onSelected: (on) => setSheet(() {
-                                        if (on) picked.add(tag); else picked.remove(tag);
+                                        if (on) {
+                                          if (!_canServerFilter()) {
+                                            picked.removeWhere((existing) =>
+                                                _tagGroupFor(existing) == entry.key);
+                                          }
+                                          picked.add(tag);
+                                        } else {
+                                          picked.remove(tag);
+                                        }
                                       }),
                                     ),
                                 ],

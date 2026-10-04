@@ -825,6 +825,29 @@ class ComicSourceParser {
 
     SearchNextFunction? loadNext;
 
+    SearchFilterLoader? loadWithFilters;
+    if (_checkExists('search.loadWithFilters')) {
+      loadWithFilters = (request) async {
+        try {
+          var res = await JsEngine().runCode("""
+          ComicSource.sources.$_key.search.loadWithFilters(
+            ${jsonEncode(request.toJson())})
+        """);
+          return Res(
+            List.generate(
+              res["comics"].length,
+              (index) => Comic.fromJson(res["comics"][index], _key!),
+            ),
+            subData: res["maxPage"],
+            total: res["total"] is num ? (res["total"] as num).toInt() : null,
+          );
+        } catch (e, s) {
+          Log.error("Network", "$e\n$s");
+          return Res.error(e.toString());
+        }
+      };
+    }
+
     if (_checkExists('search.load')) {
       loadPage = (keyword, page, searchOption) async {
         try {
@@ -866,7 +889,12 @@ class ComicSourceParser {
       };
     }
 
-    return SearchPageData(options, loadPage, loadNext);
+    return SearchPageData(
+      options,
+      loadPage,
+      loadNext,
+      loadWithFilters: loadWithFilters,
+    );
   }
 
   LoadComicFunc? _parseLoadComicFunc() {
@@ -920,17 +948,22 @@ class ComicSourceParser {
     );
 
     Future<Res<T>> retryZone<T>(Future<Res<T>> Function() func) async {
-      if (!ComicSource.find(_key!)!.isLogged) {
-        return const Res.error("Not login");
+      final source = ComicSource.find(_key!)!;
+      // A source may keep its session in JS/cookies, but account credentials
+      // entered through the App live in source.data. Try that login first when
+      // available, without blocking sources that implement their own auto-login.
+      if (!source.isLogged) {
+        await source.reLogin();
       }
       var res = await func();
-      if (res.error && res.errorMessage!.contains("Login expired")) {
-        var reLoginRes = await ComicSource.find(_key!)!.reLogin();
-        if (!reLoginRes) {
-          return const Res.error("Login expired and re-login failed");
-        } else {
-          return func();
-        }
+      final message = res.errorMessage ?? '';
+      if (res.error &&
+          (message.contains("Login expired") ||
+              message.contains("Not login") ||
+              message.contains("請先登入") ||
+              message.contains("请先登入"))) {
+        final reLoginRes = await source.reLogin();
+        if (reLoginRes) return func();
       }
       return res;
     }

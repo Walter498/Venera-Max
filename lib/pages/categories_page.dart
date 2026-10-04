@@ -46,7 +46,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   /// Row title -> selected source-native params.
   /// Each row declares whether it is a multi-select group.
   final Map<String, Set<String>> _selected = {};
-  bool _expanded = false;
+  final Set<String> _expandedRows = {};
   int _requestGeneration = 0;
 
   List<Comic> _comics = [];
@@ -108,7 +108,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _sourceIndex = index;
       _source = _availableSources[index];
       _selected.clear();
-      _expanded = false;
+      _expandedRows.clear();
       _rows = const [];
       _optionsCache.clear();
     });
@@ -141,10 +141,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
         if (param != null) hasRealParam = true;
       }
       if (hasRealParam && options.length > 1) {
-        final allowsMulti = options.any((o) {
-          final p = o.param;
-          return p?.startsWith('tag:') == true || p?.startsWith('search:') == true;
-        });
+        // Multi-select is allowed only when this source exposes the
+        // structured server-side filter loader. Otherwise one row remains a
+        // native single-select field; different rows can still combine.
+        final allowsMulti = _source?.categoryComicsData?.loadWithFilters != null;
         rows.add(_FilterRow(part.title, options, allowsMulti: allowsMulti));
         _selected[part.title] = <String>{};
       }
@@ -358,7 +358,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
     // native single-select filter; the host must not guess their semantics.
     // 題材行（選項多）：預設顯示前 9 個 + 展開鈕；其他行全部平鋪
     final expandable = row.options.length > 10;
-    final visible = (expandable && !_expanded)
+    final expanded = _expandedRows.contains(row.title);
+    final visible = (expandable && !expanded)
         ? row.options.take(9).toList()
         : row.options;
     return Padding(
@@ -395,12 +396,41 @@ class _CategoriesPageState extends State<CategoriesPage> {
               },
             ),
           if (expandable)
-            _chip(
-              _expanded ? '收起' : '展開 ▾',
-              selected: false,
-              onTap: () => setState(() => _expanded = !_expanded),
+            _expandChip(
+              expanded ? '收起' : '展開',
+              onTap: () => setState(() {
+                if (expanded) {
+                  _expandedRows.remove(row.title);
+                } else {
+                  _expandedRows.add(row.title);
+                }
+              }),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _expandChip(String label, {required VoidCallback onTap}) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        width: 66,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: context.colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(label, style: TextStyle(color: context.colorScheme.onSurfaceVariant)),
+            const SizedBox(width: 3),
+            Icon(Icons.keyboard_arrow_down, size: 15, color: context.colorScheme.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }

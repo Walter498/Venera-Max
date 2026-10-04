@@ -41,6 +41,27 @@ class CategoryFilterRequest {
       };
 }
 
+class SearchFilterRequest {
+  final String keyword;
+  final List<CategoryFilterSelection> selections;
+  final List<String> options;
+  final int page;
+
+  const SearchFilterRequest({
+    required this.keyword,
+    required this.selections,
+    required this.options,
+    required this.page,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'keyword': keyword,
+        'filters': [for (final item in selections) item.toJson()],
+        'options': options,
+        'page': page,
+      };
+}
+
 List<CategoryFilterSelection> normalizeCategorySelections(
   Iterable<CategoryFilterSelection> input,
 ) {
