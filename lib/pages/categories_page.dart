@@ -224,6 +224,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
   final Map<String, List<String>> _optionsCache = {};
 
   final Map<String, int> _counts = {};
+
+  /// One line per query that ran this round, so an empty result can be told
+  /// apart from a query the source rejected or returned nothing for.
+  final List<String> _trace = [];
   bool _countingInFlight = false;
 
   List<String> _optionsFor(String rowTitle) => _optionsCache[rowTitle] ?? const [];
@@ -334,6 +338,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       _loading = false;
       _error = null;
       _total = null;
+      _trace.clear();
     });
     await _loadOptionsForRows();
     await _loadMore();
@@ -372,6 +377,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
         if (!res.success) throw StateError(res.errorMessage ?? '載入失敗');
         (_byQuery[key] ??= []).addAll(res.data);
         _total ??= res.total;
+        _trace.add('${opt.nativeCategory} / ${opt.param} → ${res.data.length}'
+            '${res.total != null ? ' (共 ${res.total})' : ''}');
         final more = res.data.isNotEmpty &&
             (res.subData is! int || page < (res.subData as int));
         _queryHasMore[key] = more;
@@ -404,6 +411,17 @@ class _CategoriesPageState extends State<CategoriesPage> {
           if (_availableSources.length > 1)
             SliverToBoxAdapter(child: _buildSourceTabs()),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
+          if (_trace.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Text(
+                  _trace.join('\n'),
+                  style: TextStyle(
+                      fontSize: 11, color: context.colorScheme.outline),
+                ),
+              ),
+            ),
           if (_total != null)
             SliverToBoxAdapter(
               child: Padding(
