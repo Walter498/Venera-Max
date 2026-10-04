@@ -2466,18 +2466,39 @@ class ComicListState extends State<ComicList> {
     'nextUrl': _nextUrl,
   };
 
-  void restoreState(Map<String, dynamic>? state) {
-    if (state == null || !enablePageStorage) {
+  void restoreState(dynamic rawState) {
+    if (!enablePageStorage || rawState is! Map) {
       return;
     }
-    _maxPage = state['maxPage'];
+    // PageStorage can contain state written by an older widget that reused the
+    // same key (including a scroll offset double). Treat every field as
+    // untrusted and discard the whole snapshot unless its shape is valid.
+    final state = Map<Object?, Object?>.from(rawState);
+    final rawData = state['data'];
+    final rawLoading = state['loading'];
+    final rawPage = state['page'];
+    if (rawData is! Map || rawLoading is! Map || rawPage is! int) {
+      return;
+    }
+    _maxPage = state['maxPage'] is int ? state['maxPage'] as int : null;
     _data.clear();
-    _data.addAll(state['data']);
-    _page = state['page'];
-    _error = state['error'];
+    for (final entry in rawData.entries) {
+      if (entry.key is int && entry.value is List) {
+        final comics = entry.value.whereType<Comic>().toList();
+        if (comics.length == entry.value.length) {
+          _data[entry.key as int] = comics;
+        }
+      }
+    }
+    _page = rawPage;
+    _error = state['error'] is String ? state['error'] as String : null;
     _loading.clear();
-    _loading.addAll(state['loading']);
-    _nextUrl = state['nextUrl'];
+    for (final entry in rawLoading.entries) {
+      if (entry.key is int && entry.value is bool) {
+        _loading[entry.key as int] = entry.value as bool;
+      }
+    }
+    _nextUrl = state['nextUrl']?.toString();
   }
 
   void storeState() {

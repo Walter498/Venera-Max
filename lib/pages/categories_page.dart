@@ -398,6 +398,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
           if (expandable)
             _expandChip(
               expanded ? '收起' : '展開',
+              expanded: expanded,
               onTap: () => setState(() {
                 if (expanded) {
                   _expandedRows.remove(row.title);
@@ -411,7 +412,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
     );
   }
 
-  Widget _expandChip(String label, {required VoidCallback onTap}) {
+  Widget _expandChip(String label,
+      {required bool expanded, required VoidCallback onTap}) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
@@ -428,7 +430,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
           children: [
             Text(label, style: TextStyle(color: context.colorScheme.onSurfaceVariant)),
             const SizedBox(width: 3),
-            Icon(Icons.keyboard_arrow_down, size: 15, color: context.colorScheme.onSurfaceVariant),
+            Icon(
+              expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              size: 15,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),
