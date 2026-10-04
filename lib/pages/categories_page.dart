@@ -276,22 +276,38 @@ class _CategoriesPageState extends State<CategoriesPage> {
   /// source passes them to its own search, so the server filters every keyword
   /// at once and can report one accurate total. Sending each keyword as its own
   /// request and intersecting page 1 client-side returns almost nothing.
-  List<({_FilterRow row, String param})> get _selectedPairs {
-    final pairs = <({_FilterRow row, String param})>[];
+  List<({_FilterRow row, String param, String category})> get _selectedPairs {
+    final pairs = <({_FilterRow row, String param, String category})>[];
     final keywords = <String>[];
-    _FilterRow? keywordRow;
+    // Category a keyword query must be addressed to (the row's own category,
+    // never a synthesized one).
+    var keywordCategory = '';
     for (final row in _rows) {
       for (final param in _rowParams(row.title)) {
         if (param.startsWith('search:')) {
           keywords.add(param.substring(7));
-          keywordRow ??= row;
+          if (keywordCategory.isEmpty) {
+            keywordCategory = row.options
+                .firstWhere((o) => o.param == param,
+                    orElse: () => _FilterOption('', '', nativeCategory: row.title))
+                .nativeCategory;
+          }
         } else {
-          pairs.add((row: row, param: param));
+          final option = row.options.firstWhere((o) => o.param == param,
+              orElse: () => _FilterOption('', '', nativeCategory: row.title));
+          pairs.add((row: row, param: param, category: option.nativeCategory));
         }
       }
     }
-    if (keywords.isNotEmpty && keywordRow != null) {
-      pairs.insert(0, (row: keywordRow, param: 'search:${keywords.join(' ')}'));
+    if (keywords.isNotEmpty) {
+      pairs.insert(
+        0,
+        (
+          row: _rows.first,
+          param: 'search:${keywords.join(' ')}',
+          category: keywordCategory.isEmpty ? _rows.first.title : keywordCategory,
+        ),
+      );
     }
     return pairs;
   }
@@ -380,15 +396,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
     try {
       var anyMore = false;
       for (final pair in pairs) {
-        final opt = pair.row.options.firstWhere(
-          (o) => o.param == pair.param,
-          orElse: () => _FilterOption('', '', nativeCategory: pair.row.title),
-        );
-        final key = _queryKey(opt.nativeCategory, opt.param);
+        final key = _queryKey(pair.category, pair.param);
         if (_queryHasMore[key] == false) continue;
         final res = await loader(
-          opt.nativeCategory,
-          opt.param,
+          pair.category,
+          pair.param,
           _optionsFor(pair.row.title),
           page,
         );
@@ -397,7 +409,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
         (_byQuery[key] ??= []).addAll(res.data);
         _total ??= res.total;
         if (_trace.length < 4) {
-          _trace.add('${opt.nativeCategory} / ${opt.param} → ${res.data.length}'
+          _trace.add('${pair.category} / ${pair.param} → ${res.data.length}'
               '${res.total != null ? ' (共 ${res.total})' : ''}');
         }
         final more = res.data.isNotEmpty &&
@@ -431,6 +443,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
         slivers: [
           if (_availableSources.length > 1)
             SliverToBoxAdapter(child: _buildSourceTabs()),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
           for (final row in _rows) SliverToBoxAdapter(child: _buildRow(row)),
           if (_trace.isNotEmpty)
             SliverToBoxAdapter(
