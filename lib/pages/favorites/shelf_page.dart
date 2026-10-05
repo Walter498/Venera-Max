@@ -810,56 +810,15 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
         id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
   }
 
-  /// 繼續觀看：先向源取章節表（閱讀器需要章節 ID 才能要圖），
-  /// 成功才直達上次位置；失敗退回詳情頁。
-  Future<void> _continue(History h) async {
-    final nav = context;
-    final source = ComicSource.find(h.sourceKey);
-    final loader = source?.loadComicInfo;
-    if (loader == null) {
-      nav.to(() => ComicPage(
-          id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
-      return;
-    }
-    // 取章節表期間顯示進度
-    showDialog(
-      context: nav,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-    try {
-      final res = await loader(h.id).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () => const Res.error('載入漫畫章節超時'),
-      );
-      if (nav.mounted && Navigator.of(nav).canPop()) {
-        Navigator.of(nav).pop(); // 關進度
-      }
-      if (res.success && res.data.chapters != null) {
-        nav.to(() => Reader(
-              type: ComicType.fromKey(h.sourceKey),
-              cid: h.id,
-              name: h.title,
-              chapters: res.data.chapters,
-              history: h,
-              initialChapter: h.ep,
-              initialChapterGroup: h.group,
-              initialPage: h.page,
-              author: h.subtitle,
-              tags: const [],
-            ));
-      } else {
-        nav.to(() => ComicPage(
-            id: h.id,
-            sourceKey: h.sourceKey,
-            cover: h.cover,
-            title: h.title));
-      }
-    } catch (_) {
-      if (nav.mounted) Navigator.of(nav).pop();
-      nav.to(() => ComicPage(
-          id: h.id, sourceKey: h.sourceKey, cover: h.cover, title: h.title));
-    }
+  /// 立即進入閱讀器；章節表和圖片由 ReaderWithLoading 在閱讀器頁內載入。
+  /// 收藏頁不再先彈阻塞式 loading dialog，也不等待一次完整詳情請求。
+  void _continue(History h) {
+    context.to(() => ReaderWithLoading(
+          id: h.id,
+          sourceKey: h.sourceKey,
+          initialEp: h.ep,
+          initialPage: h.page,
+        ));
   }
 
 }
