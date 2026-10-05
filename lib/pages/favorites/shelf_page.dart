@@ -531,11 +531,13 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
       if (!result.success) throw StateError(result.errorMessage ?? '收藏夾載入失敗');
       final folders = Map<String, String>.from(result.data);
       final allId = source.favoriteData?.allFavoritesId;
-      final selected = _folder != null && folders.containsKey(_folder)
-          ? _folder
-          : (allId != null && folders.containsKey(allId)
-              ? allId
-              : folders.keys.firstOrNull);
+      final selected = allId != null && folders.containsKey(allId)
+          ? allId
+          : (folders.containsKey('0')
+              ? '0'
+              : (_folder != null && folders.containsKey(_folder)
+                  ? _folder
+                  : folders.keys.firstOrNull));
       setState(() {
         _folders = folders;
         _folder = selected;
@@ -638,6 +640,9 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
     return ComicList(
       key: ValueKey('${source.key}:$_folder'),
       enableSelection: true,
+      emptyText: _folder == '0' || _folder == null
+          ? '網絡收藏是空的'
+          : '此收藏夾沒有漫畫',
       leadingSliver: _controls(context).toSliver(),
       scrollbarTopPadding: context.padding.top + 48,
       loadPage: (page) => load(page, _folder),

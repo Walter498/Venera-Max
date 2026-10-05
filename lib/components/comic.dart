@@ -2096,6 +2096,7 @@ class ComicList extends StatefulWidget {
     this.scrollbarTopPadding = 0,
     this.filterTags = const <String>{},
     this.emptyFilterText,
+    this.emptyText,
     this.onAvailableTags,
   });
 
@@ -2153,6 +2154,9 @@ class ComicList extends StatefulWidget {
   /// Shown when [filterTags] is set but no loaded comic matches, so an
   /// impossible constraint reads as "no match" instead of an unchanged list.
   final String? emptyFilterText;
+
+  /// Message shown when a successfully loaded page has no comics.
+  final String? emptyText;
 
   final ValueChanged<Set<String>>? onAvailableTags;
 
@@ -2416,6 +2420,14 @@ class ComicListState extends State<ComicList> {
     }
     if (widget.onAvailableTags != null) {
       Future.microtask(() => widget.onAvailableTags!(available));
+    }
+    if (comics.isEmpty && widget.emptyText != null) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Center(child: Text(widget.emptyText!, textAlign: TextAlign.center)),
+        ),
+      );
     }
     final filtered = widget.filterTags.isEmpty
         ? comics
