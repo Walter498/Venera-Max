@@ -2097,6 +2097,7 @@ class ComicList extends StatefulWidget {
     this.filterTags = const <String>{},
     this.emptyFilterText,
     this.emptyText,
+    this.onResultCount,
     this.onAvailableTags,
   });
 
@@ -2158,6 +2159,9 @@ class ComicList extends StatefulWidget {
   /// Message shown when a successfully loaded page has no comics.
   final String? emptyText;
 
+  /// Reports server total and currently loaded item count after each page.
+  final void Function(int? total, int loaded)? onResultCount;
+
   final ValueChanged<Set<String>>? onAvailableTags;
 
   @override
@@ -2166,6 +2170,7 @@ class ComicList extends StatefulWidget {
 
 class ComicListState extends State<ComicList> {
   int? _maxPage;
+  int? _total;
 
   final Map<int, List<Comic>> _data = {};
 
@@ -2670,6 +2675,11 @@ class ComicListState extends State<ComicList> {
             }
           });
           _mirrorComicsToDomain(res.data);
+          _total = res.total;
+          widget.onResultCount?.call(
+            _total,
+            _data.values.expand((items) => items).length,
+          );
         } else {
           setState(() => _error = res.errorMessage ?? "Unknown error".tl);
         }
@@ -2690,6 +2700,11 @@ class ComicListState extends State<ComicList> {
               }
             });
             _mirrorComicsToDomain(res.data);
+            _total = res.total;
+            widget.onResultCount?.call(
+              _total,
+              _data.values.expand((items) => items).length,
+            );
           }
         } else {
           setState(() {

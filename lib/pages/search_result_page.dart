@@ -45,6 +45,8 @@ class _SearchResultPageState extends State<SearchResultPage> {
   late String text;
   final Set<String> _tagFilter = {};
   final Set<String> _availableTags = {};
+  int? _resultTotal;
+  int _loadedCount = 0;
 
   OverlayEntry? get suggestionOverlay => suggestionsController.entry;
 
@@ -194,10 +196,33 @@ class _SearchResultPageState extends State<SearchResultPage> {
       selectionHandlerCallback: (fn) => _enterSelection = fn,
       scrollbarTopPadding: context.padding.top + 56,
       errorLeading: AppSearchBar(controller: controller, action: buildAction()),
-      leadingSliver: SliverSearchBar(
-        controller: controller,
-        onChanged: onChanged,
-        action: buildAction(),
+      onResultCount: (total, loaded) {
+        if (!mounted) return;
+        setState(() {
+          _resultTotal = total;
+          _loadedCount = loaded;
+        });
+      },
+      leadingSliver: SliverMainAxisGroup(
+        slivers: [
+          SliverSearchBar(
+            controller: controller,
+            onChanged: onChanged,
+            action: buildAction(),
+          ),
+          if (_resultTotal != null || _loadedCount > 0)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Text(
+                  _resultTotal == null
+                      ? '已載入 $_loadedCount 本'
+                      : '共 $_resultTotal 本 · 已載入 $_loadedCount 本',
+                  style: TextStyle(color: context.colorScheme.outline),
+                ),
+              ),
+            ),
+        ],
       ),
       loadPage: serverFilter
           ? null

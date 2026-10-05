@@ -8,6 +8,7 @@ import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/local.dart';
+import 'package:venera/foundation/res.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/local_comics_page.dart';
@@ -191,7 +192,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
           shrinkWrap: true,
           children: [
             ListTile(
-              title: const Text('全部漫畫'),
+              title: const Text('漫畫'),
               trailing: _folder == null ? const Icon(Icons.check) : null,
               onTap: () {
                 setState(() => _folder = null);
@@ -827,8 +828,13 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      final res = await loader(h.id);
-      if (nav.mounted) Navigator.of(nav).pop(); // 關進度
+      final res = await loader(h.id).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => const Res.error('載入漫畫章節超時'),
+      );
+      if (nav.mounted && Navigator.of(nav).canPop()) {
+        Navigator.of(nav).pop(); // 關進度
+      }
       if (res.success && res.data.chapters != null) {
         nav.to(() => Reader(
               type: ComicType.fromKey(h.sourceKey),
@@ -837,6 +843,7 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
               chapters: res.data.chapters,
               history: h,
               initialChapter: h.ep,
+              initialChapterGroup: h.group,
               initialPage: h.page,
               author: h.subtitle,
               tags: const [],
