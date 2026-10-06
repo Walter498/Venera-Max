@@ -531,14 +531,15 @@ class _ShelfNetworkFavTabState extends State<_ShelfNetworkFavTab> {
       if (!mounted || generation != _generation) return;
       if (!result.success) throw StateError(result.errorMessage ?? '收藏夾載入失敗');
       final folders = Map<String, String>.from(result.data);
+      // The mobile favorite endpoint accepts folder_id=0 as the all-favorites
+      // view, but some source adapters omit that synthetic folder from their
+      // folder map. Always expose it in the host so the first view cannot land
+      // on an arbitrary empty real folder such as 韓國.
+      folders.putIfAbsent('0', () => '漫畫');
       final allId = source.favoriteData?.allFavoritesId;
       final selected = allId != null && folders.containsKey(allId)
           ? allId
-          : (folders.containsKey('0')
-              ? '0'
-              : (_folder != null && folders.containsKey(_folder)
-                  ? _folder
-                  : folders.keys.firstOrNull));
+          : '0';
       setState(() {
         _folders = folders;
         _folder = selected;
