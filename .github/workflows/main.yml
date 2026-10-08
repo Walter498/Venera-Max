@@ -185,7 +185,7 @@ jobs:
           version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml)
           version="${version%%+*}"
           mkdir -p build/app/outputs/apk/release
-          cp build/app/outputs/apk/debug/app-debug.apk \
+          cp build/app/outputs/flutter-apk/app-debug.apk \
             "build/app/outputs/apk/release/VeneraX-${version}.apk"
       - name: Verify Android signature continuity
         if: github.event_name == 'push'
