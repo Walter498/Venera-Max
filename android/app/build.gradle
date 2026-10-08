@@ -27,20 +27,20 @@ if (flutterVersionName == null) {
 
 def keystorePropertiesFile = rootProject.file("key.properties")
 def keystoreProperties = new Properties()
-if (!keystorePropertiesFile.exists()) {
-    throw new GradleException("Missing android/key.properties for release signing")
-}
-keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-["storeFile", "storePassword", "keyAlias", "keyPassword"].each { key ->
-    def value = keystoreProperties[key]
-    if (value == null || value.toString().trim().isEmpty()) {
-        throw new GradleException("Missing android/key.properties value: ${key}")
+def hasReleaseKeystore = keystorePropertiesFile.exists()
+if (hasReleaseKeystore) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    hasReleaseKeystore = ["storeFile", "storePassword", "keyAlias", "keyPassword"].every { key ->
+        def value = keystoreProperties[key]
+        value != null && !value.toString().trim().isEmpty()
     }
 }
-def releaseStoreFile = rootProject.file(keystoreProperties["storeFile"])
-if (!releaseStoreFile.exists()) {
-    throw new GradleException("Missing Android release keystore file: ${releaseStoreFile}")
-}
+def releaseStoreFile = hasReleaseKeystore
+    ? rootProject.file(keystoreProperties["storeFile"])
+    : null
+hasReleaseKeystore = hasReleaseKeystore && releaseStoreFile.exists()
+// Manual Android builds may intentionally use the generated debug keystore.
+// Tagged releases still enforce the signing gate in the workflow.
 
 android {
     namespace = "io.github.kyosee.venera"
@@ -72,16 +72,21 @@ android {
 
     signingConfigs {
         debug {
-            storeFile releaseStoreFile
-            storePassword keystoreProperties['storePassword']
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
+            // Use the standard debug keystore when no release key is present.
+            if (hasReleaseKeystore) {
+                storeFile releaseStoreFile
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
         }
         release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile releaseStoreFile
-            storePassword keystoreProperties['storePassword']
+            if (hasReleaseKeystore) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile releaseStoreFile
+                storePassword keystoreProperties['storePassword']
+            }
         }
     }
 

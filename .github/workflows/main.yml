@@ -125,19 +125,30 @@ jobs:
           channel: "stable"
           flutter-version-file: pubspec.yaml
           architecture: x64
-      - name: Verify Android signing secrets
+      - name: Select Android build mode
+        id: android_mode
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-            set -euo pipefail
-            test -n "$KEYSTORE_BASE64" || { echo "ANDROID_KEYSTORE_BASE64 secret is missing"; exit 1; }
-            test -n "$KEYSTORE_PASSWORD" || { echo "ANDROID_KEYSTORE_PASSWORD secret is missing"; exit 1; }
-            test -n "$KEY_ALIAS" || { echo "ANDROID_KEY_ALIAS secret is missing"; exit 1; }
-            test -n "$KEY_PASSWORD" || { echo "ANDROID_KEY_PASSWORD secret is missing"; exit 1; }
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            test -n "$KEYSTORE_BASE64" || { echo "ANDROID_KEYSTORE_BASE64 secret is missing for release"; exit 1; }
+            test -n "$KEYSTORE_PASSWORD" || { echo "ANDROID_KEYSTORE_PASSWORD secret is missing for release"; exit 1; }
+            test -n "$KEY_ALIAS" || { echo "ANDROID_KEY_ALIAS secret is missing for release"; exit 1; }
+            test -n "$KEY_PASSWORD" || { echo "ANDROID_KEY_PASSWORD secret is missing for release"; exit 1; }
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+          elif [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] &&
+               [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=debug" >> "$GITHUB_OUTPUT"
+            echo "Android signing secrets are absent; producing a debug APK for manual testing."
+          fi
       - name: Decode and install Android signing files
+        if: steps.android_mode.outputs.mode == 'release'
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -158,7 +169,24 @@ jobs:
       - name: Check rust-toolchain.toml
         run: rustup show
       - run: flutter pub get
-      - run: flutter build apk --release
+      - name: Build Android APK
+        env:
+          ANDROID_BUILD_MODE: ${{ steps.android_mode.outputs.mode }}
+        run: |
+          if [ "$ANDROID_BUILD_MODE" = "release" ]; then
+            flutter build apk --release
+          else
+            flutter build apk --debug
+          fi
+      - name: Normalize manual debug APK
+        if: steps.android_mode.outputs.mode == 'debug'
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml)
+          version="${version%%+*}"
+          mkdir -p build/app/outputs/apk/release
+          cp build/app/outputs/apk/debug/app-debug.apk \
+            "build/app/outputs/apk/release/VeneraX-${version}.apk"
       - name: Verify Android signature continuity
         if: github.event_name == 'push'
         env:
