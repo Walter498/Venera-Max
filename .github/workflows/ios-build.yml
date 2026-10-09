@@ -17,7 +17,7 @@ jobs:
       - name: Reader and upstream regression tests
         run: |
           set -o pipefail
-          flutter test test/filter_group_capability_test.dart test/lizi_api_client_test.dart test/reader_customizations_test.dart test/translation_performance_config_test.dart test/image_translation_rate_limiter_test.dart test/translation_config_per_comic_test.dart test/translation_store_schema_test.dart test/avif_fallback_test.dart test/avif_frame_decode_guard_test.dart test/collection_download_test.dart test/webdav_saf_upload_test.dart test/add_to_collection_test.dart 2>&1 | tee ios_build.log
+          flutter test test/cache_scan_index_test.dart test/cached_image_loading_test.dart test/chapter_modified_times_test.dart test/comic_cache_directory_test.dart test/customization_settings_test.dart test/epub_export_test.dart test/home_comic_hero_test.dart test/llm_provider_editor_layout_test.dart test/pdf_import_test.dart test/script_translator_test.dart test/settings_menu_order_test.dart test/settings_navigation_test.dart test/settings_scope_test.dart test/settings_slider_save_test.dart test/task_list_test.dart test/tasks_page_test.dart test/filter_group_capability_test.dart test/lizi_api_client_test.dart test/reader_customizations_test.dart test/translation_performance_config_test.dart test/image_translation_rate_limiter_test.dart test/translation_config_per_comic_test.dart test/translation_store_schema_test.dart test/avif_fallback_test.dart test/avif_frame_decode_guard_test.dart test/collection_download_test.dart test/webdav_saf_upload_test.dart test/add_to_collection_test.dart 2>&1 | tee ios_build.log
       - name: Disable code signing in Xcode project
         run: |
           cd ios
@@ -27,7 +27,7 @@ jobs:
           CODE_SIGNING_ALLOWED: "NO"
           CODE_SIGNING_REQUIRED: "NO"
           CODE_SIGN_IDENTITY: ""
-        run: flutter build ios --release --no-codesign -v 2>&1 | tee ios_build.log
+        run: set -o pipefail; flutter build ios --release --no-codesign -v 2>&1 | tee ios_build.log
       - name: Package IPA
         run: |
           mkdir -p build/ios/iphoneos/Payload

@@ -169,6 +169,9 @@ class _ReaderState extends State<Reader>
         _ImagePerPageHandler,
         WidgetsBindingObserver,
         RouteAware {
+  dynamic effectiveSetting(String key) =>
+      appdata.settings.getReaderSetting(cid, type.sourceKey, key);
+
   @override
   void update() {
     setState(() {});

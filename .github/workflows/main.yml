@@ -144,8 +144,8 @@ jobs:
                [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
             echo "mode=release" >> "$GITHUB_OUTPUT"
           else
-            echo "mode=debug" >> "$GITHUB_OUTPUT"
-            echo "Android signing secrets are absent; producing a debug APK for manual testing."
+            echo "mode=test-release" >> "$GITHUB_OUTPUT"
+            echo "Android signing secrets are absent; producing an optimized Release APK signed with a test certificate."
           fi
       - name: Decode and install Android signing files
         if: steps.android_mode.outputs.mode == 'release'
@@ -169,24 +169,22 @@ jobs:
       - name: Check rust-toolchain.toml
         run: rustup show
       - run: flutter pub get
-      - name: Build Android APK
+      - name: Build optimized Android APK
         env:
-          ANDROID_BUILD_MODE: ${{ steps.android_mode.outputs.mode }}
-        run: |
-          if [ "$ANDROID_BUILD_MODE" = "release" ]; then
-            flutter build apk --release
-          else
-            flutter build apk --debug
-          fi
-      - name: Normalize manual debug APK
-        if: steps.android_mode.outputs.mode == 'debug'
+          VENERA_TEST_SIGNING: ${{ steps.android_mode.outputs.mode == 'test-release' && '1' || '0' }}
+        run: flutter build apk --release
+      - name: Validate APK outputs and signature
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml)
           version="${version%%+*}"
-          mkdir -p build/app/outputs/apk/release
-          cp build/app/outputs/flutter-apk/app-debug.apk \
-            "build/app/outputs/apk/release/VeneraX-${version}.apk"
+          for suffix in "" "-arm64-v8a"; do
+            apk="build/app/outputs/apk/release/VeneraX-${version}${suffix}.apk"
+            test -s "$apk"
+            unzip -l "$apk" | grep -q 'AndroidManifest.xml'
+          done
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$signer" verify --verbose "build/app/outputs/apk/release/VeneraX-${version}.apk"
       - name: Verify Android signature continuity
         if: github.event_name == 'push'
         env:

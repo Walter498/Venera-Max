@@ -128,7 +128,7 @@ class ComicPage extends StatefulWidget {
 
   final String? title;
 
-  final int? heroID;
+  final Object? heroID;
 
   @override
   State<ComicPage> createState() => _ComicPageState();
@@ -3145,7 +3145,7 @@ class _ComicPageLoadingPlaceHolder extends StatelessWidget {
 
   final String cid;
 
-  final int? heroID;
+  final Object? heroID;
 
   @override
   Widget build(BuildContext context) {

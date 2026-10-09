@@ -109,7 +109,16 @@ android {
             ndk {
                 abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
             }
-            signingConfig signingConfigs.release
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            } else if (System.getenv("VENERA_TEST_SIGNING") == "1") {
+                signingConfig signingConfigs.debug
+            } else {
+                if (gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }) {
+                    throw new GradleException("Release signing key is missing; set VENERA_TEST_SIGNING=1 only for test APK builds")
+                }
+                signingConfig signingConfigs.release
+            }
         }
         debug {
             ndk {

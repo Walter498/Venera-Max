@@ -94,6 +94,7 @@ class PageTranslationPipeline {
       ocr.pending.map((b) => b.text).toList(),
       targetLang,
       glossary: glossary,
+      sourceLang: sourceLang,
     );
     var regions = [
       ...ocr.ready,

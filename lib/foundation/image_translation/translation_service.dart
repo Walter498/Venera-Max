@@ -727,6 +727,7 @@ class ImageTranslationService with ChangeNotifier {
           texts,
           config.targetLang,
           glossary: _glossaryFor(comicKey),
+          sourceLang: _effectiveSourceFor(comicKey, config),
         );
         _mergeGlossary(comicKey, result.glossary);
         translated = result.texts;
