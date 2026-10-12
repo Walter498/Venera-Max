@@ -511,3 +511,62 @@ class ComicSource {
     static sources = {}
 }
 ```
+
+## Optional source-native author works
+
+Expose genuine author/artist metadata in comic tags, for example
+`author:Canonical Name` or `artist:Canonical Name`. The app passes the original
+value, without translation, comma splitting or automatic language additions.
+A generic subtitle is not sufficient evidence of author identity.
+
+`comic.onClickAuthor(author)` is an optional synchronous navigation hook. Return
+`null` to use the source's author loader; return a target to override navigation:
+
+```js
+{ page: "author", attributes: { author: "Canonical Name", options: [] } }
+// Legacy target forms also work:
+{ action: "author", author: "Canonical Name" } // keyword also accepted
+"author:Canonical Name"
+```
+
+A hook may deliberately return a normal `search` or `category` target. A normal
+keyword query is never promoted into an author-works query. Hook exceptions fall
+back to the author loader. Modern author targets require `attributes.author`.
+
+Implement either page or cursor loading within `search` (argument order is the
+same as ordinary JS search: identity, options, pagination):
+
+```js
+search = {
+  // Fetch the source's exact author identity, not a title/description keyword.
+  async loadAuthor(author, options, page) {
+    return { comics: [], maxPage: 1, total: 0 };
+  }
+};
+// Alternatively:
+search = {
+  async loadAuthorNext(author, options, next) {
+    return { comics: [], next: null, total: 0 };
+  }
+};
+```
+
+`page` starts at 1; the initial cursor is `null`. A non-null `next` must be a
+string. `maxPage`, when supplied, is a positive integer; `total` is optional.
+`comics` is an array of regular comic objects (`id`, `title`, `cover`, etc.).
+Invalid response shapes, invalid comic nodes, `{error: "message"}` and thrown
+errors become app error results. If both author loaders exist, page loading wins.
+A search object exposing only author loading does not need ordinary `load` or
+`loadNext`; the parser does not invent missing loaders.
+
+The author page displays “作者作品”, keeps pagination and source search options,
+and hides tag filters and source switching because canonical author identities
+are source-local. Submitting the search bar opens ordinary keyword search;
+returning restores the author page. A source without author loading gets an
+explicit unsupported page when an author target is requested. Clicking author
+metadata on an older source preserves intentional tag navigation or offers a
+labelled “Keyword search” fallback. This fallback cannot promise all works.
+
+This contract does not establish that any deployed source implements a real
+author endpoint. Source maintainers must verify and wire the actual endpoint;
+no online author coverage is implied by the app patch.

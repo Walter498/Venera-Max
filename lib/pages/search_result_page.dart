@@ -18,12 +18,18 @@ class SearchResultPage extends StatefulWidget {
     required this.text,
     required this.sourceKey,
     this.options,
+    this.author,
+    this.keywordFallback = false,
     this.initialTags = const <String>{},
   });
 
   final String text;
 
   final String sourceKey;
+
+  final String? author;
+
+  final bool keywordFallback;
 
   final List<String>? options;
 
@@ -43,6 +49,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
   late List<String> options;
 
   late String text;
+  bool get _authorMode => widget.author?.trim().isNotEmpty == true;
   final Set<String> _tagFilter = {};
   final Set<String> _availableTags = {};
   int? _resultTotal;
@@ -59,6 +66,16 @@ class _SearchResultPageState extends State<SearchResultPage> {
     if (text != null) {
       if (suggestionsController.entry != null) {
         suggestionsController.remove();
+      }
+      if (_authorMode) {
+        final data = _searchData;
+        if (data?.loadPage == null && data?.loadNext == null &&
+            data?.loadWithFilters == null) {
+          context.to(() => AggregatedSearchPage(keyword: text!));
+        } else {
+          context.to(() => SearchResultPage(text: text!, sourceKey: sourceKey));
+        }
+        return;
       }
       text = checkAutoLanguage(text);
       // Re-searching the current target is pointless when it can't search, so
@@ -133,12 +150,12 @@ class _SearchResultPageState extends State<SearchResultPage> {
   @override
   void initState() {
     sourceKey = widget.sourceKey;
-    text = checkAutoLanguage(widget.text);
+    text = _authorMode ? widget.author! : checkAutoLanguage(widget.text);
     controller = SearchBarController(currentText: text, onSearch: search);
     options = widget.options ?? const [];
-    _tagFilter.addAll(widget.initialTags);
+    if (!_authorMode) _tagFilter.addAll(widget.initialTags);
     validateOptions();
-    appdata.addSearchHistory(text);
+    if (!_authorMode) appdata.addSearchHistory(text);
     suggestionsController = _SuggestionsController(controller, sourceKey);
     super.initState();
   }
@@ -161,23 +178,35 @@ class _SearchResultPageState extends State<SearchResultPage> {
   @override
   Widget build(BuildContext context) {
     var searchData = _searchData;
-    if (searchData == null) {
+    final unsupported = searchData == null || (_authorMode
+        ? searchData.loadAuthor == null && searchData.loadAuthorNext == null
+        : searchData.loadPage == null && searchData.loadNext == null &&
+            searchData.loadWithFilters == null);
+    if (unsupported) {
       return Column(
         children: [
           AppSearchBar(controller: controller),
+          if (_authorMode) Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('作者作品 · ${widget.author}'),
+          ),
           Expanded(
             child: NetworkError(
               withAppbar: false,
-              message: "This source does not support searching".tl,
+              message: _authorMode
+                  ? '此源未提供作者作品查詢'
+                  : "This source does not support searching".tl,
             ),
           ),
         ],
       );
     }
-    final serverFilter = _tagFilter.isNotEmpty && searchData.loadWithFilters != null;
+    if (searchData == null) return const SizedBox.shrink();
+    final serverFilter = !_authorMode && searchData.loadWithFilters != null &&
+        (_tagFilter.isNotEmpty || searchData.loadPage == null && searchData.loadNext == null);
     final filterKey = [..._tagFilter]..sort();
     return ComicList(
-      key: Key(text + options.toString() + sourceKey + filterKey.toString()),
+      key: Key('${widget.author ?? ''}|$text|$options|$sourceKey|$filterKey'),
       enableSelection: true,
       // Server-filtered results have already satisfied every selected tag.
       // Local fallback is used only when the source has no filter loader.
@@ -210,6 +239,15 @@ class _SearchResultPageState extends State<SearchResultPage> {
             onChanged: onChanged,
             action: buildAction(),
           ),
+          if (_authorMode || widget.keywordFallback)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Text(_authorMode
+                    ? '作者作品 · ${widget.author}'
+                    : 'Keyword search · 此源未提供作者作品查詢'),
+              ),
+            ),
           if (_resultTotal != null || _loadedCount > 0)
             SliverToBoxAdapter(
               child: Padding(
@@ -224,12 +262,16 @@ class _SearchResultPageState extends State<SearchResultPage> {
             ),
         ],
       ),
-      loadPage: serverFilter
-          ? null
-          : (searchData.loadPage == null
+      loadPage: _authorMode
+          ? (searchData.loadAuthor == null
               ? null
-              : (i) => searchData.loadPage!(text, i, options)),
-      loadWithFilters: serverFilter
+              : (i) => searchData.loadAuthor!(widget.author!, i, options))
+          : (serverFilter
+              ? null
+              : (searchData.loadPage == null
+                  ? null
+                  : (i) => searchData.loadPage!(text, i, options))),
+      loadWithFilters: !_authorMode && serverFilter
           ? (i) => searchData.loadWithFilters!(SearchFilterRequest(
                 keyword: text,
                 selections: _selectedSearchFilters(),
@@ -237,11 +279,13 @@ class _SearchResultPageState extends State<SearchResultPage> {
                 page: i,
               ))
           : null,
-      loadNext: searchData.loadNext == null
-          ? null
-          : (i) {
-              return searchData.loadNext!(text, i, options);
-            },
+      loadNext: _authorMode
+          ? (searchData.loadAuthorNext == null
+              ? null
+              : (i) => searchData.loadAuthorNext!(widget.author!, i, options))
+          : (searchData.loadNext == null
+              ? null
+              : (i) => searchData.loadNext!(text, i, options)),
     );
   }
 
@@ -427,14 +471,14 @@ class _SearchResultPageState extends State<SearchResultPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Tooltip(
+        if (!_authorMode || _loadedCount > 0) Tooltip(
           message: "Multi-Select".tl,
           child: IconButton(
             icon: const Icon(Icons.checklist),
             onPressed: () => _enterSelection?.call(),
           ),
         ),
-        Tooltip(
+        if (!_authorMode) Tooltip(
           message: "Filter by tag".tl,
           child: IconButton(
             icon: Badge(
@@ -445,7 +489,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
             onPressed: _showTagFilter,
           ),
         ),
-        Tooltip(
+        if (!_authorMode || (_searchData?.searchOptions?.isNotEmpty ?? false)) Tooltip(
           message: "Settings".tl,
           child: IconButton(
             icon: const Icon(Icons.tune_rounded),
@@ -465,8 +509,15 @@ class _SearchResultPageState extends State<SearchResultPage> {
               );
               if (!previousOptions.isEqualTo(options) ||
                   previousSourceKey != sourceKey) {
-                text = checkAutoLanguage(controller.text);
-                controller.currentText = text;
+                if (!_authorMode) {
+                  text = checkAutoLanguage(controller.text);
+                  controller.currentText = text;
+                }
+                suggestionsController.remove();
+                suggestionsController = _SuggestionsController(controller, sourceKey);
+                _resultTotal = null;
+                _loadedCount = 0;
+                _enterSelection = null;
                 setState(() {});
               }
             },
@@ -703,7 +754,7 @@ class _SearchSettingsDialogState extends State<_SearchSettingsDialog> {
   @override
   void initState() {
     searchTarget = widget.state.sourceKey;
-    options = widget.state.options;
+    options = List<String>.from(widget.state.options);
     super.initState();
   }
 
@@ -720,17 +771,22 @@ class _SearchSettingsDialogState extends State<_SearchSettingsDialog> {
     // may still name a source whose search implementation is gone, or one that
     // never had one.
     sources.removeWhere((e) {
-      return !enabled.contains(e.key) || e.searchPageData == null;
+      final data = e.searchPageData;
+      return !enabled.contains(e.key) || data == null ||
+          (widget.state._authorMode
+              ? data.loadAuthor == null && data.loadAuthorNext == null
+              : data.loadPage == null && data.loadNext == null &&
+                  data.loadWithFilters == null);
     });
     return ContentDialog(
       title: "Settings".tl,
       content: Column(
         children: [
-          ListTile(
+          if (!widget.state._authorMode) ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             title: Text("Search in".tl),
           ),
-          Wrap(
+          if (!widget.state._authorMode) Wrap(
             spacing: 8,
             runSpacing: 8,
             children: sources.map((e) {

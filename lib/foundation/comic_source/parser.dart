@@ -214,6 +214,7 @@ class ComicSourceParser {
       _getValue("comic.enableTagsTranslate") ?? false,
       _parseStarRatingFunc(),
       _parseArchiveDownloader(),
+      handleClickAuthorEvent: _parseClickAuthorEvent(),
     );
 
     // A script may expose apiFetch(path) so the app can reuse the source's
@@ -836,6 +837,8 @@ class ComicSourceParser {
     SearchNextFunction? loadNext;
 
     SearchFilterLoader? loadWithFilters;
+    SearchAuthorFunction? loadAuthor;
+    SearchAuthorNextFunction? loadAuthorNext;
     if (_checkExists('search.loadWithFilters')) {
       loadWithFilters = (request) async {
         try {
@@ -849,6 +852,76 @@ class ComicSourceParser {
               (index) => Comic.fromJson(res["comics"][index], _key!),
             ),
             subData: res["maxPage"],
+            total: res["total"] is num ? (res["total"] as num).toInt() : null,
+          );
+        } catch (e, s) {
+          Log.error("Network", "$e\n$s");
+          return Res.error(e.toString());
+        }
+      };
+    }
+
+    if (_checkExists('search.loadAuthor')) {
+      loadAuthor = (author, page, searchOption) async {
+        try {
+          final res = await JsEngine().runCode("""
+          ComicSource.sources.$_key.search.loadAuthor(
+            ${jsonEncode(author)}, ${jsonEncode(searchOption)}, ${jsonEncode(page)})
+        """);
+          if (res is Map && res["error"] != null) {
+            throw res["error"].toString();
+          }
+          if (res is! Map || res["comics"] is! List) {
+            throw "Invalid author response: expected a comics list";
+          }
+          if ((res["comics"] as List).any((node) => node is! Map<String, dynamic>)) {
+            throw "Invalid author response: comic must be an object";
+          }
+          if ((res["next"] != null && res["next"] is! String) ||
+              (res["maxPage"] != null &&
+                  (res["maxPage"] is! int || res["maxPage"] < 1))) {
+            throw "Invalid author response: invalid pagination";
+          }
+          return Res(
+            List.generate(
+              res["comics"].length,
+              (index) => Comic.fromJson(res["comics"][index], _key!),
+            ),
+            subData: res["maxPage"],
+            total: res["total"] is num ? (res["total"] as num).toInt() : null,
+          );
+        } catch (e, s) {
+          Log.error("Network", "$e\n$s");
+          return Res.error(e.toString());
+        }
+      };
+    } else if (_checkExists('search.loadAuthorNext')) {
+      loadAuthorNext = (author, next, searchOption) async {
+        try {
+          final res = await JsEngine().runCode("""
+          ComicSource.sources.$_key.search.loadAuthorNext(
+            ${jsonEncode(author)}, ${jsonEncode(searchOption)}, ${jsonEncode(next)})
+        """);
+          if (res is Map && res["error"] != null) {
+            throw res["error"].toString();
+          }
+          if (res is! Map || res["comics"] is! List) {
+            throw "Invalid author response: expected a comics list";
+          }
+          if ((res["comics"] as List).any((node) => node is! Map<String, dynamic>)) {
+            throw "Invalid author response: comic must be an object";
+          }
+          if ((res["next"] != null && res["next"] is! String) ||
+              (res["maxPage"] != null &&
+                  (res["maxPage"] is! int || res["maxPage"] < 1))) {
+            throw "Invalid author response: invalid pagination";
+          }
+          return Res(
+            List.generate(
+              res["comics"].length,
+              (index) => Comic.fromJson(res["comics"][index], _key!),
+            ),
+            subData: res["next"],
             total: res["total"] is num ? (res["total"] as num).toInt() : null,
           );
         } catch (e, s) {
@@ -878,7 +951,7 @@ class ComicSourceParser {
           return Res.error(e.toString());
         }
       };
-    } else {
+    } else if (_checkExists('search.loadNext')) {
       loadNext = (keyword, next, searchOption) async {
         try {
           var res = await JsEngine().runCode("""
@@ -904,6 +977,8 @@ class ComicSourceParser {
       loadPage,
       loadNext,
       loadWithFilters: loadWithFilters,
+      loadAuthor: loadAuthor,
+      loadAuthorNext: loadAuthorNext,
     );
   }
 
@@ -1383,6 +1458,26 @@ class ComicSourceParser {
       var r = Map<String, dynamic>.from(res);
       r.removeWhere((key, value) => value == null);
       return PageJumpTarget.parse(_key!, r);
+    };
+  }
+
+  HandleClickAuthorEvent? _parseClickAuthorEvent() {
+    if (!_checkExists("comic.onClickAuthor")) {
+      return null;
+    }
+    return (author) {
+      try {
+        final res = JsEngine().runCode("""
+          ComicSource.sources.$_key.comic.onClickAuthor(${jsonEncode(author)})
+        """);
+        if (res is! Map && res is! String) return null;
+        final target = PageJumpTarget.parse(_key!, res);
+        return const ['author', 'search', 'category'].contains(target.page)
+            ? target : null;
+      } catch (e, s) {
+        Log.error('Author navigation', '$e\n$s');
+        return null;
+      }
     };
   }
 

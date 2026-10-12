@@ -4,6 +4,7 @@ permissions:
   contents: write
 jobs:
   Build_IOS:
+    if: github.ref != 'refs/heads/fix/author-search-236249-20261013'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4

@@ -1391,21 +1391,8 @@ class ComicDescription extends StatelessWidget {
   }
 
   List<_DescriptionTag> _authorItems() {
-    final author = _clean(subtitle);
-    if (author != null) {
-      return author
-          .split(RegExp(r"[|,]"))
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .map(
-            (e) => _DescriptionTag(
-              namespace: _namespaceForValue(e, _authorNamespaces),
-              value: e,
-              label: e,
-            ),
-          )
-          .toList();
-    }
+    // Only structured author metadata identifies an author. A subtitle can be
+    // a status, language or arbitrary description, and commas can be in names.
     return _tagItemsWithNamespace(_authorNamespaces);
   }
 

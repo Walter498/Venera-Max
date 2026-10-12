@@ -562,6 +562,9 @@ class ComicSource {
 
   final HandleClickTagEvent? handleClickTagEvent;
 
+  /// Optional source-native author works navigation.
+  final HandleClickAuthorEvent? handleClickAuthorEvent;
+
   /// Callback when a tag suggestion is selected in search.
   final TagSuggestionSelectFunc? onTagSuggestionSelected;
 
@@ -693,8 +696,9 @@ class ComicSource {
     this.enableTagsSuggestions,
     this.enableTagsTranslate,
     this.starRatingFunc,
-    this.archiveDownloader,
-  );
+    this.archiveDownloader, {
+    this.handleClickAuthorEvent,
+  });
 }
 
 class AccountConfig {
@@ -810,6 +814,20 @@ typedef SearchNextFunction =
 typedef SearchFilterLoader =
     Future<Res<List<Comic>>> Function(SearchFilterRequest request);
 
+typedef SearchAuthorFunction =
+    Future<Res<List<Comic>>> Function(
+      String author,
+      int page,
+      List<String> searchOption,
+    );
+
+typedef SearchAuthorNextFunction =
+    Future<Res<List<Comic>>> Function(
+      String author,
+      String? next,
+      List<String> searchOption,
+    );
+
 class SearchPageData {
   /// If this is not null, the default value of search options will be first element.
   final List<SearchOptions>? searchOptions;
@@ -821,11 +839,18 @@ class SearchPageData {
   /// Optional source-native search + tag filter request.
   final SearchFilterLoader? loadWithFilters;
 
+  /// Optional source-native author works query. This must be a true author
+  /// query, not a keyword search over titles/descriptions.
+  final SearchAuthorFunction? loadAuthor;
+  final SearchAuthorNextFunction? loadAuthorNext;
+
   const SearchPageData(
     this.searchOptions,
     this.loadPage,
     this.loadNext, {
     this.loadWithFilters,
+    this.loadAuthor,
+    this.loadAuthorNext,
   });
 }
 

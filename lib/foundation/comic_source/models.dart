@@ -531,6 +531,11 @@ class PageJumpTarget {
               "text": value["keyword"],
             },
           );
+        } else if (page == "author") {
+          return PageJumpTarget(sourceKey, "author", {
+            "author": value["author"] ?? value["keyword"],
+            "options": value["options"],
+          });
         } else if (page == "category") {
           return PageJumpTarget(
             sourceKey,
@@ -546,8 +551,13 @@ class PageJumpTarget {
       }
     } else if (value is String) {
       // old version string encoding. search: `search:keyword`, category: `category:keyword` or `category:keyword@param`
-      var segments = value.split(":");
+      final separator = value.indexOf(':');
+      if (separator < 0) return PageJumpTarget(sourceKey, "Invalid Data", null);
+      var segments = [value.substring(0, separator), value.substring(separator + 1)];
       var page = segments[0];
+      if (page == "author") {
+        return PageJumpTarget(sourceKey, "author", {"author": segments[1]});
+      }
       if (page == "search") {
         return PageJumpTarget(
           sourceKey,
@@ -585,7 +595,19 @@ class PageJumpTarget {
   }
 
   void jump(BuildContext context) {
-    if (page == "search") {
+    if (page == "author") {
+      final author = attributes?["author"];
+      if (author is! String || author.trim().isEmpty) {
+        Log.error("Page Jump", "Author name is required");
+        return;
+      }
+      context.to(() => SearchResultPage(
+        text: author,
+        author: author,
+        sourceKey: sourceKey,
+        options: List<String>.from(attributes?["options"] ?? []),
+      ));
+    } else if (page == "search") {
       context.to(
         () => SearchResultPage(
           text: attributes?["text"] ?? attributes?["keyword"] ?? "",

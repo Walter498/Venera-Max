@@ -977,7 +977,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
           pagesText: comic.maxPage?.toString(),
           showTitle: false,
           onTapAuthor: (author, namespace) {
-            onTapTag(author, namespace ?? 'author');
+            onTapAuthor(author, namespace);
           },
           onTapTag: onTapTag,
           enableLongPressCopy: true,

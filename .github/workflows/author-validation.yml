@@ -1,0 +1,87 @@
+name: Author patch validation
+on:
+  push:
+    branches: [fix/author-search-236249-20261013]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios:
+    if: github.ref == 'refs/heads/fix/author-search-236249-20261013'
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - name: Toolchain and locked dependencies
+        run: bash tool/author_ci_run.sh dependencies-ios
+      - name: Fatal analysis
+        run: bash tool/author_ci_run.sh analyze
+      - name: Prepare original native host libraries
+        run: bash tool/author_ci_run.sh native-tests
+      - name: Author tests and original 28-file regression
+        timeout-minutes: 20
+        run: bash tool/author_ci_run.sh tests
+      - name: Build unsigned device Release and validate IPA
+        run: bash tool/author_ci_run.sh ios
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: author-ios-evidence
+          path: ${{ runner.temp }}/venera-author-evidence/
+          if-no-files-found: error
+      - name: Upload unsigned device IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: author-ios-unsigned-device
+          path: build/author-artifacts/*.ipa
+          if-no-files-found: error
+  android:
+    if: github.ref == 'refs/heads/fix/author-search-236249-20261013'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - name: Toolchain and locked dependencies
+        run: bash tool/author_ci_run.sh dependencies-android
+      - name: Build test-signed Release and validate four APKs
+        env:
+          VENERA_TEST_SIGNING: '1'
+        run: bash tool/author_ci_run.sh android
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: author-android-evidence
+          path: ${{ runner.temp }}/venera-author-evidence/
+          if-no-files-found: error
+      - name: Upload test-signed APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: author-android-test-release
+          path: build/author-artifacts/*.apk
+          if-no-files-found: error

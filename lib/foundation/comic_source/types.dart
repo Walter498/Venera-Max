@@ -89,6 +89,10 @@ typedef VoteCommentFunc =
 typedef HandleClickTagEvent =
     PageJumpTarget? Function(String namespace, String tag);
 
+/// Optional source-native author works navigation. The source must resolve the
+/// author identity or endpoint; this is not a normal keyword/tag search.
+typedef HandleClickAuthorEvent = PageJumpTarget? Function(String author);
+
 /// Handle tag suggestion selection event. Should return the text to insert
 /// into the search field.
 typedef TagSuggestionSelectFunc = String Function(String namespace, String tag);
