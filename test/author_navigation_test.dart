@@ -139,6 +139,90 @@ void main() {
     }
   });
 
+  test('empty author responses accept zero pages and optional integer totals', () async {
+    for (final loader in ['loadAuthor', 'loadAuthorNext']) {
+      for (final total in ['0', 'null']) {
+        final source = await parse('''
+          async $loader(author, options, position) {
+            return {comics: [], maxPage: 0, next: null, total: $total};
+          }
+        ''');
+        final data = source.searchPageData!;
+        final result = loader == 'loadAuthor'
+            ? await data.loadAuthor!(author, 1, [])
+            : await data.loadAuthorNext!(author, null, []);
+        expect(result.error, isFalse);
+        expect(result.data, isEmpty);
+        expect(result.subData, loader == 'loadAuthor' ? 0 : isNull);
+        expect(result.total, total == '0' ? 0 : isNull);
+      }
+    }
+  });
+
+  test('author pagination and totals reject invalid types without truncation', () async {
+    for (final loader in ['loadAuthor', 'loadAuthorNext']) {
+      for (final fields in [
+        'comics: [{id: "one", title: "One", cover: ""}], maxPage: 0',
+        'comics: [], maxPage: -1',
+        'comics: [], maxPage: 1.5',
+        'comics: [], maxPage: "0"',
+        'comics: [], total: -1',
+        'comics: [], total: 1.5',
+        'comics: [], total: "0"',
+        'comics: [], total: true',
+      ]) {
+        final source = await parse('''
+          async $loader(author, options, position) { return {$fields}; }
+        ''');
+        final data = source.searchPageData!;
+        final result = loader == 'loadAuthor'
+            ? await data.loadAuthor!(author, 1, [])
+            : await data.loadAuthorNext!(author, null, []);
+        expect(result.error, isTrue, reason: '$loader: $fields');
+        expect(result.errorMessage, contains(fields.contains('total:')
+            ? 'total must be a non-negative integer' : 'invalid pagination'));
+      }
+    }
+  });
+
+  testWidgets('empty author page stays scoped, has no error and never fetches again', (tester) async {
+    final oldMode = appdata.settings['comicListDisplayMode'];
+    addTearDown(() => appdata.settings['comicListDisplayMode'] = oldMode);
+    for (final mode in ['paging', 'continuous']) {
+      for (final loader in ['loadAuthor', 'loadAuthorNext']) {
+        appdata.settings['comicListDisplayMode'] = mode;
+        JsEngine().runCode('globalThis.emptyAuthorCalls = 0;');
+        final source = (await tester.runAsync(() => register('''
+          async load(keyword, options, page) {
+            throw new Error("keyword loader must not be called");
+          },
+          async $loader(author, options, position) {
+            globalThis.emptyAuthorCalls++;
+            return {comics: [], maxPage: 0, next: null, total: 0};
+          }
+        ''')))!;
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: SearchResultPage(
+          key: ValueKey('$mode-$loader'),
+          text: author, author: author, sourceKey: source.key,
+        ))));
+        await tester.pumpAndSettle();
+        expect(find.text('作者作品 · $author'), findsOneWidget);
+        expect(find.byType(NetworkError), findsNothing);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        final list = tester.widget<ComicList>(find.byType(ComicList));
+        expect(list.loadWithFilters, isNull);
+        expect(loader == 'loadAuthor' ? list.loadNext : list.loadPage, isNull);
+        await tester.drag(find.byType(CustomScrollView).first, const Offset(0, -500));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 1));
+        final calls = await tester.runAsync(() async =>
+            await JsEngine().runCode('globalThis.emptyAuthorCalls'));
+        expect(calls, 1, reason: '$mode: $loader');
+        expect(tester.takeException(), isNull);
+      }
+    }
+  });
+
   testWidgets('page jump builds author loader, excludes keyword/filter paths and returns', (tester) async {
     final source = (await tester.runAsync(() => register(pageSearch)))!;
     JsEngine().runCode('globalThis.emitAuthorComics = false;');

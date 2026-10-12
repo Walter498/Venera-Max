@@ -201,7 +201,6 @@ class _SearchResultPageState extends State<SearchResultPage> {
         ],
       );
     }
-    if (searchData == null) return const SizedBox.shrink();
     final serverFilter = !_authorMode && searchData.loadWithFilters != null &&
         (_tagFilter.isNotEmpty || searchData.loadPage == null && searchData.loadNext == null);
     final filterKey = [..._tagFilter]..sort();

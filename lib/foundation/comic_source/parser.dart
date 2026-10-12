@@ -877,10 +877,17 @@ class ComicSourceParser {
           if ((res["comics"] as List).any((node) => node is! Map<String, dynamic>)) {
             throw "Invalid author response: comic must be an object";
           }
+          // Sources may report zero pages for an empty author result.
           if ((res["next"] != null && res["next"] is! String) ||
               (res["maxPage"] != null &&
-                  (res["maxPage"] is! int || res["maxPage"] < 1))) {
+                  (res["maxPage"] is! int || res["maxPage"] < 0 ||
+                      (res["maxPage"] == 0 &&
+                          (res["comics"] as List).isNotEmpty)))) {
             throw "Invalid author response: invalid pagination";
+          }
+          if (res["total"] != null &&
+              (res["total"] is! int || res["total"] < 0)) {
+            throw "Invalid author response: total must be a non-negative integer";
           }
           return Res(
             List.generate(
@@ -888,7 +895,7 @@ class ComicSourceParser {
               (index) => Comic.fromJson(res["comics"][index], _key!),
             ),
             subData: res["maxPage"],
-            total: res["total"] is num ? (res["total"] as num).toInt() : null,
+            total: res["total"] as int?,
           );
         } catch (e, s) {
           Log.error("Network", "$e\n$s");
@@ -911,10 +918,17 @@ class ComicSourceParser {
           if ((res["comics"] as List).any((node) => node is! Map<String, dynamic>)) {
             throw "Invalid author response: comic must be an object";
           }
+          // Sources may report zero pages for an empty author result.
           if ((res["next"] != null && res["next"] is! String) ||
               (res["maxPage"] != null &&
-                  (res["maxPage"] is! int || res["maxPage"] < 1))) {
+                  (res["maxPage"] is! int || res["maxPage"] < 0 ||
+                      (res["maxPage"] == 0 &&
+                          (res["comics"] as List).isNotEmpty)))) {
             throw "Invalid author response: invalid pagination";
+          }
+          if (res["total"] != null &&
+              (res["total"] is! int || res["total"] < 0)) {
+            throw "Invalid author response: total must be a non-negative integer";
           }
           return Res(
             List.generate(
@@ -922,7 +936,7 @@ class ComicSourceParser {
               (index) => Comic.fromJson(res["comics"][index], _key!),
             ),
             subData: res["next"],
-            total: res["total"] is num ? (res["total"] as num).toInt() : null,
+            total: res["total"] as int?,
           );
         } catch (e, s) {
           Log.error("Network", "$e\n$s");

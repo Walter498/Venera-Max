@@ -1439,22 +1439,6 @@ class ComicDescription extends StatelessWidget {
         const [];
   }
 
-  String? _namespaceForValue(String value, Set<String> namespaces) {
-    for (final tag in tags ?? const <String>[]) {
-      final index = tag.indexOf(':');
-      if (index == -1) {
-        continue;
-      }
-      final namespace = tag.substring(0, index);
-      final tagValue = _clean(tag.substring(index + 1));
-      if (tagValue == value &&
-          namespaces.contains(_normalizeNamespace(namespace))) {
-        return namespace;
-      }
-    }
-    return null;
-  }
-
   bool _isMetadataTag(String tag) {
     if (!tag.contains(':')) {
       final value = _clean(tag);
