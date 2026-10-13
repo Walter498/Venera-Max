@@ -8,6 +8,11 @@ finish() {
   rc=$?
   trap - EXIT
   printf 'step=%s exit=%s\n' "$step" "$rc" | tee "$evidence/$step.exit"
+  if [[ "$rc" != 0 && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    printf '\n### Failed step: %s (exit %s)\n\n```text\n' "$step" "$rc" >> "$GITHUB_STEP_SUMMARY"
+    tail -n 100 "$evidence/$step.log" >> "$GITHUB_STEP_SUMMARY"
+    printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+  fi
   exit "$rc"
 }
 trap finish EXIT
@@ -18,6 +23,9 @@ case "$step" in
       sudo xcode-select --switch /Applications/Xcode_16.4.app
       xcodebuild -version
       xcrun --sdk iphoneos --show-sdk-version
+      if ! command -v rg >/dev/null 2>&1; then
+        brew install ripgrep
+      fi
     fi
     # Read the original toolchain; fail if it differs from the approved pin.
     rust_version=$(python3 -c 'import pathlib,re; print(re.search(r"channel\s*=\s*\"([^\"]+)\"", pathlib.Path("rust-toolchain.toml").read_text())[1])')
