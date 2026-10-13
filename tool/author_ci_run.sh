@@ -29,8 +29,48 @@ case "$step" in
     git diff --exit-code -- pubspec.yaml pubspec.lock rust-toolchain.toml
     ;;
   analyze)
-    # Evidence is outside the checkout; never copy pubspec or suppress diagnostics.
-    flutter analyze --no-pub --fatal-infos --fatal-warnings
+    # Capture both runs; analyzer's diagnostic exit is data, setup failures are not.
+    current_root=$(pwd -P)
+    baseline_commit=27476af2
+    baseline_root=$(mktemp -d "${RUNNER_TEMP}/venera-author-baseline.XXXXXX")
+    # RUNNER_TEMP is ephemeral; retain baseline files only in evidence logs.
+    current_raw="$evidence/analyzer-current.machine"
+    baseline_raw="$evidence/analyzer-baseline.machine"
+    package_config="$current_root/.dart_tool/package_config.json"
+    test -s "$package_config"
+    cp "$package_config" "$evidence/package_config.current.json"
+    printf 'baseline_commit=%s\ncurrent_root=%s\nbaseline_root=%s\nresolved_package_config_sha256=' "$baseline_commit" "$current_root" "$baseline_root" | tee "$evidence/analyzer-provenance.txt"
+    shasum -a 256 "$package_config" | tee -a "$evidence/analyzer-provenance.txt"
+    git archive "$baseline_commit" | tar -x -C "$baseline_root"
+    cp "$current_root/pubspec.lock" "$evidence/pubspec.current.before.lock"
+    cp "$baseline_root/pubspec.lock" "$evidence/pubspec.baseline.before.lock"
+    python3 tool/author_analyzer_compare.py --self-test
+    python3 tool/author_analyzer_compare.py --remap-config "$package_config" \
+      --current-root "$current_root" --baseline-root "$baseline_root" \
+      --report "$evidence/package_config.mapping.json"
+    cp "$baseline_root/.dart_tool/package_config.json" "$evidence/package_config.baseline.json"
+    # Use the Dart SDK bundled with the selected Flutter; Dart analyze never runs pub get.
+    flutter_bin=$(command -v flutter)
+    dart_bin=$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().parent / "cache/dart-sdk/bin/dart")' "$flutter_bin")
+    test -x "$dart_bin"
+    "$dart_bin" --version | tee -a "$evidence/analyzer-provenance.txt"
+    printf 'dart_bin=%s\n' "$dart_bin" | tee -a "$evidence/analyzer-provenance.txt"
+    (cd "$current_root" && set +e; "$dart_bin" analyze --format=machine > "$current_raw" 2>&1; printf '%s' "$?" > "$evidence/analyzer-current.exit")
+    (cd "$baseline_root" && set +e; "$dart_bin" analyze --format=machine > "$baseline_raw" 2>&1; printf '%s' "$?" > "$evidence/analyzer-baseline.exit")
+    current_exit=$(cat "$evidence/analyzer-current.exit")
+    baseline_exit=$(cat "$evidence/analyzer-baseline.exit")
+    set +e
+    python3 tool/author_analyzer_compare.py \
+      --current "$current_raw" --baseline "$baseline_raw" \
+      --current-root "$current_root" --baseline-root "$baseline_root" \
+      --current-exit "$current_exit" --baseline-exit "$baseline_exit" \
+      --report "$evidence/analyzer-comparison.json"
+    compare_rc=$?
+    set -e
+    printf 'analyzer_exit current=%s baseline=%s\n' "$current_exit" "$baseline_exit" | tee -a "$evidence/analyzer-provenance.txt"
+    cmp "$current_root/pubspec.lock" "$evidence/pubspec.current.before.lock"
+    cmp "$baseline_root/pubspec.lock" "$evidence/pubspec.baseline.before.lock"
+    exit "$compare_rc"
     ;;
   native-tests)
     bash tool/prepare_native_tests.sh

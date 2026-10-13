@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.3'
@@ -24,7 +25,8 @@ jobs:
           architecture: x64
       - name: Toolchain and locked dependencies
         run: bash tool/author_ci_run.sh dependencies-ios
-      - name: Fatal analysis
+      - name: Strict incremental analyzer baseline gate
+        timeout-minutes: 8
         run: bash tool/author_ci_run.sh analyze
       - name: Prepare original native host libraries
         run: bash tool/author_ci_run.sh native-tests
@@ -57,6 +59,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -68,6 +71,9 @@ jobs:
           architecture: x64
       - name: Toolchain and locked dependencies
         run: bash tool/author_ci_run.sh dependencies-android
+      - name: Strict incremental analyzer baseline gate
+        timeout-minutes: 8
+        run: bash tool/author_ci_run.sh analyze
       - name: Build test-signed Release and validate four APKs
         env:
           VENERA_TEST_SIGNING: '1'
