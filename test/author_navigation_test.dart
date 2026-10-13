@@ -302,7 +302,9 @@ void main() {
     await tester.tap(find.byIcon(Icons.tune_rounded));
     await pumpJsFrames(tester);
     // Author identities are source-local: settings expose options, no source chips.
-    expect(find.byType(OptionChip), findsNothing);
+    final optionChips = tester.widgetList<OptionChip>(find.byType(OptionChip));
+    expect(optionChips.map((chip) => chip.text), ['Recent', 'Old']);
+    expect(optionChips.any((chip) => chip.text == source.name), isFalse);
     await tester.pageBack();
     await pumpJsFrames(tester);
     final list = tester.widget<ComicList>(find.byType(ComicList));
