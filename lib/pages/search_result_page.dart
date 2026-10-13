@@ -229,8 +229,13 @@ class _SearchResultPageState extends State<SearchResultPage> {
       // Local fallback is used only when the source has no filter loader.
       filterTags: serverFilter ? const <String>{} : _tagFilter,
       emptyFilterText: '沒有同時符合標籤和搜索結果的漫畫',
-      onAvailableTags: (tags) {
-        if (!mounted) return;
+      // Author results have no tag-filter UI. For keyword results, ComicList
+      // reports tags after every grid build; unchanged tags must not schedule
+      // another parent build (including an empty successfully loaded page).
+      onAvailableTags: _authorMode ? null : (tags) {
+        if (!mounted ||
+            (_availableTags.length == tags.length &&
+                _availableTags.containsAll(tags))) return;
         setState(() {
           _availableTags
             ..clear()
