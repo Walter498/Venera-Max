@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../lib/foundation/author_index.dart';
+import 'package:venera/foundation/author_index.dart';
 
 void check(bool condition, String message) {
   if (!condition) throw StateError(message);
