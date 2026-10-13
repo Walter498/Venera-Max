@@ -754,6 +754,21 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
   @override
   Future<void> onDataLoaded() async {
+    try {
+      // Error placeholders have no authoritative tags and must not erase an
+      // association recorded on a previous successful visit.
+      if (detailsLoadError == null) {
+        await App.authorIndex.recordDetails(
+          sourceKey: comic.sourceKey,
+          comicId: comic.comicId,
+          title: comic.title,
+          cover: comic.cover,
+          tags: comic.tags,
+        );
+      }
+    } catch (e, s) {
+      Log.error('AuthorIndex', e, s);
+    }
     _comicStateRepository.mirrorComicDetails(comic);
     _loadRelatedSources();
     TranslationStore().updateComicMetadata(

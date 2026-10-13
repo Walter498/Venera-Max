@@ -585,22 +585,11 @@ abstract mixin class _ComicPageActions {
       ));
       return;
     }
-    // Retain intentional source tag navigation without promoting a query to an
-    // author resolver. Older sources get an explicitly labelled keyword page.
-    final tagTarget = source?.handleClickTagEvent?.call(namespace ?? 'author', author);
-    if (tagTarget != null) {
-      context.showMessage(message: '此源未提供作者作品查詢，使用標籤跳轉');
-      tagTarget.jump(context);
-      return;
-    }
-    context.showMessage(message: '此源未提供作者作品查詢，使用 Keyword search');
-    if (search?.loadPage == null && search?.loadNext == null &&
-        search?.loadWithFilters == null) {
-      context.to(() => AggregatedSearchPage(keyword: author));
-      return;
-    }
     context.to(() => SearchResultPage(
-      text: author, sourceKey: source!.key, keywordFallback: true,
+      text: author,
+      author: author,
+      sourceKey: comic.sourceKey,
+      localAuthorResults: App.authorIndex.find(comic.sourceKey, author),
     ));
   }
 

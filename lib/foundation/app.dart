@@ -12,6 +12,7 @@ import 'package:venera/foundation/image_translation/translation_store.dart';
 import 'package:venera/foundation/read_later.dart';
 
 import 'appdata.dart';
+import 'author_index.dart';
 import 'domain_database.dart';
 import 'favorites.dart';
 import 'local.dart';
@@ -85,6 +86,8 @@ class _App {
 
   final DomainDatabase domain = DomainDatabase();
 
+  final AuthorIndex authorIndex = AuthorIndex();
+
   void rootPop() {
     rootNavigatorKey.currentState?.maybePop();
   }
@@ -100,6 +103,11 @@ class _App {
   Future<void> init() async {
     cachePath = (await getApplicationCacheDirectory()).path;
     dataPath = (await getApplicationSupportDirectory()).path;
+    try {
+      await authorIndex.init(dataPath);
+    } catch (e, s) {
+      Log.error('AuthorIndex', '$e\n$s');
+    }
     if (isAndroid) {
       externalStoragePath = (await getExternalStorageDirectory())!.path;
     }

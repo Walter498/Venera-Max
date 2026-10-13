@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/author_index.dart';
+import 'package:venera/foundation/res.dart';
 import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/comic_tag_enricher.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
@@ -19,6 +21,7 @@ class SearchResultPage extends StatefulWidget {
     required this.sourceKey,
     this.options,
     this.author,
+    this.localAuthorResults,
     this.keywordFallback = false,
     this.initialTags = const <String>{},
   });
@@ -28,6 +31,9 @@ class SearchResultPage extends StatefulWidget {
   final String sourceKey;
 
   final String? author;
+
+  /// Explicit local associations; the page also checks the source and name.
+  final List<AuthorIndexEntry>? localAuthorResults;
 
   final bool keywordFallback;
 
@@ -178,6 +184,12 @@ class _SearchResultPageState extends State<SearchResultPage> {
   @override
   Widget build(BuildContext context) {
     var searchData = _searchData;
+    if (_authorMode &&
+        (widget.localAuthorResults != null ||
+            searchData == null ||
+            searchData.loadAuthor == null && searchData.loadAuthorNext == null)) {
+      return _buildLocalAuthorResults(context);
+    }
     final unsupported = searchData == null || (_authorMode
         ? searchData.loadAuthor == null && searchData.loadAuthorNext == null
         : searchData.loadPage == null && searchData.loadNext == null &&
@@ -244,7 +256,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text(_authorMode
                     ? '作者作品 · ${widget.author}'
-                    : 'Keyword search · 此源未提供作者作品查詢'),
+                    : 'Keyword search · 關鍵詞候選 · 未確認作者關聯'),
               ),
             ),
           if (_resultTotal != null || _loadedCount > 0)
@@ -286,6 +298,87 @@ class _SearchResultPageState extends State<SearchResultPage> {
               ? null
               : (i) => searchData.loadNext!(text, i, options)),
     );
+  }
+
+  Widget _buildLocalAuthorResults(BuildContext context) {
+    final entries = widget.localAuthorResults ??
+        App.authorIndex.find(sourceKey, widget.author!);
+    final comicsById = <String, Comic>{};
+    for (final entry in entries) {
+      if (entry.sourceKey != sourceKey || entry.author != widget.author) {
+        continue;
+      }
+      comicsById[entry.comicId] = Comic(
+        entry.title,
+        entry.cover,
+        entry.comicId,
+        null,
+        ['author:${entry.author}'],
+        '',
+        entry.sourceKey,
+        null,
+        null,
+      );
+    }
+    final comics = comicsById.values.toList();
+    final sourceName = ComicSource.find(sourceKey)?.name ?? sourceKey;
+    return ComicList(
+      key: Key('local-author|$sourceKey|${widget.author}'),
+      leadingSliver: SliverMainAxisGroup(
+        slivers: [
+          SliverSearchBar(controller: controller),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('作者作品 · ${widget.author}'),
+                  Text('$sourceName · 本地已索引 ${comics.length} 本'),
+                  const Text('僅列出已開啟作品中明確標記此作者的漫畫'),
+                  TextButton(
+                    onPressed: _findMoreAuthorCandidates,
+                    child: const Text('查找更多（關鍵詞候選）'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      loadPage: (page) async => Res<List<Comic>>(
+        page == 1 ? comics : const <Comic>[],
+        subData: 1,
+        total: comics.length,
+      ),
+    );
+  }
+
+  void _findMoreAuthorCandidates() {
+    final searchData = _searchData;
+    if (searchData?.loadPage != null ||
+        searchData?.loadNext != null ||
+        searchData?.loadWithFilters != null) {
+      context.to(() => SearchResultPage(
+        text: widget.author!,
+        sourceKey: sourceKey,
+        keywordFallback: true,
+      ));
+      return;
+    }
+    // Keep cross-source keyword candidates on a separate, labelled page.
+    context.to(() => Column(
+      children: [
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('關鍵詞候選 · ${widget.author} · 未確認作者關聯'),
+          ),
+        ),
+        Expanded(child: AggregatedSearchPage(keyword: widget.author!)),
+      ],
+    ));
   }
 
   Map<String, List<String>> _sourceTagGroups() {

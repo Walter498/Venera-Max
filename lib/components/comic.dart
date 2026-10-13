@@ -1417,12 +1417,14 @@ class ComicDescription extends StatelessWidget {
 
   List<_DescriptionTag> _tagItemsWithNamespace(Set<String> namespaces) {
     return tags
-            ?.map((e) => e.replaceAll("\n", " ").trim())
-            .where((e) => e.contains(':'))
+            ?.where((e) => e.contains(':'))
             .map((e) {
               final index = e.indexOf(':');
               final namespace = _normalizeNamespace(e.substring(0, index));
-              final value = _clean(e.substring(index + 1));
+              final rawValue = e.substring(index + 1);
+              final value = _authorNamespaces.contains(namespace)
+                  ? (rawValue.trim().isEmpty ? null : rawValue)
+                  : _clean(rawValue);
               if (value == null || !namespaces.contains(namespace)) {
                 return null;
               }

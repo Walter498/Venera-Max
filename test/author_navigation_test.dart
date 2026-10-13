@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/author_index.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/js_engine.dart';
 import 'package:venera/pages/search_result_page.dart';
@@ -298,7 +299,7 @@ void main() {
     expect(find.text('作者作品 · $author'), findsOneWidget);
   });
 
-  testWidgets('source without author capability shows unsupported and no ComicList', (tester) async {
+  testWidgets('source without author capability shows local author results', (tester) async {
     final source = (await tester.runAsync(() => register(
       'async load(keyword, options, page) { return {comics: []}; }',
     )))!;
@@ -306,8 +307,33 @@ void main() {
       text: author, author: author, sourceKey: source.key,
     ))));
     await tester.pumpAndSettle();
-    expect(find.text('此源未提供作者作品查詢'), findsOneWidget);
-    expect(find.byType(ComicList), findsNothing);
+    expect(find.text('作者作品 · $author'), findsOneWidget);
+    expect(find.text('查找更多（關鍵詞候選）'), findsOneWidget);
+    expect(find.byType(ComicList), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SearchResultPage(
+      key: const ValueKey('local-author-fixture'),
+      text: author,
+      author: author,
+      sourceKey: source.key,
+      localAuthorResults: [
+        AuthorIndexEntry(
+          sourceKey: source.key, author: author, comicId: 'opened',
+          title: 'Already opened', cover: '',
+        ),
+        const AuthorIndexEntry(
+          sourceKey: 'other-source', author: author, comicId: 'foreign',
+          title: 'Other source', cover: '',
+        ),
+      ],
+    ))));
+    await tester.pumpAndSettle();
+    final list = tester.widget<ComicList>(find.byType(ComicList));
+    final result = await list.loadPage!(1);
+    expect(result.data.map((comic) => comic.id), ['opened']);
+    expect(result.data.single.sourceKey, source.key);
+    expect(result.total, 1);
     expect(tester.takeException(), isNull);
   });
 
