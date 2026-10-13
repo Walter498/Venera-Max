@@ -235,7 +235,9 @@ class _SearchResultPageState extends State<SearchResultPage> {
       onAvailableTags: _authorMode ? null : (tags) {
         if (!mounted ||
             (_availableTags.length == tags.length &&
-                _availableTags.containsAll(tags))) return;
+                _availableTags.containsAll(tags))) {
+          return;
+        }
         setState(() {
           _availableTags
             ..clear()
