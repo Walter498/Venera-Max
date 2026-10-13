@@ -19,13 +19,17 @@ class AuthorFixture extends ComicSource {
   key = "$key";
   version = "1.0.0";
   minAppVersion = null;
-  comic = {$hook};
+  comic = {
+    async loadInfo(id) { return {title: id, cover: "", tags: {}}; },
+    $hook
+  };
   search = {$search};
 }
 ''';
 
 const pageSearch = '''
   async load(keyword, options, page) {
+    if (keyword === "ordinary keyword") return {comics: [], maxPage: 0};
     throw new Error("keyword loader must not be called in author mode");
   },
   async loadAuthor(author, options, page) {
@@ -36,6 +40,36 @@ const pageSearch = '''
     };
   }
 ''';
+
+// QuickJS dispatch and source/history file IO use real asynchronous events.
+// Start builds and navigation in that zone too, not only source registration.
+void testJsWidgets(
+  String description,
+  Future<void> Function(WidgetTester tester) body,
+) {
+  testWidgets(description, (tester) async {
+    await tester.runAsync(() async {
+      try {
+        await body(tester);
+      } finally {
+        // Unmount before the source registry and engine are torn down.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await appdata.saveData(false);
+      }
+    });
+  });
+}
+
+Future<void> pumpJsFrames(WidgetTester tester) async {
+  // A fake-clock-only pumpAndSettle starves native Promise dispatch. Yield a
+  // real event turn between frames; a stuck loader still fails within a bound.
+  for (var frame = 0; frame < 120; frame++) {
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+    await tester.pump(const Duration(milliseconds: 16));
+    if (!tester.binding.hasScheduledFrame) return;
+  }
+  fail('Author page did not settle after 120 real async frames');
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -186,14 +220,14 @@ void main() {
     }
   });
 
-  testWidgets('empty author page stays scoped, has no error and never fetches again', (tester) async {
+  testJsWidgets('empty author page stays scoped, has no error and never fetches again', (tester) async {
     final oldMode = appdata.settings['comicListDisplayMode'];
     addTearDown(() => appdata.settings['comicListDisplayMode'] = oldMode);
     for (final mode in ['paging', 'continuous']) {
       for (final loader in ['loadAuthor', 'loadAuthorNext']) {
         appdata.settings['comicListDisplayMode'] = mode;
         JsEngine().runCode('globalThis.emptyAuthorCalls = 0;');
-        final source = (await tester.runAsync(() => register('''
+        final source = await register('''
           async load(keyword, options, page) {
             throw new Error("keyword loader must not be called");
           },
@@ -201,12 +235,12 @@ void main() {
             globalThis.emptyAuthorCalls++;
             return {comics: [], maxPage: 0, next: null, total: 0};
           }
-        ''')))!;
+        ''');
         await tester.pumpWidget(MaterialApp(home: Scaffold(body: SearchResultPage(
           key: ValueKey('$mode-$loader'),
           text: author, author: author, sourceKey: source.key,
         ))));
-        await tester.pumpAndSettle();
+        await pumpJsFrames(tester);
         expect(find.text('作者作品 · $author'), findsOneWidget);
         expect(find.byType(NetworkError), findsNothing);
         expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -214,18 +248,17 @@ void main() {
         expect(list.loadWithFilters, isNull);
         expect(loader == 'loadAuthor' ? list.loadNext : list.loadPage, isNull);
         await tester.drag(find.byType(CustomScrollView).first, const Offset(0, -500));
-        await tester.pumpAndSettle();
+        await pumpJsFrames(tester);
         await tester.pump(const Duration(seconds: 1));
-        final calls = await tester.runAsync(() async =>
-            await JsEngine().runCode('globalThis.emptyAuthorCalls'));
+        final calls = JsEngine().runCode('globalThis.emptyAuthorCalls');
         expect(calls, 1, reason: '$mode: $loader');
         expect(tester.takeException(), isNull);
       }
     }
   });
 
-  testWidgets('page jump builds author loader, excludes keyword/filter paths and returns', (tester) async {
-    final source = (await tester.runAsync(() => register(pageSearch)))!;
+  testJsWidgets('page jump builds author loader, excludes keyword/filter paths and returns', (tester) async {
+    final source = await register(pageSearch);
     JsEngine().runCode('globalThis.emitAuthorComics = false;');
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Builder(
       builder: (context) => TextButton(
@@ -234,7 +267,7 @@ void main() {
       ),
     ))));
     await tester.tap(find.text('open author'));
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     expect(find.text('作者作品 · $author'), findsOneWidget);
     expect(find.byIcon(Icons.filter_alt_outlined), findsNothing);
     expect(find.byIcon(Icons.tune_rounded), findsNothing);
@@ -242,71 +275,71 @@ void main() {
     expect(list.loadWithFilters, isNull);
     expect(list.loadNext, isNull);
     JsEngine().runCode('globalThis.emitAuthorComics = true;');
-    final second = (await tester.runAsync(() => list.loadPage!(2)))!;
+    final second = await list.loadPage!(2);
     expect(second.data.single.id, 'author-2');
     expect(second.data.single.title, author);
     await tester.pageBack();
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     expect(find.text('open author'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('cursor author page keeps source identity and sorting options', (tester) async {
-    final source = (await tester.runAsync(() => register('''
+  testJsWidgets('cursor author page keeps source identity and sorting options', (tester) async {
+    final source = await register('''
       optionList: [{label: "Sort", options: ["recent-Recent", "old-Old"]}],
       async loadAuthorNext(author, options, next) {
         return {comics: globalThis.emitAuthorComics === false ? [] : [
           {id: next || "first", title: author + "|" + options[0], cover: ""}
         ], next: null};
       }
-    ''')))!;
+    ''');
     JsEngine().runCode('globalThis.emitAuthorComics = false;');
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: SearchResultPage(
       text: author, author: author, sourceKey: source.key, options: const ['old'],
     ))));
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
     await tester.tap(find.byIcon(Icons.tune_rounded));
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     // Author identities are source-local: settings expose options, no source chips.
     expect(find.byType(OptionChip), findsNothing);
     await tester.pageBack();
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     final list = tester.widget<ComicList>(find.byType(ComicList));
     expect(list.loadPage, isNull);
     expect(list.loadWithFilters, isNull);
     JsEngine().runCode('globalThis.emitAuthorComics = true;');
-    final second = (await tester.runAsync(() => list.loadNext!('cursor-two')))!;
+    final second = await list.loadNext!('cursor-two');
     expect(second.data.single.id, 'cursor-two');
     expect(second.data.single.title, '$author|old');
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('manual search pushes ordinary mode instead of reusing author', (tester) async {
-    final source = (await tester.runAsync(() => register(pageSearch)))!;
+  testJsWidgets('manual search pushes ordinary mode instead of reusing author', (tester) async {
+    final source = await register(pageSearch);
     JsEngine().runCode('globalThis.emitAuthorComics = false;');
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: SearchResultPage(
       text: author, author: author, sourceKey: source.key,
     ))));
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     final bar = tester.widget<SliverSearchBar>(find.byType(SliverSearchBar));
     bar.controller.onSearch!('ordinary keyword');
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     final pages = tester.widgetList<SearchResultPage>(find.byType(SearchResultPage, skipOffstage: false));
     expect(pages.any((page) => page.author == null && page.text == 'ordinary keyword'), isTrue);
     await tester.pageBack();
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     expect(find.text('作者作品 · $author'), findsOneWidget);
   });
 
-  testWidgets('source without author capability shows local author results', (tester) async {
-    final source = (await tester.runAsync(() => register(
+  testJsWidgets('source without author capability shows local author results', (tester) async {
+    final source = await register(
       'async load(keyword, options, page) { return {comics: []}; }',
-    )))!;
+    );
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: SearchResultPage(
       text: author, author: author, sourceKey: source.key,
     ))));
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     expect(find.text('作者作品 · $author'), findsOneWidget);
     expect(find.text('查找更多（關鍵詞候選）'), findsOneWidget);
     expect(find.byType(ComicList), findsOneWidget);
@@ -328,7 +361,7 @@ void main() {
         ),
       ],
     ))));
-    await tester.pumpAndSettle();
+    await pumpJsFrames(tester);
     final list = tester.widget<ComicList>(find.byType(ComicList));
     final result = await list.loadPage!(1);
     expect(result.data.map((comic) => comic.id), ['opened']);
@@ -337,7 +370,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('structured artist metadata wins; arbitrary subtitle is not an author', (tester) async {
+  testJsWidgets('structured artist metadata wins; arbitrary subtitle is not an author', (tester) async {
     final tapped = <String>[];
     Widget description(List<String> tags) => MaterialApp(home: Scaffold(body: ComicDescription(
       title: 'Title', subtitle: 'Ongoing, English', description: '',

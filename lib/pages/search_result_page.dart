@@ -183,6 +183,12 @@ class _SearchResultPageState extends State<SearchResultPage> {
 
   @override
   Widget build(BuildContext context) {
+    // AppPageRoute pushes the page directly; the previous route's Scaffold is
+    // not an ancestor of this route's search TextField and ink controls.
+    return Material(child: _buildResults(context));
+  }
+
+  Widget _buildResults(BuildContext context) {
     var searchData = _searchData;
     if (_authorMode &&
         (widget.localAuthorResults != null ||

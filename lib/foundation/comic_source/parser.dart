@@ -153,8 +153,10 @@ class ComicSourceParser {
     _key = key;
     _checkKeyValidation();
 
+    // Do not export the assigned source object: its function properties become
+    // owned JSInvokable handles in Dart, although this result is never used.
     JsEngine().runCode("""
-      ComicSource.sources.$_key = this['temp'];
+      void (ComicSource.sources.$_key = this['temp']);
     """);
 
     // Fix broken isAppVersionAfter comparison in source scripts.
