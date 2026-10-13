@@ -67,6 +67,16 @@ case "$step" in
       --report "$evidence/analyzer-comparison.json"
     compare_rc=$?
     set -e
+    if [[ "$compare_rc" != 0 ]]; then
+      python3 - "$evidence/analyzer-comparison.json" <<'PY'
+import json,sys
+report=json.load(open(sys.argv[1]))
+for message in report.get('failures', []):
+    print('::error title=Analyzer gate::'+message.replace('%','%25').replace('\n','%0A').replace('\r','%0D'))
+for item in report.get('new_diagnostics', [])[:30]:
+    print('::error file='+item['file']+'::'+item['code']+' '+item['message'].replace('%','%25').replace('\n','%0A').replace('\r','%0D'))
+PY
+    fi
     printf 'analyzer_exit current=%s baseline=%s\n' "$current_exit" "$baseline_exit" | tee -a "$evidence/analyzer-provenance.txt"
     cmp "$current_root/pubspec.lock" "$evidence/pubspec.current.before.lock"
     cmp "$baseline_root/pubspec.lock" "$evidence/pubspec.baseline.before.lock"

@@ -3,6 +3,11 @@ on:
   push:
     branches: [fix/author-search-236249-20261013]
   workflow_dispatch:
+    inputs:
+      build_android:
+        description: Build Android in addition to iOS
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -49,7 +54,7 @@ jobs:
           path: build/author-artifacts/*.ipa
           if-no-files-found: error
   android:
-    if: github.ref == 'refs/heads/fix/author-search-236249-20261013'
+    if: github.ref == 'refs/heads/fix/author-search-236249-20261013' && github.event_name == 'workflow_dispatch' && inputs.build_android
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     defaults:

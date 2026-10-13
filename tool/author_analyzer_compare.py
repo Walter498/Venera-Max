@@ -169,6 +169,26 @@ class SyntheticTests(unittest.TestCase):
                 self.assertEqual(run.returncode, expected, run.stderr + run.stdout)
                 self.assertEqual(json.loads(report.read_text())['status'], 'FAIL' if expected else 'PASS')
 
+    def test_mapping_via_symlink(self):
+        # Reproduce macOS /var -> /private/var aliases on any runner.
+        with tempfile.TemporaryDirectory() as temp:
+            real = pathlib.Path(temp).resolve() / 'real'
+            real.mkdir()
+            alias = real.parent / 'alias'
+            alias.symlink_to(real, target_is_directory=True)
+            current, baseline, external = alias / 'current', alias / 'baseline', alias / 'external'
+            for root in (current, baseline, external):
+                (root / 'lib').mkdir(parents=True)
+            (current / '.dart_tool').mkdir()
+            source = current / '.dart_tool/package_config.json'
+            source.write_text(json.dumps({'configVersion': 2, 'packages': [
+                {'name': 'venera', 'rootUri': '../', 'packageUri': 'lib/'},
+                {'name': 'external', 'rootUri': '../../external', 'packageUri': 'lib/'}]}))
+            remap_config(source, current, baseline, alias / 'evidence.json')
+            mapped = json.loads((baseline / '.dart_tool/package_config.json').read_text())
+            self.assertEqual(mapped['packages'][0]['rootUri'], baseline.resolve().as_uri())
+            self.assertEqual(mapped['packages'][1]['rootUri'], external.resolve().as_uri())
+
     def test_mapping(self):
         with tempfile.TemporaryDirectory() as temp:
             top = pathlib.Path(temp)
@@ -184,7 +204,7 @@ class SyntheticTests(unittest.TestCase):
             remap_config(source, current, baseline, evidence)
             mapped = json.loads((baseline / '.dart_tool/package_config.json').read_text())
             self.assertEqual(mapped['packages'][0]['rootUri'], baseline.resolve().as_uri())
-            self.assertEqual(mapped['packages'][1]['rootUri'], external.as_uri())
+            self.assertEqual(mapped['packages'][1]['rootUri'], external.resolve().as_uri())
             self.assertTrue(json.loads(evidence.read_text())['self_venera_exact_baseline'])
             (external / 'lib').rmdir()
             external.rmdir()
