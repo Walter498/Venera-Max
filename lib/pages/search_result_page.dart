@@ -871,7 +871,7 @@ class _SearchSettingsDialogState extends State<_SearchSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     var sources = ComicSource.all();
-    var enabled = appdata.settings['searchSources'] as List;
+    var enabled = (appdata.settings['searchSources'] as List?) ?? const [];
     // Drop the ones that can't search: the enabled list is a plain key list and
     // may still name a source whose search implementation is gone, or one that
     // never had one.
