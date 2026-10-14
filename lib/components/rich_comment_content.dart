@@ -22,7 +22,11 @@ double get commentsFontSize {
 /// This widget intelligently decides whether to use simple text or rich formatting
 /// based on the content. It supports HTML tags and auto-linking of URLs.
 class CommentContent extends StatelessWidget {
-  const CommentContent({super.key, required this.text, this.fontSize});
+  const CommentContent({super.key, required this.text, this.fontSize,
+    this.selectable = true});
+
+  /// Full pages retain selection; chapter previews use natural, non-scrollable text.
+  final bool selectable;
 
   final String text;
 
@@ -33,9 +37,13 @@ class CommentContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!text.contains('<') && !text.contains('http')) {
-      return SelectableText(text, style: fontSize == null ? null : TextStyle(fontSize: fontSize));
+      final style = fontSize == null ? null : TextStyle(fontSize: fontSize);
+      return selectable
+          ? SelectableText(text, style: style)
+          : Text(text, style: style, softWrap: true, overflow: TextOverflow.clip);
     } else {
-      return RichCommentContent(text: text, fontSize: fontSize);
+      return RichCommentContent(text: text, fontSize: fontSize,
+        selectable: selectable);
     }
   }
 }
@@ -138,11 +146,13 @@ class RichCommentContent extends StatefulWidget {
     required this.text,
     this.showImages = true,
     this.fontSize,
+    this.selectable = true,
   });
 
   final String text;
 
   final bool showImages;
+  final bool selectable;
 
   /// Explicit font size for the comment body. When null, inherits the ambient
   /// [DefaultTextStyle] (used by compact previews that must not scale).
@@ -301,9 +311,12 @@ class _RichCommentContentState extends State<RichCommentContent> {
     if (widget.fontSize != null) {
       baseStyle = baseStyle.copyWith(fontSize: widget.fontSize);
     }
-    Widget content = SelectableText.rich(
-      TextSpan(style: baseStyle, children: textSpan),
-    );
+    final span = TextSpan(style: baseStyle, children: textSpan);
+    // Text.rich shares the exact parser/spans and links, but does not create
+    // SelectableText's internal EditableText/Scrollable, even at zero extent.
+    Widget content = widget.selectable
+        ? SelectableText.rich(span)
+        : Text.rich(span, softWrap: true, overflow: TextOverflow.clip);
     if (images.isNotEmpty && widget.showImages) {
       content = Column(
         mainAxisSize: MainAxisSize.min,

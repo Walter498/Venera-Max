@@ -37,6 +37,14 @@ jobs:
         id: analyze
         timeout-minutes: 8
         run: bash tool/comments_ci_run.sh analyze
+      - name: Upload early analyzer diagnostics without waiting for tests
+        if: ${{ !cancelled() && steps.analyze.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: comments-ios-analyzer-early
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+          retention-days: 14
       - name: Prepare original QuickJS and PDFium host libraries
         id: native
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}

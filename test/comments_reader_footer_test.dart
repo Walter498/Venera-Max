@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/comment_presentation.dart';
+import 'package:venera/components/rich_comment_content.dart';
 import 'package:venera/components/comments_feed.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/res.dart';
@@ -41,6 +42,75 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());scroll.dispose();
     });
   }
+
+  for (final rich in [false, true]) {
+    testWidgets('preview body and reply drag parent chapter scroll rich=$rich', (tester) async {
+      final body = rich ? '<b>Body 😀 [unknown-emoji]</b><br>Second line'
+          : 'Body 😀 [unknown-emoji]\nSecond line';
+      final reply = rich ? '<i>Reply 😀 [unknown-emoji]</i><br>Second line'
+          : 'Reply 😀 [unknown-emoji]\nSecond line';
+      final source = commentsSource(chapterLegacy: (id, ep, page, parent) async => Res([
+        Comment.fromJson({'id':'drag', 'userName':'Author', 'content':body,
+          'replyPreview':{'id':'drag-reply', 'userName':'Reply author', 'content':reply}}),
+      ], subData:1));
+      final scroll = ScrollController();
+      try {
+        await tester.pumpWidget(host(ChapterCommentsPreview(comicId:'work',epId:'ep',source:source,
+          comicTitle:'Work',chapterTitle:'Chapter'),controller:scroll));
+        await tester.pumpAndSettle();
+        final footer = find.byType(ChapterCommentsPreview);
+        expect(find.descendant(of:footer,matching:find.byType(Scrollable)),findsNothing);
+        expect(find.descendant(of:footer,matching:find.byType(SelectableText)),findsNothing);
+        expect(find.byType(CommentContent),findsNWidgets(2));
+        for (final text in [body, reply]) {
+          final content = find.byWidgetPredicate((w) => w is CommentContent && w.text == text);
+          expect(tester.widget<CommentContent>(content).selectable,isFalse);
+          final naturalText = find.descendant(of:content,matching:find.byType(Text));
+          expect(naturalText,findsOneWidget);
+          final rendered = tester.widget<Text>(naturalText);
+          expect(rendered.data ?? rendered.textSpan!.toPlainText(),
+            text == body ? 'Body 😀 [unknown-emoji]\nSecond line'
+                : 'Reply 😀 [unknown-emoji]\nSecond line');
+          if (rich) {
+            final spans = (rendered.textSpan! as TextSpan).children!.cast<TextSpan>();
+            if (text == body) {
+              expect(spans.first.style?.fontWeight,FontWeight.bold);
+            } else {
+              expect(spans.first.style?.fontStyle,FontStyle.italic);
+            }
+          }
+          scroll.jumpTo(scroll.position.maxScrollExtent);
+          await tester.pumpAndSettle();
+          expect(content.hitTestable(),findsOneWidget);
+          final before = scroll.offset;
+          await tester.drag(content,const Offset(0,120));
+          await tester.pumpAndSettle();
+          expect(scroll.offset,lessThan(before));
+          expect(tester.takeException(),isNull);
+        }
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        scroll.dispose();
+      }
+    });
+  }
+
+  testWidgets('full-page presentation still defaults to selectable plain and rich body/reply', (tester) async {
+    for (final rich in [false, true]) {
+      final body = rich ? '<b>Selectable body</b>' : 'Selectable body';
+      final reply = rich ? '<i>Selectable reply</i>' : 'Selectable reply';
+      await tester.pumpWidget(MaterialApp(home:Scaffold(body:CommentPresentation(
+        comment:Comment.fromJson({'id':'full','userName':'Author','content':body,
+          'replyPreview':{'id':'reply','userName':'Reply author','content':reply}})))));
+      await tester.pumpAndSettle();
+      expect(tester.widget<CommentPresentation>(find.byType(CommentPresentation)).selectable,isTrue);
+      expect(tester.widgetList<CommentContent>(find.byType(CommentContent))
+        .every((content) => content.selectable),isTrue);
+      expect(find.byType(SelectableText),findsNWidgets(2));
+      expect(tester.takeException(),isNull);
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('chapter load hook starts before a lazy preview exists and joins the shared feed', (tester) async {
     final response=Completer<Res<List<Comment>>>();

@@ -20,13 +20,15 @@ class CommentAvatar extends StatelessWidget {
 /// Shared between work, chapter, embedded and footer entry points.
 class CommentPresentation extends StatelessWidget {
   const CommentPresentation({super.key, required this.comment, this.sourceKey,
-    this.fontSize = 15, this.actions, this.onReply, this.compact = false});
+    this.fontSize = 15, this.actions, this.onReply, this.compact = false,
+    this.selectable = true});
   final Comment comment;
   final String? sourceKey;
   final double fontSize;
   final Widget? actions;
   final VoidCallback? onReply;
   final bool compact;
+  final bool selectable;
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -40,7 +42,7 @@ class CommentPresentation extends StatelessWidget {
         Text(reply.userName, style: TextStyle(fontSize: fontSize - 1, fontWeight: FontWeight.w600)),
         if (reply.time != null) Text(reply.time!, style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
         const SizedBox(height: 4),
-        CommentContent(text: reply.content, fontSize: fontSize),
+        CommentContent(text: reply.content, fontSize: fontSize, selectable: selectable),
         if (onReply != null) Align(alignment: Alignment.centerRight,
           child: TextButton(onPressed: onReply, child: const Text('查看回复详情'))),
       ]));
@@ -54,7 +56,7 @@ class CommentPresentation extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
           const SizedBox(height: 6),
           // Unknown protocol emoji stays intact. The rich renderer handles only known formats.
-          CommentContent(text: comment.content, fontSize: fontSize),
+          CommentContent(text: comment.content, fontSize: fontSize, selectable: selectable),
           if (comment.replyPreview != null) preview(comment.replyPreview!),
           if (actions != null) actions! else CommentReadOnlyStats(comment: comment, onReply: onReply),
         ])),

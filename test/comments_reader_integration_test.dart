@@ -16,6 +16,7 @@ import 'package:venera/foundation/image_provider/reader_image.dart';
 import 'package:venera/foundation/js_engine.dart';
 import 'package:venera/foundation/local.dart';
 import 'package:venera/foundation/read_later.dart';
+import 'package:venera/foundation/sqlite_connection.dart';
 import 'package:venera/pages/reader/reader.dart';
 import 'comments_fixtures.dart';
 
@@ -40,13 +41,24 @@ void main() {
     oldPath = App.dataPath;
     directory = Directory.systemTemp.createTempSync('comments_reader_');
     App.dataPath = directory.path;
-    await JsEngine().init();
-    await HistoryManager().init();
-    await ReadLaterManager().init();
-    await LocalFavoritesManager().init();
+    Future<void> stage(String name, Future<void> Function() action) async {
+      debugPrint('COMMENTS_READER_HOST start $name');
+      await action().timeout(const Duration(seconds: 30));
+      debugPrint('COMMENTS_READER_HOST done $name');
+    }
+    // ensureInit is a readiness barrier, not an initializer. Satisfy the real
+    // dependencies before favorites/local can await them; no readiness mocks.
+    await stage('appdata.init', appdata.init);
+    await stage('js.init', JsEngine().init);
+    await stage('sources.init', ComicSourceManager().init);
+    await stage('history.init', HistoryManager().init);
+    await stage('readLater.init', ReadLaterManager().init);
+    await stage('favorites.init', LocalFavoritesManager().init);
+    await stage('favorites.backgroundRead', () =>
+      DatabaseGateway.instance.runExclusive(() async {}));
     final library = Directory('${directory.path}/library')..createSync();
     File('${directory.path}/local_path').writeAsStringSync(library.path);
-    await LocalManager().init();
+    await stage('local.init', LocalManager().init);
   });
   tearDownAll(() async {
     try {
@@ -78,7 +90,7 @@ void main() {
     final image = await createTestImage(width: mode == 'continuousTopToBottom' ? 390 : 844,
       height: mode == 'continuousTopToBottom' ? 844 : 390);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    final file = File('${directory.path}/page_${serial}.png')
+    final file = File('${directory.path}/page_$serial.png')
       ..writeAsBytesSync(bytes!.buffer.asUint8List());
     imageUrl = file.uri.toString();
     final key = 'reader_comments_${serial++}';

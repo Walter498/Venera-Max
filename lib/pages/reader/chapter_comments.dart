@@ -593,6 +593,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             else for (final comment in feed.comments.take(previewLimit))
               CommentPresentation(key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
                 comment:comment,sourceKey:widget.source.key,fontSize:commentsFontSize,
+                selectable:false,
                 onReply:widget.source.canReadReplies(comment,chapter:true) ? () => _openReply(comment) : null),
             Padding(padding: const EdgeInsets.fromLTRB(16,0,16,12), child: OutlinedButton(
               onPressed:_openAll,child:Text('View all comments'.tl))),

@@ -13,6 +13,7 @@ import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/image_translation/translation_store.dart';
 import 'package:venera/foundation/read_later.dart';
 import 'package:venera/foundation/res.dart';
+import 'package:venera/foundation/sqlite_connection.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'comments_fixtures.dart';
 
@@ -42,6 +43,21 @@ Finder get _previewEntry => find.text('View more');
 
 // Real database/file work must get real event turns. Fixed-clock settling is
 // unsuitable for a pending probe (spinner), so all polling has a hard bound.
+// setUpAll runs on the real event loop (not a testWidgets fake clock).
+// Fail with the exact pending dependency instead of consuming the CI step.
+Future<void> _hostStage(String name, FutureOr<void> Function() action) async {
+  final elapsed = Stopwatch()..start();
+  debugPrint('COMMENTS_DETAILS_HOST start $name');
+  try {
+    await Future<void>.sync(action).timeout(const Duration(seconds: 30));
+    debugPrint('COMMENTS_DETAILS_HOST done $name ${elapsed.elapsedMilliseconds}ms');
+  } catch (error) {
+    debugPrint('COMMENTS_DETAILS_HOST failed $name '
+        '${elapsed.elapsedMilliseconds}ms: $error');
+    rethrow;
+  }
+}
+
 Future<void> _frames(WidgetTester tester, [int count = 8]) async {
   for (var i = 0; i < count; i++) {
     await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -122,27 +138,101 @@ void main() {
   late String cover;
   final sources = <ComicSource>[];
 
+  final closers = <void Function()>[];
+  var pathsChanged = false;
+  var hostReady = false;
+
+  // Run every close even if saving or a preceding close fails. Consume the
+  // stack so failed setup and tearDownAll cannot close the same host twice.
+  void closeStores() {
+    if (closers.isEmpty) return;
+    final close = closers.removeLast();
+    try {
+      close();
+    } finally {
+      closeStores();
+    }
+  }
+
+  void registerStore(String filename, void Function() close) {
+    final path = '${directory.path}/$filename';
+    closers.add(() {
+      try {
+        close();
+      } finally {
+        // Some managers' close() returns before isInitialized becomes true.
+        // Release a handle opened by a failed/partial init as well.
+        DatabaseGateway.instance.closeManaged(path);
+      }
+    });
+  }
+
+  Future<void> releaseHost() async {
+    if (!pathsChanged) return;
+    try {
+      // Drain settings/implicit-data writes before removing their real files.
+      await _hostStage('appdata.saveData', () => appdata.saveData(false));
+    } finally {
+      try {
+        closeStores();
+      } finally {
+        App.dataPath = oldDataPath;
+        App.cachePath = oldCachePath;
+        pathsChanged = false;
+        hostReady = false;
+        directory.deleteSync(recursive: true);
+      }
+    }
+  }
+
   setUpAll(() async {
     oldDataPath = App.dataPath;
     oldCachePath = App.cachePath;
     directory = Directory.systemTemp.createTempSync('comments_details_page_');
     App.dataPath = directory.path;
     App.cachePath = directory.path;
-    // These are real isolated stores, not a fake App.init success flag.
-    await App.domain.init(directory.path);
-    await App.authorIndex.init(directory.path);
-    await HistoryManager().init();
-    await LocalFavoritesManager().init();
-    await ReadLaterManager().init();
-    await TranslationStore().init();
-    // A local valid image prevents a cover request without mocking providers.
-    final file = File('${directory.path}/cover.gif');
-    file.writeAsBytesSync(const [
-      71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128, 0, 0, 0, 0, 0,
-      255, 255, 255, 33, 249, 4, 1, 0, 0, 0, 0, 44, 0, 0, 0, 0,
-      1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59,
-    ]);
-    cover = 'file://${file.path}';
+    pathsChanged = true;
+    try {
+      // The shared host already awaited real translations and FontLoader.load.
+      debugPrint('COMMENTS_DETAILS_HOST translations/fonts ready');
+      // LocalFavoritesManager.init awaits appdata.ensureInit(). That is a
+      // readiness barrier, NOT an initializer. Complete the real Init contract
+      // in this isolated directory before awaiting the dependent store.
+      await _hostStage('appdata.init', appdata.init);
+      closers.add(App.domain.close);
+      await _hostStage('domain.init', () => App.domain.init(directory.path));
+      await _hostStage('authorIndex.init',
+          () => App.authorIndex.init(directory.path));
+      registerStore('history.db', HistoryManager().close);
+      await _hostStage('history.init', HistoryManager().init);
+      registerStore('local_favorite.db', LocalFavoritesManager().close);
+      await _hostStage('favorites.init', LocalFavoritesManager().init);
+      // initCounts starts a gateway isolate read without awaiting it. Drain
+      // that real read before any test can fail and start closing stores.
+      await _hostStage('favorites.backgroundRead',
+          () => DatabaseGateway.instance.runExclusive(() async {}));
+      registerStore('read_later.db', ReadLaterManager().close);
+      await _hostStage('readLater.init', ReadLaterManager().init);
+      registerStore('image_translation.db', TranslationStore().close);
+      await _hostStage('translationStore.init', TranslationStore().init);
+      // Open the real cache here so teardown never creates an unused database.
+      await _hostStage('detailsCache.open', () {
+        closers.add(ComicDetailsCache().close);
+      });
+      // A local valid image prevents a cover request without mocking providers.
+      await _hostStage('cover.write', () {
+        final file = File('${directory.path}/cover.gif');
+        file.writeAsBytesSync(const [
+          71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128, 0, 0, 0, 0, 0,
+          255, 255, 255, 33, 249, 4, 1, 0, 0, 0, 0, 44, 0, 0, 0, 0,
+          1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59,
+        ]);
+        cover = 'file://${file.path}';
+      });
+      hostReady = true;
+    } finally {
+      if (!hostReady) await releaseHost();
+    }
   });
 
   tearDown(() {
@@ -154,21 +244,7 @@ void main() {
     PaintingBinding.instance.imageCache.clearLiveImages();
   });
 
-  tearDownAll(() async {
-    try {
-      await appdata.saveData(false);
-      ComicDetailsCache().close();
-      TranslationStore().close();
-      ReadLaterManager().close();
-      LocalFavoritesManager().close();
-      HistoryManager().close();
-      App.domain.close();
-    } finally {
-      App.dataPath = oldDataPath;
-      App.cachePath = oldCachePath;
-      directory.deleteSync(recursive: true);
-    }
-  });
+  tearDownAll(releaseHost);
 
   Future<void> mount(WidgetTester tester, ComicSource source) async {
     expect(ComicSourceManager().add(source), isTrue);

@@ -282,6 +282,7 @@ class _ReaderState extends State<Reader>
   // Continuous modes set this from the complete footer's trailing geometry.
   bool continuousChapterEndReached = false;
   bool galleryFooterEndReached = false;
+  @override
   bool get chapterEndReached {
     if (!chapterCommentsSettled(chapter)) return false;
     return mode.isGallery
