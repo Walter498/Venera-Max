@@ -28,6 +28,7 @@ Widget legacyFooter(List<Comment> rows) => Padding(
   ]));
 
 void main() {
+  setUpCommentsTestHost();
   for(final size in [const Size(390,844),const Size(844,390)]) {
     for(final brightness in [Brightness.light,Brightness.dark]) {
       for(final fontScale in [1.0,2.0]) {

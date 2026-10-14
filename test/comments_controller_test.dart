@@ -10,6 +10,7 @@ import 'package:venera/foundation/res.dart';
 import 'comments_fixtures.dart';
 
 void main() {
+  setUpCommentsTestHost();
   test('legacy source is called with exactly four ordered parameters', () async {
     final calls = <List<dynamic>>[];
     final source = commentsSource(legacy: (id,sub,page,reply) async {

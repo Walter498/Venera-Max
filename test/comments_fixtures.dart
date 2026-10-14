@@ -1,5 +1,29 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:venera/foundation/appdata.dart';
+import 'package:venera/utils/translations.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/res.dart';
+
+// Each test file runs in its own isolate. Load the real bundled translations
+// once per isolate, before any production widget or translated legacy layout.
+// Keep App.isInitialized false: App.init also boots unrelated device plugins.
+Future<void>? _commentsTranslations;
+
+Future<void> initCommentsTestHost() =>
+    _commentsTranslations ??= AppTranslation.init();
+
+void setUpCommentsTestHost() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(initCommentsTestHost);
+  late dynamic previousLanguage;
+  setUp(() {
+    previousLanguage = appdata.settings['language'];
+    appdata.settings['language'] = 'en-US';
+  });
+  tearDown(() {
+    appdata.settings['language'] = previousLanguage;
+  });
+}
 
 Comment commentFixture(String id, {String? avatar, int? score = 12,
   int? replies = 2, bool preview = true}) => Comment.fromJson({

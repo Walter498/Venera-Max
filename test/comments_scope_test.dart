@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/comments_feed.dart';
-import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/comments_controller.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/res.dart';
@@ -10,7 +9,7 @@ import 'package:venera/pages/reader/reader.dart';
 import 'comments_fixtures.dart';
 
 void main() {
-  setUp(() { appdata.settings['language']='en-US'; });
+  setUpCommentsTestHost();
   test('options-only without declaration is not an executable loader', () {
     final source=commentsSource(
       options:(a,b,c,d,e) async => const Res([],subData:0),

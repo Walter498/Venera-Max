@@ -11,7 +11,7 @@ import 'package:venera/pages/reader/reader.dart';
 import 'comments_fixtures.dart';
 
 void main() {
-  setUp(() { appdata.settings['language']='en-US'; });
+  setUpCommentsTestHost();
   testWidgets('missing avatar is an explicit generic person and stats are readonly', (tester) async {
     await tester.pumpWidget(MaterialApp(home:Scaffold(body:CommentPresentation(
       comment:commentFixture('topic',score:0,replies:0)))));

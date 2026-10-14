@@ -8,6 +8,7 @@ import 'package:venera/pages/reader/reader.dart';
 import 'comments_fixtures.dart';
 
 void main() {
+  setUpCommentsTestHost();
   for (final brightness in [Brightness.light,Brightness.dark]) {
     for (final scale in [1.0,2.0]) {
       final mode = brightness == Brightness.light ? 'light' : 'dark';

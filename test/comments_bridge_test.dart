@@ -5,11 +5,11 @@ import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comments_controller.dart';
 import 'package:venera/foundation/js_engine.dart';
-import 'package:venera/utils/translations.dart';
+import 'comments_fixtures.dart';
 
 // Real parser + QuickJS, without App.init/device/account/JWT/network setup.
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpCommentsTestHost();
   late Directory temp;
   late String oldPath;
   var serial = 0;
@@ -24,6 +24,10 @@ class CommentsBridgeFixture extends ComicSource {
   key = "$key";
   version = "1.0.0";
   minAppVersion = null;
+  // Real parser probes nested search hooks even when this source only exposes
+  // comments. Supply optional containers, not fake executable loaders.
+  search = {};
+  categoryComics = {};
   comic = {
     async loadInfo(id) { return {title: id, cover: "", tags: {}}; },
     $comic
@@ -43,7 +47,7 @@ class CommentsBridgeFixture extends ComicSource {
     oldPath = App.dataPath;
     temp = Directory.systemTemp.createTempSync('comments_bridge_');
     App.dataPath = temp.path;
-    await AppTranslation.init();
+    await initCommentsTestHost();
     await JsEngine().init();
   });
   tearDown(() {
