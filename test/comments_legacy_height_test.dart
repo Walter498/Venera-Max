@@ -4,6 +4,7 @@ import 'package:venera/foundation/widget_utils.dart';
 import 'package:venera/utils/translations.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/res.dart';
+import 'package:venera/foundation/comic_source/comic_source.dart' show Comment;
 import 'package:venera/pages/reader/reader.dart';
 import 'comments_fixtures.dart';
 

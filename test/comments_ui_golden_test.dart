@@ -59,8 +59,13 @@ void main() {
           // Capture remains the initial viewport, then exercise the actual
           // lazy list. At 200% a reply action must be reachable, not clipped
           // permanently below the parent/long-nickname content.
+          // Target the first reply's keyed real tile, not .first on an empty
+          // lazy finder before scrollUntilVisible has built that reply.
+          final replyTile = find.byKey(ValueKey(
+            'new:reply-1:${commentFixture('reply-1').content}'));
           final replyAction = thread
-            ? find.byIcon(Icons.insert_comment_outlined).first
+            ? find.descendant(of:replyTile,
+                matching:find.byIcon(Icons.insert_comment_outlined))
             : find.text('查看回复详情');
           final scrollable = find.byType(Scrollable).first;
           await tester.scrollUntilVisible(replyAction, 180,
