@@ -158,6 +158,18 @@ class ReaderCommentsFixture extends ComicSource {
     final dynamic state = tester.state(find.byType(Reader));
     expect(state.isLoading,false);
     expect(JsEngine().runCode('globalThis.readerCommentCalls'),1);
+    if (mode.startsWith('continuous')) {
+      final rendered = find.descendant(of: find.byType(Reader),
+          matching: find.byType(RawImage));
+      debugPrint('COMMENTS_READER_GEOMETRY $mode viewport=${state.size} '
+          'page=${state.page} images=${state.images?.length} '
+          'rendered=${rendered.evaluate().map((e) {
+            final image = (e.widget as RawImage).image;
+            final box = e.findRenderObject() as RenderBox;
+            return '${image?.width}x${image?.height}@${box.size}'
+                ':${box.localToGlobal(Offset.zero)}';
+          }).join(";")}');
+    }
     return state;
   }
 
@@ -214,6 +226,15 @@ class ReaderCommentsFixture extends ComicSource {
           : mode=='galleryLeftToRight' ? LogicalKeyboardKey.arrowRight
           : LogicalKeyboardKey.arrowDown);
         await frames(tester);
+        if (mode == 'continuousTopToBottom') {
+          // Continuous arrow keys scroll a quarter viewport, not one image.
+          // Verify the real key kept us in this chapter, then exercise the
+          // explicit image-page API separately with the original exact check.
+          expect(state.chapter, 1);
+          expect(state.page, inInclusiveRange(1, 3));
+          state.toPage(2);
+          await frames(tester, 20);
+        }
         expect(state.page,2);
         for(var i=0;i<8;i++) { state.toNextPage(); await frames(tester,4); }
         if(mode.startsWith('gallery')) {
@@ -271,12 +292,23 @@ class ReaderCommentsFixture extends ComicSource {
         resolve(nonempty()); await frames(tester,30);
         // Physical drag along the chapter's reading direction, exercising the
         // mounted PhotoView -> scroll resolver rather than a Rect helper.
-        await tester.drag(find.byType(Reader),Offset(mode.endsWith('RightToLeft') ? 844 : -844,0));
+        // tester.drag normally spends 18px winning the gesture arena; a
+        // nominal 844px move then stops before the next image's leading edge.
+        await tester.drag(find.byType(Reader),
+          Offset(mode.endsWith('RightToLeft') ? 846 : -846, 0),
+          touchSlopX: 0, touchSlopY: 0);
         await frames(tester,30);
         expect(state.page,2);
         await tester.sendKeyEvent(mode.endsWith('RightToLeft')
           ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight);
         await frames(tester,30);
+        // Continuous keys scroll 1/4 viewport; they do not target the next
+        // image. Preserve actual key input and verify exact image navigation
+        // through the mounted Reader API rather than assuming gallery keys.
+        expect(state.chapter, 1);
+        expect(state.chapterEndReached, false);
+        state.toPage(3);
+        await frames(tester, 30);
         expect(state.page,3); expect(state.chapterEndReached,false);
         state.toNextPage(); await frames(tester,30);
         expect(state.chapter,1); expect(state.chapterEndReached,false);

@@ -591,15 +591,18 @@ class _ReaderState extends State<Reader>
         initialEntries: [
           OverlayEntry(
             builder: (context) {
-              return _ReaderScaffold(
-                child: _ReaderGestureDetector(
-                  child: _ReaderImages(
-                    // Seamless mode keeps a constant key so cross-chapter
-                    // scrolling doesn't remount. The nonce forces a one-off
-                    // remount when an explicit jump targets an unloaded chapter.
-                    key: _isSeamlessContinuous
-                        ? Key('seamless_$chapterJumpNonce')
-                        : Key(chapter.toString()),
+              return Material(
+                type: MaterialType.transparency,
+                child: _ReaderScaffold(
+                  child: _ReaderGestureDetector(
+                    child: _ReaderImages(
+                      // Seamless mode keeps a constant key so cross-chapter
+                      // scrolling doesn't remount. The nonce forces a one-off
+                      // remount when an explicit jump targets an unloaded chapter.
+                      key: _isSeamlessContinuous
+                          ? Key('seamless_$chapterJumpNonce')
+                          : Key(chapter.toString()),
+                    ),
                   ),
                 ),
               );

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/comments_feed.dart';
+import 'package:venera/components/comment_presentation.dart';
 import 'package:venera/foundation/comments_controller.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/res.dart';
@@ -47,8 +48,22 @@ void main() {
     await feed.refresh(); await tester.pumpAndSettle();
     stale.complete(const Res([],subData:0,total:0)); await old; await tester.pumpAndSettle();
     expect(feed.comments.single.id,'current'); expect(feed.confirmedEmpty,isFalse);
-    expect(find.byType(CommentsFeed),findsOneWidget); expect(calls,2);
-    expect(identical(tester.widget<CommentsFeed>(find.byType(CommentsFeed)).controller,feed),isTrue);
+    // The footer is a fixed preview, not a paginated CommentsFeed. Assert
+    // caller ownership through its actual public state and visible content.
+    final preview = find.byType(ChapterCommentsPreview);
+    expect(preview, findsOneWidget);
+    expect(tester.widget<ChapterCommentsPreview>(preview).sharedFeed, same(feed));
+    expect(tester.state<ChapterCommentsPreviewState>(preview).feed, same(feed));
+    expect(find.byType(CommentsFeed), findsNothing);
+    expect(find.byKey(const ValueKey('chapter-comments-region')), findsOneWidget);
+    final tile = find.byType(CommentPresentation);
+    expect(tile, findsOneWidget);
+    expect(tester.widget<CommentPresentation>(tile).comment.id, 'current');
+    expect(find.text('A thoughtful reader with a long nickname'), findsOneWidget);
+    expect(find.text('Chapter'), findsOneWidget);
+    expect(find.text('View all comments'), findsNWidgets(2));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(calls,2);
     expect(tester.takeException(),isNull);
     await tester.pumpWidget(const SizedBox.shrink()); feed.dispose();
   });

@@ -2189,7 +2189,10 @@ class _ContinuousModeState extends State<_ContinuousMode>
     final itemLeading = itemBox.localToGlobal(Offset.zero);
     return vertical
         ? itemLeading.dy - viewportLeading.dy
-        : itemLeading.dx - viewportLeading.dx;
+        : _reverse
+            ? viewportLeading.dx + selfBox.size.width -
+                (itemLeading.dx + itemBox.size.width)
+            : itemLeading.dx - viewportLeading.dx;
   }
 
   /// Scrolls (animated or instant) so that (chapter,page) sits at the leading

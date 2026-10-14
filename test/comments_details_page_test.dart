@@ -11,6 +11,8 @@ import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/image_translation/translation_store.dart';
+import 'package:venera/foundation/js_engine.dart';
+import 'package:venera/foundation/local.dart';
 import 'package:venera/foundation/read_later.dart';
 import 'package:venera/foundation/res.dart';
 import 'package:venera/foundation/sqlite_connection.dart';
@@ -18,7 +20,8 @@ import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'comments_fixtures.dart';
 
 // Dart mock loaders sit behind the real source registry, repository and page.
-// No JS bridge, HTTP, device plugin boot or App.isInitialized override is used.
+// Real JS/source/local readiness is initialized below; comment loaders remain
+// Dart fixtures. No HTTP, device plugin boot or App.isInitialized override.
 ComicSource _source(LoadComicFunc info, CommentsLoader comments) => ComicSource(
   'Details fixture', 'details_page_fixture', null, null, null, null,
   const [], null, null, info, null, null, null, null, '', '', '1.0',
@@ -144,13 +147,14 @@ void main() {
 
   // Run every close even if saving or a preceding close fails. Consume the
   // stack so failed setup and tearDownAll cannot close the same host twice.
-  void closeStores() {
+  Future<void> closeStores() async {
     if (closers.isEmpty) return;
+    final stage = closers.length;
     final close = closers.removeLast();
     try {
-      close();
+      await _hostStage('cleanup.resource.$stage', close);
     } finally {
-      closeStores();
+      await closeStores();
     }
   }
 
@@ -174,7 +178,7 @@ void main() {
       await _hostStage('appdata.saveData', () => appdata.saveData(false));
     } finally {
       try {
-        closeStores();
+        await closeStores();
       } finally {
         App.dataPath = oldDataPath;
         App.cachePath = oldCachePath;
@@ -215,6 +219,46 @@ void main() {
       await _hostStage('readLater.init', ReadLaterManager().init);
       registerStore('image_translation.db', TranslationStore().close);
       await _hostStage('translationStore.init', TranslationStore().init);
+      // ensureInit() only waits: initialize JS, then the source registry, then
+      // LocalManager so ComicPage.onDataLoaded can query the real local DB.
+      // Register cleanup before init to release partially initialized resources.
+      final js = JsEngine();
+      closers.add(js.dispose);
+      await _hostStage('jsEngine.init', js.init);
+      expect(js.runCode('typeof ComicSource'), 'function',
+          reason: 'real JS init must expose the source contract');
+      expect(js.runCode('typeof ComicSource.sources'), 'object');
+      final registry = ComicSourceManager();
+      closers.add(() {
+        try {
+          for (final source in registry.all()) {
+            registry.remove(source.key);
+          }
+        } finally {
+          registry.dispose();
+        }
+      });
+      await _hostStage('sourceManager.init', registry.init);
+      // Use LocalManager's real persisted path contract in the isolated host;
+      // this keeps local files here without a path-provider plugin or override.
+      await _hostStage('localPath.write', () async {
+        final local = Directory('${directory.path}/local');
+        await local.create();
+        await File('${directory.path}/local_path').writeAsString(local.path);
+      });
+      final localManager = LocalManager();
+      registerStore('local.db', () {
+        try {
+          localManager.close();
+        } finally {
+          localManager.dispose();
+        }
+      });
+      await _hostStage('localManager.init', localManager.init);
+      // init schedules auto-resume after 3s. Drain that real callback while
+      // dependencies are alive, including when an assertion/setup later fails.
+      await _hostStage('localManager.deferredResume',
+          () => Future<void>.delayed(const Duration(seconds: 3)));
       // Open the real cache here so teardown never creates an unused database.
       await _hostStage('detailsCache.open', () {
         closers.add(ComicDetailsCache().close);

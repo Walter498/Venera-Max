@@ -293,7 +293,11 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           top: 0,
           left: 0,
           right: 0,
-          height: kTopBarHeight + context.padding.top,
+          // Preserve the normal 56px bar; enlarged text needs room for both
+          // title lines rather than overflowing an off-screen 56px Column.
+          height: math.max(kTopBarHeight,
+              MediaQuery.textScalerOf(context).scale(44) + 12) +
+              context.padding.top,
           child: AnimatedSlide(
             duration: _readerChromeAnimationDuration,
             curve: Curves.easeOutCubic,
