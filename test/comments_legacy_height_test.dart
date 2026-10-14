@@ -3,18 +3,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/foundation/widget_utils.dart';
 import 'package:venera/utils/translations.dart';
 import 'package:venera/foundation/appdata.dart';
-import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/res.dart';
 import 'package:venera/pages/reader/reader.dart';
 import 'comments_fixtures.dart';
 
-// Actual fa7afe19 whole footer layout, independently rendered at identical width.
+// Independent fa7afe19 whole footer measurement at identical width/theme/scale.
+// Boundary: normal-size Row + Expanded is preserved. Enlarged text or narrow
+// inner width uses Wrap, matching the production measurement exception.
+// Old content/padding/list limits and original fa7afe19 source remain unchanged.
 Widget legacyFooter(List<Comment> rows) => Padding(
   padding:const EdgeInsets.fromLTRB(16,18,16,18),
   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(children:[const Icon(Icons.chat_bubble_outline_rounded,size:20),
-      const SizedBox(width:8),Expanded(child:Text('Chapter Comments'.tl,style:ts.s18)),
-      TextButton(onPressed:(){},child:Text('View all comments'.tl))]),
+    LayoutBuilder(builder:(context,constraints) {
+      final responsive = MediaQuery.textScalerOf(context).scale(18) > 18 ||
+        constraints.maxWidth < 328;
+      if (responsive) {
+        return Wrap(spacing:8,crossAxisAlignment:WrapCrossAlignment.center,children:[
+          const Icon(Icons.chat_bubble_outline_rounded,size:20),
+          Text('Chapter Comments'.tl,style:ts.s18),
+          TextButton(onPressed:(){},child:Text('View all comments'.tl))]);
+      }
+      return Row(children:[const Icon(Icons.chat_bubble_outline_rounded,size:20),
+        const SizedBox(width:8),Expanded(child:Text('Chapter Comments'.tl,style:ts.s18)),
+        TextButton(onPressed:(){},child:Text('View all comments'.tl))]);
+    }),
     Text('Chapter',style:ts.s12),const SizedBox(height:10),
     for(final c in rows.take(3)) Padding(padding:const EdgeInsets.symmetric(vertical:8),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[

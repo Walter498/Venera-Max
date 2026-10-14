@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,15 +25,17 @@ void main() {
     expect(tester.takeException(),isNull);
   });
   testWidgets('preview reply navigation requests parent id, not preview id', (tester) async {
+    final previousPlatform=debugDefaultTargetPlatformOverride;
     debugDefaultTargetPlatformOverride=TargetPlatform.iOS;
-    addTearDown(() => debugDefaultTargetPlatformOverride=null);
+    try {
     final replies=<String?>[];
     final source=commentsSource(chapterCapabilities:const CommentCapabilities(canLoadReplies:true),
       chapterOptions:(id,ep,page,reply,options) async {
         replies.add(reply);
         return Res(reply == null ? [commentFixture('topic-A')] : [commentFixture('reply',preview:false)],subData:1,total:1);
       });
-    await tester.pumpWidget(MaterialApp(home:ChapterCommentsPage(
+    await tester.pumpWidget(MaterialApp(theme:ThemeData(platform:TargetPlatform.iOS),
+      home:ChapterCommentsPage(
       comicId:'work',epId:'ep',source:source,comicTitle:'Work',chapterTitle:'Chapter')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('查看回复详情')); await tester.pumpAndSettle();
@@ -39,6 +43,9 @@ void main() {
     expect(find.text('评论详情'),findsOneWidget);
     expect(find.text('回复列表'),findsOneWidget);
     expect(tester.takeException(),isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride=previousPlatform;
+    }
   });
   testWidgets('actual chapter sort selection invokes the page options hook', (tester) async {
     final requested=<String?>[];
@@ -114,11 +121,50 @@ void main() {
     expect(find.byType(CommentsFeed),findsNothing); expect(find.text('暂无评论'),findsNothing);
     expect(find.text('重试'),findsNothing); expect(tester.takeException(),isNull);
   });
+  for (final unavailable in [true,false]) {
+    testWidgets('bounded pending footer preserves ${unavailable ? "unavailable" : "error"} outcome', (tester) async {
+      tester.view.physicalSize=const Size(390,844);tester.view.devicePixelRatio=1;
+      addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
+      final previousScale=appdata.settings['chapterCommentsHeightScale'];
+      addTearDown(() => appdata.settings['chapterCommentsHeightScale']=previousScale);
+      appdata.settings['chapterCommentsHeightScale']=2.0;
+      final response=Completer<Res<List<Comment>>>();
+      final source=commentsSource(chapterCapabilities:const CommentCapabilities(sorts:['new']),
+        chapterOptions:(a,b,c,d,e) => response.future);
+      await tester.pumpWidget(MaterialApp(theme:ThemeData(platform:TargetPlatform.iOS),
+        builder:(context,child) => MediaQuery(
+          data:MediaQuery.of(context).copyWith(textScaler:const TextScaler.linear(2.0)),
+          child:child!),
+        home:Scaffold(body:ChapterCommentsPreview(comicId:'work',epId:'ep',
+          source:source,comicTitle:'Work',chapterTitle:'Chapter'))));
+      // Do not settle an intentionally pending spinner. Both the provisional
+      // frame and the measured loading frame must fit their real constraints.
+      expect(find.byType(CommentsFeed),findsOneWidget);
+      expect(tester.takeException(),isNull);
+      await tester.pump();
+      expect(tester.takeException(),isNull);
+      response.complete(unavailable ? const Res([],subData:0,total:0,available:false)
+        : const Res.error('offline'));
+      await tester.pumpAndSettle();
+      if (unavailable) {
+        expect(find.byType(CommentsFeed),findsNothing);
+        expect(find.text('暂无评论'),findsNothing);
+        expect(find.text('重试'),findsNothing);
+      } else {
+        expect(find.byType(CommentsFeed),findsOneWidget);
+        expect(find.text('重试'),findsOneWidget);
+        expect(find.text('暂无评论'),findsNothing);
+      }
+      expect(tester.takeException(),isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
   for (final brightness in [Brightness.light,Brightness.dark]) {
     for (final fontScale in [1.0,2.0]) {
       testWidgets('real footer iOS $brightness font $fontScale viewport doubles', (tester) async {
+        final previousPlatform=debugDefaultTargetPlatformOverride;
         debugDefaultTargetPlatformOverride=TargetPlatform.iOS;
-        addTearDown(() => debugDefaultTargetPlatformOverride=null);
+        try {
         tester.view.physicalSize=const Size(390,844); tester.view.devicePixelRatio=1;
         addTearDown(tester.view.resetPhysicalSize); addTearDown(tester.view.resetDevicePixelRatio);
         final previous=appdata.settings['chapterCommentsHeightScale'];
@@ -143,6 +189,9 @@ void main() {
         expect(tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height,closeTo(legacy*2,0.01));
         expect(tester.takeException(),isNull);
         await tester.pumpWidget(const SizedBox.shrink());
+        } finally {
+          debugDefaultTargetPlatformOverride=previousPlatform;
+        }
       });
     }
   }

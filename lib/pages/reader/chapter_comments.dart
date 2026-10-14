@@ -511,14 +511,27 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
   final _bottomKey = GlobalKey();
   double? _legacyHeight, _chromeHeight;
   bool _measureQueued = false;
-  // Layout the actual fa7afe19 footer invisibly, under the same inherited
-  // width/theme/textScaler. Its entire natural region is the 1x baseline.
+  // Layout the fa7afe19 footer measurement copy under the same inherited
+  // width/theme/textScaler. The normal-size header retains Row + Expanded;
+  // enlarged text or a narrow inner width uses Wrap in both independent copies.
+  // The original fa7afe19 source is unchanged; responsive cases are exceptions.
+  // The entire natural region (not just its list) remains the 1x baseline.
   Widget _legacyFooter(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(16,18,16,18),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [const Icon(Icons.chat_bubble_outline_rounded,size:20),
-        const SizedBox(width:8), Expanded(child:Text('Chapter Comments'.tl,style:ts.s18)),
-        TextButton(onPressed:_openAll,child:Text('View all comments'.tl))]),
+      LayoutBuilder(builder:(context,constraints) {
+        final responsive = MediaQuery.textScalerOf(context).scale(18) > 18 ||
+          constraints.maxWidth < 328;
+        if (responsive) {
+          return Wrap(spacing:8, crossAxisAlignment:WrapCrossAlignment.center, children: [
+            const Icon(Icons.chat_bubble_outline_rounded,size:20),
+            Text('Chapter Comments'.tl,style:ts.s18),
+            TextButton(onPressed:_openAll,child:Text('View all comments'.tl))]);
+        }
+        return Row(children:[const Icon(Icons.chat_bubble_outline_rounded,size:20),
+          const SizedBox(width:8), Expanded(child:Text('Chapter Comments'.tl,style:ts.s18)),
+          TextButton(onPressed:_openAll,child:Text('View all comments'.tl))]);
+      }),
       Text(widget.chapterTitle,style:ts.s12.withColor(context.colorScheme.outline)),
       const SizedBox(height:10),
       if (feed.loading) const Center(child:Padding(padding:EdgeInsets.all(12),child:CircularProgressIndicator()))
@@ -562,9 +575,25 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
         return Material(color: context.colorScheme.surface, child: LayoutBuilder(
           builder: (context, constraints) {
             _measure();
+            final viewport = SizedBox(
+              height: math.max(1, (_legacyHeight ?? 300) * scale - (_chromeHeight ?? 100)),
+              child: CommentsFeed(controller: feed,
+                sorts: widget.source.chapterCommentsOptionsLoader == null ? const [] :
+                  widget.source.chapterCommentCapabilities?.sorts ?? const [],
+                itemBuilder: (comment) => CommentPresentation(
+                  key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
+                  comment: comment, sourceKey: widget.source.key, fontSize: commentsFontSize,
+                  onReply: widget.source.canReadReplies(comment, chapter:true) ? () => _openReply(comment) : null)));
             return Stack(children: [
-              Offstage(child:SizedBox(width:constraints.maxWidth,
-                child:SizedBox(key:_legacyKey,child:_legacyFooter(context)))),
+              // Offstage still lays out its child. Remove only the vertical
+              // viewport bound so this copy measures natural content, not the
+              // available screen height, and never overflows a finite Column.
+              Offstage(child:constraints.hasBoundedHeight
+                ? OverflowBox(minHeight:0,maxHeight:double.infinity,
+                    alignment:Alignment.topCenter,child:SizedBox(width:constraints.maxWidth,
+                      child:SizedBox(key:_legacyKey,child:_legacyFooter(context))))
+                : SizedBox(width:constraints.maxWidth,
+                    child:SizedBox(key:_legacyKey,child:_legacyFooter(context)))),
               Column(key:const ValueKey('chapter-comments-region'),
                 crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Column(key:_headerKey,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -575,14 +604,13 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             if (widget.chapterTitle.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal:16),
               child: Text(widget.chapterTitle,style: ts.s12)),
             ]),
-            SizedBox(height: math.max(1, (_legacyHeight ?? 300) * scale - (_chromeHeight ?? 100)),
-              child: CommentsFeed(controller: feed,
-                sorts: widget.source.chapterCommentsOptionsLoader == null ? const [] :
-                  widget.source.chapterCommentCapabilities?.sorts ?? const [],
-                itemBuilder: (comment) => CommentPresentation(
-                  key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
-                  comment: comment, sourceKey: widget.source.key, fontSize: commentsFontSize,
-                  onReply: widget.source.canReadReplies(comment, chapter:true) ? () => _openReply(comment) : null))),
+            // A finite reader viewport cannot accommodate the provisional
+            // 300 * scale plus chrome before the first natural measurement.
+            // Flex constrains only the feed to the remaining available height;
+            // an unbounded footer retains the exact whole-region scale formula.
+            if (constraints.hasBoundedHeight)
+              Flexible(fit:FlexFit.loose,child:viewport)
+            else viewport,
             Padding(key:_bottomKey,padding: const EdgeInsets.fromLTRB(16,0,16,12), child: OutlinedButton(
               onPressed: _openAll, child: Text('View all comments'.tl))),
           ]),]);

@@ -16,8 +16,10 @@ void main() {
       for (final thread in [true,false]) {
       final scenario = thread ? 'thread' : 'chapter_sort';
       testWidgets('real chapter $scenario $mode $percent', (tester) async {
+        final previousPlatform = debugDefaultTargetPlatformOverride;
         debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        // Flutter checks foundation invariants before addTearDown callbacks.
+        try {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = const Size(390,844);
         addTearDown(tester.view.resetPhysicalSize);
@@ -32,7 +34,8 @@ void main() {
           ],subData:2,total:6));
         final boundary = GlobalKey();
         await tester.pumpWidget(MaterialApp(theme: ThemeData(
-          brightness: brightness, platform:TargetPlatform.iOS, useMaterial3:true),
+          brightness: brightness, platform:TargetPlatform.iOS, useMaterial3:true,
+          fontFamily:'CommentsLatin', fontFamilyFallback:const ['CommentsCJK']),
           builder:(context,child) => MediaQuery(data:MediaQuery.of(context).copyWith(
             textScaler:TextScaler.linear(scale)),child:child!),
           home: RepaintBoundary(key:boundary,child:ChapterCommentsPage(
@@ -52,8 +55,25 @@ void main() {
         expect(tester.getSize(find.byKey(boundary)),const Size(390,844));
         await expectLater(find.byKey(boundary),matchesGoldenFile(
           'goldens/comments/${scenario}_${mode}_$percent.png'));
+        if (scale == 2.0) {
+          // Capture remains the initial viewport, then exercise the actual
+          // lazy list. At 200% a reply action must be reachable, not clipped
+          // permanently below the parent/long-nickname content.
+          final replyAction = thread
+            ? find.byIcon(Icons.insert_comment_outlined).first
+            : find.text('查看回复详情');
+          final scrollable = find.byType(Scrollable).first;
+          await tester.scrollUntilVisible(replyAction, 180,
+            scrollable:scrollable, maxScrolls:40);
+          await tester.pumpAndSettle();
+          expect(replyAction.hitTestable(), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        }
         // No FlutterError suppression: overflow/layout errors fail the test.
         await tester.pumpWidget(const SizedBox.shrink());
+        } finally {
+          debugDefaultTargetPlatformOverride = previousPlatform;
+        }
       });
       }
     }

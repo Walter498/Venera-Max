@@ -57,9 +57,13 @@ class CommentsBridgeFixture extends ComicSource {
     keys.clear();
   });
   tearDownAll(() {
-    JsEngine().dispose();
-    App.dataPath = oldPath;
-    temp.deleteSync(recursive: true);
+    try {
+      // Keep strict QuickJS reference checking; a leak still fails the suite.
+      JsEngine().dispose();
+    } finally {
+      App.dataPath = oldPath;
+      temp.deleteSync(recursive: true);
+    }
   });
 
   for (final chapter in [false, true]) {
@@ -246,10 +250,14 @@ class CommentsBridgeFixture extends ComicSource {
           }
           if (cap?.canLoadReplies == false || cap?.enabled == false) {
             // Even a direct attempted navigation cannot invoke either JS hook.
-            JsEngine().runCode('''
+            final installed = JsEngine().runCode('''
               ComicSource.sources.${source.key}.comic.${loaderName(chapter, true)} =
                 function() { throw new Error("disabled hook invoked"); };
+              // Assignment evaluates to the function. Do not export a QuickJS
+              // function handle to Dart when the fixture only installs a hook.
+              void 0;
             ''');
+            expect(installed, isNull);
             final res = await source.loadCommentPage('b', 'ep', 1, 'parent', chapter: chapter);
             expect(res.error, isTrue);
             expect(res.errorMessage, 'Comments capability unavailable');
