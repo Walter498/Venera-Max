@@ -189,7 +189,7 @@ class _GalleryModeState extends State<_GalleryMode>
     }
     if (reader.widget.chapters == null) return false;
     var source = ComicSource.find(reader.type.sourceKey);
-    if (source?.chapterCommentsLoader == null) return false;
+    if (source?.hasChapterComments != true || !reader.chapterCommentsAvailable(reader.eid)) return false;
     return appdata.settings.getReaderSetting(
               reader.cid,
               reader.type.sourceKey,
@@ -1731,7 +1731,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
   bool get showChapterCommentsAtEnd {
     if (reader.widget.chapters == null) return false;
     var source = ComicSource.find(reader.type.sourceKey);
-    if (source?.chapterCommentsLoader == null) return false;
+    if (source?.hasChapterComments != true || !reader.chapterCommentsAvailable(reader.eid)) return false;
     return appdata.settings.getReaderSetting(
               reader.cid,
               reader.type.sourceKey,
@@ -1754,12 +1754,14 @@ class _ContinuousModeState extends State<_ContinuousMode>
     if (chapterIndex < 0 || chapterIndex >= chapters.length) {
       return const SizedBox();
     }
-    return _ChapterCommentsPreview(
+    if (!reader.chapterCommentsAvailable(chapters.ids.elementAt(chapterIndex))) return const SizedBox.shrink();
+    return ChapterCommentsPreview(
         comicId: reader.cid,
         epId: chapters.ids.elementAt(chapterIndex),
         source: source,
         comicTitle: reader.widget.name,
         chapterTitle: chapters.titles.elementAt(chapterIndex),
+        sharedFeed: reader.chapterCommentsFeed(source, chapters.ids.elementAt(chapterIndex)),
     );
   }
 

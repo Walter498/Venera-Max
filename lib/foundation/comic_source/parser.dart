@@ -217,6 +217,9 @@ class ComicSourceParser {
       _parseStarRatingFunc(),
       _parseArchiveDownloader(),
       handleClickAuthorEvent: _parseClickAuthorEvent(),
+      resolveCommentCapabilities: _parseCommentCapabilities,
+      commentsOptionsLoader: _parseCommentsOptionsLoader(false),
+      chapterCommentsOptionsLoader: _parseCommentsOptionsLoader(true),
     );
 
     // A script may expose apiFetch(path) so the app can reuse the source's
@@ -1215,6 +1218,27 @@ class ComicSourceParser {
     );
   }
 
+  CommentCapabilities? _parseCommentCapabilities(bool chapter) {
+    final path = chapter ? 'comic.chapterCommentCapabilities' : 'comic.commentCapabilities';
+    if (!_checkExists(path)) return null;
+    return CommentCapabilities.fromJson(_getValue(path));
+  }
+
+  CommentsOptionsLoader? _parseCommentsOptionsLoader(bool chapter) {
+    final path = chapter ? 'comic.loadChapterCommentsWithOptions' : 'comic.loadCommentsWithOptions';
+    if (!_checkExists(path)) return null;
+    return (id, subId, page, replyTo, options) async {
+      try {
+        final res = await JsEngine().runCode('ComicSource.sources.$_key.$path('
+          '${jsonEncode(id)},${jsonEncode(subId)},${jsonEncode(page)},'
+          '${jsonEncode(replyTo)},${jsonEncode(options)})');
+        return Res((res['comments'] as List).map((e) => Comment.fromJson(e)).toList(),
+          subData: res['maxPage'], total: Comment.nonNegativeInt(res['total']),
+          available: res['available'] is bool ? res['available'] as bool : null);
+      } catch (e, s) { Log.error('Network', '$e\n$s'); return Res.error(e.toString()); }
+    };
+  }
+
   CommentsLoader? _parseCommentsLoader() {
     if (!_checkExists("comic.loadComments")) return null;
     return (id, subId, page, replyTo) async {
@@ -1226,6 +1250,8 @@ class ComicSourceParser {
         return Res(
           (res["comments"] as List).map((e) => Comment.fromJson(e)).toList(),
           subData: res["maxPage"],
+          total: Comment.nonNegativeInt(res["total"]),
+          available: res["available"] is bool ? res["available"] as bool : null,
         );
       } catch (e, s) {
         Log.error("Network", "$e\n$s");
@@ -1274,6 +1300,8 @@ class ComicSourceParser {
         return Res(
           (res["comments"] as List).map((e) => Comment.fromJson(e)).toList(),
           subData: res["maxPage"],
+          total: Comment.nonNegativeInt(res["total"]),
+          available: res["available"] is bool ? res["available"] as bool : null,
         );
       } catch (e, s) {
         Log.error("Network", "$e\n$s");

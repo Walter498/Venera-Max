@@ -7,36 +7,37 @@ class Comment {
   final String? time;
   final int? replyCount;
   final String? id;
+  final Comment? replyPreview;
   int? score;
   final bool? isLiked;
-  int? voteStatus; // 1: upvote, -1: downvote, 0: none
-
-  static String? parseTime(dynamic value) {
+  int? voteStatus;
+  static String? optionalText(dynamic value) {
     if (value == null) return null;
-    if (value is int) {
-      if (value < 10000000000) {
-        return DateTime.fromMillisecondsSinceEpoch(value * 1000)
-            .toString()
-            .substring(0, 19);
-      } else {
-        return DateTime.fromMillisecondsSinceEpoch(value)
-            .toString()
-            .substring(0, 19);
-      }
-    }
-    return value.toString();
+    final text = value.toString().trim();
+    return text.isEmpty || text == 'null' ? null : text;
   }
-
+  static int? nonNegativeInt(dynamic value) => value is int && value >= 0 &&
+      value <= 9007199254740991 ? value : null;
+  static String? parseTime(dynamic value) {
+    if (value is int) {
+      final ms = value.abs() < 10000000000 ? value * 1000 : value;
+      if (ms.abs() > 8640000000000000) return null;
+      return DateTime.fromMillisecondsSinceEpoch(ms).toString().split('.').first;
+    }
+    return value is String ? optionalText(value) : null;
+  }
   Comment.fromJson(Map<String, dynamic> json)
-      : userName = json["userName"],
-        avatar = json["avatar"],
-        content = json["content"],
-        time = parseTime(json["time"]),
-        replyCount = json["replyCount"],
-        id = json["id"].toString(),
-        score = json["score"],
-        isLiked = json["isLiked"],
-        voteStatus = json["voteStatus"];
+      : userName = json['userName']?.toString() ?? '',
+        avatar = json['avatar'] is String ? optionalText(json['avatar']) : null,
+        content = json['content']?.toString() ?? '',
+        time = parseTime(json['time']),
+        replyCount = nonNegativeInt(json['replyCount']),
+        id = optionalText(json['id']),
+        replyPreview = json['replyPreview'] is Map ?
+          Comment.fromJson({...Map<String,dynamic>.from(json['replyPreview'] as Map), 'replyPreview': null}) : null,
+        score = nonNegativeInt(json['score']),
+        isLiked = json['isLiked'] is bool ? json['isLiked'] : null,
+        voteStatus = json['voteStatus'] is int ? json['voteStatus'] : null;
 }
 
 class Comic {

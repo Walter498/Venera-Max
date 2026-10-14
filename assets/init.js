@@ -1093,7 +1093,8 @@ function ComicDetails({title, subtitle, subTitle, cover, description, tags, chap
  * @param voteStatus {number?} - 1: upvote, -1: downvote, 0: none
  * @constructor
  */
-function Comment({userName, avatar, content, time, replyCount, id, isLiked, score, voteStatus}) {
+function Comment({userName, avatar, content, time, replyCount, id, isLiked, score, voteStatus, replyPreview}) {
+    this.replyPreview = replyPreview;
     this.userName = userName;
     this.avatar = avatar;
     this.content = content;
@@ -1521,3 +1522,14 @@ function compute(func, ...args) {
         args: args
     })
 }
+/** Optional comment UI protocol (legacy loadComments/loadChapterComments remain 4 args):
+ * comic.commentCapabilities / chapterCommentCapabilities:
+ * {sorts:['new','hot','wonderful'], defaultSort:'new', canLoadReplies:true|false}
+ * comic.loadCommentsWithOptions(id,subId,page,replyTo,{sort}) and
+ * comic.loadChapterCommentsWithOptions(id,epId,page,replyTo,{sort}) are opt-in.
+ * Returned {comments,maxPage,total?,available?}; total is a genuine nonnegative integer.
+ * Explicit available:false hides runtime entry/footer; missing availability is unknown.
+ * canLoadReplies must be true to expose read-reply navigation; write hooks stay unchanged.
+ * Comment.replyPreview is optional {userName,avatar,content,time,id}; never a full thread.
+ * Reply requests always send the parent Comment.id as replyTo, not preview.id.
+ */

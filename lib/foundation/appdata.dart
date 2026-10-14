@@ -499,6 +499,7 @@ class Settings with ChangeNotifier {
     // ⑩ 首頁顯示源：首頁要展示哪些漫畫源的內容。空 = 全部（有探索頁的源）。
     'homeDisplaySources': <String>[],
     'showChapterComments': true, // show chapter comments in reader
+    'chapterCommentsHeightScale': 2.0, // footer viewport relative to legacy 3-row preview
     'commentsFontSize': 14.0, // font size for comment body & user name text
     'showChapterCommentsAtEnd':
         false, // show chapter comments at end of chapter

@@ -23,19 +23,23 @@ class Res<T> {
   /// Null means the source does not report one; callers must not invent it.
   final int? total;
 
+  /// Explicit runtime absence; null preserves legacy/unknown availability.
+  final bool? available;
+
   @override
   String toString() => _data.toString();
 
-  Res.fromErrorRes(Res another, {this.subData, this.total})
+  Res.fromErrorRes(Res another, {this.subData, this.total, this.available})
       : _data = null,
         errorMessage = another.errorMessage;
 
   /// network result
-  const Res(this._data, {this.errorMessage, this.subData, this.total});
+  const Res(this._data, {this.errorMessage, this.subData, this.total, this.available});
 
   const Res.error(String err)
       : _data = null,
         subData = null,
         total = null,
+        available = null,
         errorMessage = err;
 }

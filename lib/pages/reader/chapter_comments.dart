@@ -36,190 +36,69 @@ class ChapterCommentsPage extends StatefulWidget {
 }
 
 class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
-  bool _loading = true;
-  List<Comment>? _comments;
-  String? _error;
-  int _page = 1;
-  int? maxPage;
-  var controller = TextEditingController();
+  late CommentsController feed;
+  final controller = TextEditingController();
   bool sending = false;
-
-  /// Both loads are build-triggered (loading placeholder / list tail); a
-  /// rebuild during the request used to fire a duplicate one, double-loading
-  /// the same page.
-  bool _requestInFlight = false;
-
+  late String _scopeRevision;
+  void _createFeed() {
+    _scopeRevision = widget.source.commentScopeRevision;
+    feed = CommentsController(loader: (page, sort) async {
+      final revision = _scopeRevision;
+      final result = await widget.source.loadCommentPage(widget.comicId, widget.epId, page, widget.replyComment?.id, chapter: true, sort: sort);
+      if (revision != widget.source.commentScopeRevision) return const Res.error("Source settings changed; refresh comments");
+      return result;
+    },
+      sort: widget.source.chapterCommentsOptionsLoader == null ? null : widget.source.chapterCommentCapabilities?.defaultSort,
+      block: _shouldBlockComment);
+    feed.refresh();
+  }
   @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  void firstLoad() async {
-    if (_requestInFlight) return;
-    _requestInFlight = true;
-    var res = await widget.source.chapterCommentsLoader!(
-      widget.comicId,
-      widget.epId,
-      1,
-      widget.replyComment?.id,
-    );
-    _requestInFlight = false;
-    if (!mounted) return;
-    if (res.error) {
-      setState(() {
-        _error = res.errorMessage;
-        _loading = false;
-      });
-    } else {
-      var filteredComments = res.data
-          .where((c) => !_shouldBlockComment(c))
-          .toList();
-      setState(() {
-        _comments = filteredComments;
-        _loading = false;
-        maxPage = res.subData;
-      });
+  void initState() { super.initState(); _createFeed(); }
+  @override
+  void didUpdateWidget(covariant ChapterCommentsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_scopeRevision != widget.source.commentScopeRevision || oldWidget.source != widget.source || oldWidget.replyComment?.id != widget.replyComment?.id ||
+        oldWidget.comicId != widget.comicId || oldWidget.epId != widget.epId) {
+      feed.dispose(); _createFeed();
     }
   }
-
-  void loadMore() async {
-    if (_requestInFlight) return;
-    _requestInFlight = true;
-    var res = await widget.source.chapterCommentsLoader!(
-      widget.comicId,
-      widget.epId,
-      _page + 1,
-      widget.replyComment?.id,
-    );
-    _requestInFlight = false;
-    if (!mounted) return;
-    if (res.error) {
-      context.showMessage(message: res.errorMessage ?? "Unknown Error");
-    } else {
-      var filteredComments = res.data
-          .where((c) => !_shouldBlockComment(c))
-          .toList();
-      setState(() {
-        _comments!.addAll(filteredComments);
-        _page++;
-        if (maxPage == null && res.data.isEmpty) {
-          maxPage = _page;
-        }
-      });
-    }
-  }
+  @override
+  void dispose() { feed.dispose(); controller.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: Appbar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Chapter Comments".tl, style: ts.s18),
-            Text(widget.chapterTitle, style: ts.s12),
-          ],
-        ),
+        title: Text(widget.replyComment == null ? 'Chapter Comments'.tl : '评论详情'),
         style: AppbarStyle.shadow,
       ),
-      body: buildBody(context),
+      body: AnimatedBuilder(animation: feed, builder: (context, _) =>
+        feed.unavailable ? const SizedBox.shrink() : buildBody(context)),
     );
   }
 
   Widget buildBody(BuildContext context) {
-    if (_loading) {
-      firstLoad();
-      return const Center(child: CircularProgressIndicator());
-    } else if (_error != null) {
-      return NetworkError(
-        message: _error!,
-        retry: () {
-          setState(() {
-            _loading = true;
-          });
-        },
-        withAppbar: false,
-      );
-    } else {
-      var showAvatar =
-          _comments!.any((e) {
-            return e.avatar != null;
-          }) ||
-          (widget.replyComment?.avatar != null);
-      return Column(
-        children: [
-          Expanded(
-            child: SmoothScrollProvider(
-              builder: (context, controller, physics) {
-                return ListView.builder(
-                  controller: controller,
-                  physics: physics,
-                  primary: false,
-                  padding: EdgeInsets.zero,
-                  itemCount: _comments!.length + 2,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      if (widget.replyComment != null) {
-                        return Column(
-                          children: [
-                            _ChapterCommentTile(
-                              comment: widget.replyComment!,
-                              source: widget.source,
-                              comicId: widget.comicId,
-                              epId: widget.epId,
-                              showAvatar: showAvatar,
-                              showActions: false,
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  top: BorderSide(
-                                    color: context.colorScheme.outlineVariant,
-                                    width: 0.6,
-                                  ),
-                                ),
-                              ),
-                              child: Text("Replies".tl, style: ts.s18),
-                            ),
-                          ],
-                        );
-                      } else {
-                        return const SizedBox();
-                      }
-                    }
-                    index--;
-
-                    if (index == _comments!.length) {
-                      if (_page < (maxPage ?? _page + 1)) {
-                        loadMore();
-                        return const ListLoadingIndicator();
-                      } else {
-                        return const SizedBox();
-                      }
-                    }
-
-                    return _ChapterCommentTile(
-                      comment: _comments![index],
-                      source: widget.source,
-                      comicId: widget.comicId,
-                      epId: widget.epId,
-                      showAvatar: showAvatar,
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          buildBottom(context),
-        ],
-      );
-    }
+    if (!widget.source.hasChapterComments) return const SizedBox.shrink();
+    Widget tile(Comment comment, {bool actions = true}) => _ChapterCommentTile(
+      key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
+      comment: comment, source: widget.source, comicId: widget.comicId, epId: widget.epId,
+      showAvatar: true, showActions: actions);
+    return Column(children: [
+      if (widget.chapterTitle.isNotEmpty) Align(alignment: Alignment.centerLeft,
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal:16,vertical:8),
+          child: Text(widget.chapterTitle,style: ts.s12))),
+      Expanded(child: CommentsFeed(
+      controller: feed,
+      sorts: widget.source.chapterCommentsOptionsLoader == null ? const [] : widget.source.chapterCommentCapabilities?.sorts ?? const [],
+      totalLabel: widget.replyComment == null ? '评论' : '回复',
+      parent: widget.replyComment == null ? null : Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          tile(widget.replyComment!, actions: false),
+          const Divider(height: 1),
+          const Padding(padding: EdgeInsets.all(16), child: Text('回复列表')),
+        ]),
+      itemBuilder: (comment) => tile(comment))), buildBottom(context)]);
   }
 
   Widget buildBottom(BuildContext context) {
@@ -278,14 +157,12 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
                     controller.text,
                     widget.replyComment?.id,
                   );
+                  if (!mounted) return;
                   if (!b.error) {
                     controller.text = "";
                     setState(() {
                       sending = false;
-                      _loading = true;
-                      _comments?.clear();
-                      _page = 1;
-                      maxPage = null;
+                      feed.refresh();
                     });
                   } else {
                     context.showMessage(message: b.errorMessage ?? "Error");
@@ -308,6 +185,7 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
 
 class _ChapterCommentTile extends StatefulWidget {
   const _ChapterCommentTile({
+    super.key,
     required this.comment,
     required this.source,
     required this.comicId,
@@ -337,75 +215,41 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.showAvatar)
-            Container(
-              width: 36,
-              height: 36,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                color: Theme.of(context).colorScheme.secondaryContainer,
-              ),
-              child: widget.comment.avatar == null
-                  ? null
-                  : AnimatedImage(
-                      image: CachedImageProvider(
-                        widget.comment.avatar!,
-                        sourceKey: widget.source.key,
-                      ),
-                    ),
-            ).paddingRight(8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.comment.userName,
-                  style: ts.bold.copyWith(fontSize: commentsFontSize),
-                ),
-                if (widget.comment.time != null)
-                  Text(widget.comment.time!, style: ts.s12),
-                const SizedBox(height: 4),
-                _CommentContent(text: widget.comment.content),
-                buildActions(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  void didUpdateWidget(covariant _ChapterCommentTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.comment != widget.comment) {
+      likes = widget.comment.score ?? 0;
+      isLiked = widget.comment.isLiked ?? false;
+      voteStatus = widget.comment.voteStatus;
+    }
   }
+  void openReply() {
+    if (!widget.source.canReadReplies(widget.comment, chapter: true)) return;
+    final parent = context.findAncestorStateOfType<_ChapterCommentsPageState>();
+    showSideBar(context, ChapterCommentsPage(comicId: widget.comicId, epId: widget.epId,
+      source: widget.source, comicTitle: parent?.widget.comicTitle ?? '',
+      chapterTitle: parent?.widget.chapterTitle ?? '', replyComment: widget.comment), showBarrier: false);
+  }
+  @override
+  Widget build(BuildContext context) => CommentPresentation(
+    comment: widget.comment, sourceKey: widget.source.key, fontSize: commentsFontSize,
+    actions: widget.showActions ? buildActions() : CommentReadOnlyStats(comment: widget.comment),
+    onReply: widget.showActions && widget.source.canReadReplies(widget.comment, chapter: true) ? openReply : null);
 
   Widget buildActions() {
-    if (!widget.showActions) {
-      return const SizedBox();
-    }
-    if (widget.comment.score == null && widget.comment.replyCount == null) {
-      return const SizedBox();
-    }
-    return SizedBox(
-      height: 36,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          if (widget.comment.score != null &&
-              widget.source.voteCommentFunc != null)
-            buildVote(),
-          if (widget.comment.score != null &&
-              widget.source.likeCommentFunc != null)
-            buildLike(),
-          // Only show reply button if comment has both id and replyCount
-          if (widget.comment.replyCount != null && widget.comment.id != null)
-            buildReply(),
-        ],
-      ),
-    ).paddingTop(8);
+    if (!widget.showActions) return const SizedBox.shrink();
+    final hasId = widget.comment.id != null;
+    final canReply = widget.source.canReadReplies(widget.comment, chapter: true);
+    return Padding(padding: const EdgeInsets.only(top: 8), child: Wrap(
+      spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+      if (widget.comment.score != null)
+        if (hasId && widget.source.voteCommentFunc != null) buildVote()
+        else if (hasId && widget.source.likeCommentFunc != null) buildLike()
+        else CommentReadOnlyStats(comment: Comment.fromJson({'score': widget.comment.score})),
+      if (widget.comment.replyCount != null)
+        if (canReply) buildReply()
+        else CommentReadOnlyStats(comment: Comment.fromJson({'replyCount': widget.comment.replyCount})),
+    ]));
   }
 
   Widget buildReply() {
@@ -420,23 +264,7 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          // Get the parent page's widget to access comicTitle and chapterTitle
-          var parentState = context
-              .findAncestorStateOfType<_ChapterCommentsPageState>();
-          showSideBar(
-            context,
-            ChapterCommentsPage(
-              comicId: widget.comicId,
-              epId: widget.epId,
-              source: widget.source,
-              comicTitle: parentState?.widget.comicTitle ?? '',
-              chapterTitle: parentState?.widget.chapterTitle ?? '',
-              replyComment: widget.comment,
-            ),
-            showBarrier: false,
-          );
-        },
+        onTap: openReply,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -476,7 +304,8 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
             widget.comment.id!,
             !isLiked,
           );
-          if (res.success) {
+          if (!mounted) return;
+    if (res.success) {
             isLiked = !isLiked;
             likes += isLiked ? 1 : -1;
           } else {
@@ -532,6 +361,7 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
       isUp,
       isCancel,
     );
+    if (!mounted) return;
     if (res.success) {
       if (isCancel) {
         voteStatus = 0;
@@ -630,387 +460,144 @@ class _EmbeddedChapterCommentsPage extends StatefulWidget {
       _EmbeddedChapterCommentsPageState();
 }
 
-class _EmbeddedChapterCommentsPageState
-    extends State<_EmbeddedChapterCommentsPage> {
-  bool _loading = true;
-  List<Comment>? _comments;
-  String? _error;
-  int _page = 1;
-  int? maxPage;
-  var textController = TextEditingController();
-  final scrollController = ScrollController();
-  bool sending = false;
-
-  /// Both loads are build-triggered (loading placeholder / list tail); a
-  /// rebuild during the request used to fire a duplicate one, double-loading
-  /// the same page.
-  bool _requestInFlight = false;
-
+class _EmbeddedChapterCommentsPageState extends State<_EmbeddedChapterCommentsPage> {
   @override
-  void dispose() {
-    textController.dispose();
-    scrollController.dispose();
-    super.dispose();
-  }
-
-  void firstLoad() async {
-    if (_requestInFlight) return;
-    _requestInFlight = true;
-    var res = await widget.source.chapterCommentsLoader!(
-      widget.comicId,
-      widget.epId,
-      1,
-      null,
-    );
-    _requestInFlight = false;
-    if (res.error) {
-      if (mounted) {
-        setState(() {
-          _error = res.errorMessage;
-          _loading = false;
-        });
-      }
-    } else if (mounted) {
-      var filteredComments = res.data
-          .where((c) => !_shouldBlockComment(c))
-          .toList();
-      setState(() {
-        _comments = filteredComments;
-        _loading = false;
-        maxPage = res.subData;
-      });
-    }
-  }
-
-  void loadMore() async {
-    if (_requestInFlight) return;
-    _requestInFlight = true;
-    var res = await widget.source.chapterCommentsLoader!(
-      widget.comicId,
-      widget.epId,
-      _page + 1,
-      null,
-    );
-    _requestInFlight = false;
-    if (res.error) {
-      if (mounted) {
-        context.showMessage(message: res.errorMessage ?? "Unknown Error");
-      }
-    } else if (mounted) {
-      var filteredComments = res.data
-          .where((c) => !_shouldBlockComment(c))
-          .toList();
-      setState(() {
-        _comments!.addAll(filteredComments);
-        _page++;
-        if (maxPage == null && res.data.isEmpty) {
-          maxPage = _page;
-        }
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: context.colorScheme.surface,
-      child: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBody()),
-            _buildBottom(),
-            // Only this spacer may depend on the keyboard inset: reading it at
-            // the page root rebuilt the whole comments grid on every frame of
-            // the IME animation (#107). Scoped here, those frames only resize
-            // an empty box and relayout the column.
-            Builder(
-              builder: (context) =>
-                  SizedBox(height: MediaQuery.viewInsetsOf(context).bottom),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: context.colorScheme.outlineVariant,
-            width: 0.6,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            tooltip: "Exit".tl,
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.comment, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text("Chapter Comments".tl, style: ts.s18),
-                Text(widget.chapterTitle, style: ts.s12),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBody() {
-    if (_loading) {
-      firstLoad();
-      return const Center(child: CircularProgressIndicator());
-    } else if (_error != null) {
-      return NetworkError(
-        message: _error!,
-        retry: () {
-          setState(() {
-            _loading = true;
-            _error = null;
-          });
-        },
-        withAppbar: false,
-      );
-    } else if (_comments == null || _comments!.isEmpty) {
-      return Center(child: Text("No comments yet".tl, style: ts.s14));
-    } else {
-      var showAvatar = _comments!.any((e) => e.avatar != null);
-      return _buildCommentsList(showAvatar);
-    }
-  }
-
-  Widget _buildCommentsList(bool showAvatar) {
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final crossAxisCount = isLandscape ? 2 : 1;
-
-    return AppScrollBar(
-      controller: scrollController,
-      child: ScrollConfiguration(
-        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-        child: MasonryGridView.count(
-          controller: scrollController,
-          crossAxisCount: crossAxisCount,
-          mainAxisSpacing: 0,
-          crossAxisSpacing: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          itemCount: _comments!.length + 1,
-          itemBuilder: (context, index) {
-            if (index == _comments!.length) {
-              if (_page < (maxPage ?? _page + 1)) {
-                loadMore();
-                return const ListLoadingIndicator();
-              } else {
-                return const SizedBox();
-              }
-            }
-            return _ChapterCommentTile(
-              comment: _comments![index],
-              source: widget.source,
-              comicId: widget.comicId,
-              epId: widget.epId,
-              showAvatar: showAvatar,
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottom() {
-    if (widget.source.sendChapterCommentFunc == null) {
-      return const SizedBox(height: 0);
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: context.colorScheme.outlineVariant,
-            width: 0.6,
-          ),
-        ),
-      ),
-      child: Material(
-        color: context.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(24),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: textController,
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  hintText: "Comment".tl,
-                ),
-                minLines: 1,
-                maxLines: 5,
-              ),
-            ),
-            if (sending)
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            else
-              IconButton(
-                onPressed: () async {
-                  if (textController.text.isEmpty) {
-                    return;
-                  }
-                  setState(() {
-                    sending = true;
-                  });
-                  var b = await widget.source.sendChapterCommentFunc!(
-                    widget.comicId,
-                    widget.epId,
-                    textController.text,
-                    null,
-                  );
-                  if (!b.error) {
-                    textController.text = "";
-                    setState(() {
-                      sending = false;
-                      _loading = true;
-                      _comments?.clear();
-                      _page = 1;
-                      maxPage = null;
-                    });
-                  } else {
-                    if (mounted) {
-                      context.showMessage(message: b.errorMessage ?? "Error");
-                    }
-                    setState(() {
-                      sending = false;
-                    });
-                  }
-                },
-                icon: Icon(
-                  Icons.send,
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-              ),
-          ],
-        ).paddingLeft(16).paddingRight(4),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ChapterCommentsPage(
+    comicId: widget.comicId, epId: widget.epId, source: widget.source,
+    comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle);
 }
 
 /// A compact chapter footer in the reader, with a full comments route.
 /// Never fabricates a total count: the badge counts the fetched first page.
-class _ChapterCommentsPreview extends StatefulWidget {
-  const _ChapterCommentsPreview({super.key, required this.comicId,
+class ChapterCommentsPreview extends StatefulWidget {
+  const ChapterCommentsPreview({super.key, required this.comicId,
     required this.epId, required this.source, required this.comicTitle,
-    required this.chapterTitle});
+    required this.chapterTitle, this.sharedFeed});
   final String comicId, epId, comicTitle, chapterTitle;
+  final CommentsController? sharedFeed;
   final ComicSource source;
   @override
-  State<_ChapterCommentsPreview> createState() => _ChapterCommentsPreviewState();
+  State<ChapterCommentsPreview> createState() => ChapterCommentsPreviewState();
 }
 
-class _ChapterCommentsPreviewState extends State<_ChapterCommentsPreview> {
-  List<Comment>? _comments;
-  String? _error;
-  int _generation = 0;
-
+class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
+  late CommentsController feed;
+  late String _scopeRevision;
+  void _createFeed() {
+    _scopeRevision = widget.source.commentScopeRevision;
+    if (widget.sharedFeed != null) { feed = widget.sharedFeed!; return; }
+    feed = CommentsController(loader: (page, sort) async {
+      final revision = _scopeRevision;
+      final result = await widget.source.loadCommentPage(
+        widget.comicId, widget.epId, page, null, chapter: true, sort: sort);
+      if (revision != widget.source.commentScopeRevision) return const Res.error("Source settings changed; refresh comments");
+      return result;
+    },
+      sort: widget.source.chapterCommentsOptionsLoader == null ? null :
+        widget.source.chapterCommentCapabilities?.defaultSort, block: _shouldBlockComment);
+    feed.refresh();
+  }
   @override
-  void initState() { super.initState(); _load(); }
-
+  void initState() { super.initState(); _createFeed(); }
   @override
-  void didUpdateWidget(covariant _ChapterCommentsPreview oldWidget) {
+  void didUpdateWidget(covariant ChapterCommentsPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.epId != widget.epId || oldWidget.comicId != widget.comicId ||
-        oldWidget.source.key != widget.source.key) {
-      _comments = null; _error = null; _load();
+    if (_scopeRevision != widget.source.commentScopeRevision || oldWidget.epId != widget.epId || oldWidget.comicId != widget.comicId ||
+        oldWidget.source != widget.source || oldWidget.sharedFeed != widget.sharedFeed) {
+      if (oldWidget.sharedFeed == null) feed.dispose();
+      _createFeed();
     }
   }
+  @override
+  void dispose() { if (widget.sharedFeed == null) feed.dispose(); super.dispose(); }
+  void _openAll() => context.to(() => ChapterCommentsPage(
+    comicId: widget.comicId, epId: widget.epId, source: widget.source,
+    comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle));
+  void _openReply(Comment comment) => context.to(() => ChapterCommentsPage(
+    comicId: widget.comicId, epId: widget.epId, source: widget.source,
+    comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle, replyComment: comment));
 
-  Future<void> _load() async {
-    final generation = ++_generation;
-    try {
-      final res = await widget.source.chapterCommentsLoader!(
-        widget.comicId, widget.epId, 1, null);
-      if (!mounted || generation != _generation) return;
-      setState(() {
-        if (res.error) { _error = res.errorMessage ?? 'Comments unavailable'; }
-        else { _comments = res.data.where((c) => !_shouldBlockComment(c)).toList(); }
-      });
-    } catch (e) {
-      if (mounted && generation == _generation) setState(() => _error = e.toString());
-    }
+  final _legacyKey = GlobalKey();
+  final _headerKey = GlobalKey();
+  final _bottomKey = GlobalKey();
+  double? _legacyHeight, _chromeHeight;
+  bool _measureQueued = false;
+  // Layout the actual fa7afe19 footer invisibly, under the same inherited
+  // width/theme/textScaler. Its entire natural region is the 1x baseline.
+  Widget _legacyFooter(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16,18,16,18),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [const Icon(Icons.chat_bubble_outline_rounded,size:20),
+        const SizedBox(width:8), Expanded(child:Text('Chapter Comments'.tl,style:ts.s18)),
+        TextButton(onPressed:_openAll,child:Text('View all comments'.tl))]),
+      Text(widget.chapterTitle,style:ts.s12.withColor(context.colorScheme.outline)),
+      const SizedBox(height:10),
+      if (feed.loading) const Center(child:Padding(padding:EdgeInsets.all(12),child:CircularProgressIndicator()))
+      else if (feed.error != null) TextButton(onPressed:feed.refresh,child:Text('Retry'.tl))
+      else for(final comment in feed.comments.take(3)) Padding(
+        padding:const EdgeInsets.symmetric(vertical:8),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text(comment.userName,style:const TextStyle(fontWeight:FontWeight.w600)),
+          if(comment.time!=null) Text(comment.time!,style:ts.s12.withColor(context.colorScheme.outline)),
+          Text(comment.content,maxLines:3,overflow:TextOverflow.ellipsis),
+        ])),
+      const SizedBox(height:8),
+      OutlinedButton.icon(onPressed:_openAll,icon:const Icon(Icons.edit_outlined,size:18),
+        label:Text('View comments and reply'.tl)),
+    ]));
+  void _measure() {
+    if (_measureQueued) return;
+    _measureQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureQueued = false;
+      if (!mounted) return;
+      final legacy = _legacyKey.currentContext?.findRenderObject();
+      final header = _headerKey.currentContext?.findRenderObject();
+      final bottom = _bottomKey.currentContext?.findRenderObject();
+      if (legacy is! RenderBox || header is! RenderBox || bottom is! RenderBox) return;
+      final height = legacy.size.height;
+      final chrome = header.size.height + bottom.size.height;
+      if (_legacyHeight != height || _chromeHeight != chrome) {
+        setState(() { _legacyHeight = height; _chromeHeight = chrome; });
+      }
+    });
   }
-
-  void _openAll() {
-    context.to(() => ChapterCommentsPage(
-      comicId: widget.comicId, epId: widget.epId, source: widget.source,
-      comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle,
-    ));
-  }
-
   @override
   Widget build(BuildContext context) {
-    final comments = _comments;
-    return Material(
-      color: context.colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-            const SizedBox(width: 8),
-            Expanded(child: Text('Chapter Comments'.tl, style: ts.s18)),
-            TextButton(onPressed: _openAll, child: Text('View all comments'.tl)),
-          ]),
-          Text(widget.chapterTitle, style: ts.s12.withColor(context.colorScheme.outline)),
-          const SizedBox(height: 10),
-          if (comments == null && _error == null)
-            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
-          else if (_error != null)
-            TextButton(onPressed: () { setState(() { _error = null; }); _load(); },
-              child: Text('Retry'.tl))
-          else if (comments!.isEmpty)
-            Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: Text('No comments'.tl))
-          else
-            for (final comment in comments.take(3))
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(comment.userName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  if (comment.time != null) Text(comment.time!, style: ts.s12.withColor(context.colorScheme.outline)),
-                  // Rich content/replies remain on the full page; the compact
-                  // preview is deliberately bounded for long chapter footers.
-                  Text(comment.content, maxLines: 3, overflow: TextOverflow.ellipsis),
-                ]),
-              ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(onPressed: _openAll,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: Text('View comments and reply'.tl)),
-        ]),
-      ),
-    );
+    if (!widget.source.hasChapterComments) return const SizedBox.shrink();
+    return AnimatedBuilder(animation: Listenable.merge([feed, appdata.settings]),
+      builder: (context, _) {
+        if (!widget.source.hasChapterComments || feed.unavailable || feed.confirmedEmpty) return const SizedBox.shrink();
+        final scale = chapterCommentsScale(appdata.settings.getReaderSetting(
+          widget.comicId, widget.source.key, 'chapterCommentsHeightScale'));
+        return Material(color: context.colorScheme.surface, child: LayoutBuilder(
+          builder: (context, constraints) {
+            _measure();
+            return Stack(children: [
+              Offstage(child:SizedBox(width:constraints.maxWidth,
+                child:SizedBox(key:_legacyKey,child:_legacyFooter(context)))),
+              Column(key:const ValueKey('chapter-comments-region'),
+                crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Column(key:_headerKey,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            Padding(padding: const EdgeInsets.fromLTRB(16,12,16,0), child: Wrap(
+              alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
+              children: [Text('Chapter Comments'.tl, style: ts.s18),
+                TextButton(onPressed: _openAll, child: Text('View all comments'.tl))])),
+            if (widget.chapterTitle.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal:16),
+              child: Text(widget.chapterTitle,style: ts.s12)),
+            ]),
+            SizedBox(height: math.max(1, (_legacyHeight ?? 300) * scale - (_chromeHeight ?? 100)),
+              child: CommentsFeed(controller: feed,
+                sorts: widget.source.chapterCommentsOptionsLoader == null ? const [] :
+                  widget.source.chapterCommentCapabilities?.sorts ?? const [],
+                itemBuilder: (comment) => CommentPresentation(
+                  key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
+                  comment: comment, sourceKey: widget.source.key, fontSize: commentsFontSize,
+                  onReply: widget.source.canReadReplies(comment, chapter:true) ? () => _openReply(comment) : null))),
+            Padding(key:_bottomKey,padding: const EdgeInsets.fromLTRB(16,0,16,12), child: OutlinedButton(
+              onPressed: _openAll, child: Text('View all comments'.tl))),
+          ]),]);
+          }));
+      });
   }
 }

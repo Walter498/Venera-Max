@@ -532,6 +532,39 @@ class ComicSource {
 
   final String version;
 
+  final CommentCapabilities? _commentCapabilities;
+  final CommentCapabilities? _chapterCommentCapabilities;
+  final CommentCapabilities? Function(bool chapter)? resolveCommentCapabilities;
+  CommentCapabilities? get commentCapabilities => resolveCommentCapabilities?.call(false) ?? _commentCapabilities;
+  CommentCapabilities? get chapterCommentCapabilities => resolveCommentCapabilities?.call(true) ?? _chapterCommentCapabilities;
+  /// Only source settings, never account/JWT, participate in comment scope.
+  String get commentScopeRevision => '$version:${jsonEncode(data['settings'] ?? const {})}';
+  final CommentsOptionsLoader? commentsOptionsLoader;
+  final CommentsOptionsLoader? chapterCommentsOptionsLoader;
+  bool get hasComments => commentCapabilities?.enabled != false &&
+      (commentsLoader != null || (commentCapabilities != null && commentsOptionsLoader != null));
+  bool get hasChapterComments => chapterCommentCapabilities?.enabled != false &&
+      (chapterCommentsLoader != null || (chapterCommentCapabilities != null && chapterCommentsOptionsLoader != null));
+  Future<Res<List<Comment>>> loadCommentPage(String id, String? subId, int page,
+      String? replyTo, {bool chapter = false, String? sort}) {
+    final capability = chapter ? chapterCommentCapabilities : commentCapabilities;
+    final options = chapter ? chapterCommentsOptionsLoader : commentsOptionsLoader;
+    final legacy = chapter ? chapterCommentsLoader : commentsLoader;
+    if (capability?.enabled == false || (replyTo != null && capability?.canLoadReplies == false)) {
+      return Future.value(const Res.error('Comments capability unavailable'));
+    }
+    if (capability != null && options != null) {
+      return options(id, subId, page, replyTo, {
+        if (sort != null && capability.sorts.contains(sort)) 'sort': sort,
+      });
+    }
+    if (legacy == null) return Future.value(const Res.error('Comments loader unavailable'));
+    return legacy(id, subId, page, replyTo);
+  }
+  bool canReadReplies(Comment comment, {bool chapter = false}) =>
+      comment.id != null && (chapter ? hasChapterComments : hasComments) &&
+      (chapter ? chapterCommentCapabilities : commentCapabilities)?.canLoadReplies == true;
+
   final CommentsLoader? commentsLoader;
 
   final SendCommentFunc? sendCommentFunc;
@@ -698,7 +731,13 @@ class ComicSource {
     this.starRatingFunc,
     this.archiveDownloader, {
     this.handleClickAuthorEvent,
-  });
+    CommentCapabilities? commentCapabilities,
+    CommentCapabilities? chapterCommentCapabilities,
+    this.resolveCommentCapabilities,
+    this.commentsOptionsLoader,
+    this.chapterCommentsOptionsLoader,
+  }) : _commentCapabilities = commentCapabilities,
+       _chapterCommentCapabilities = chapterCommentCapabilities;
 }
 
 class AccountConfig {

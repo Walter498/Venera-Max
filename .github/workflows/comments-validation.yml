@@ -1,0 +1,80 @@
+name: Comments UI validation
+on:
+  push:
+    branches: [feat/comments-ui-replies-20261014]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: comments-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ios:
+    if: github.ref == 'refs/heads/feat/comments-ui-replies-20261014' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Initialize provenance and evidence
+        id: evidence
+        run: bash tool/comments_ci_run.sh init
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - name: Pinned SDK and locked dependencies
+        id: dependencies
+        timeout-minutes: 12
+        run: bash tool/comments_ci_run.sh dependencies-ios
+      - name: Strict same-SDK baseline analyzer gate
+        id: analyze
+        timeout-minutes: 8
+        run: bash tool/comments_ci_run.sh analyze
+      - name: Prepare original QuickJS and PDFium host libraries
+        id: native
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        timeout-minutes: 8
+        run: bash tool/comments_ci_run.sh native-tests
+      - name: Original author 13 and 28-file regression plus new comments tests
+        id: tests
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 20
+        run: bash tool/comments_ci_run.sh tests
+      - name: Real Flutter widget golden comparison and fresh PNG capture
+        id: render
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 12
+        run: bash tool/comments_ci_run.sh render
+      - name: Build unsigned iPhoneOS Release and validate IPA
+        id: ios
+        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
+        timeout-minutes: 20
+        run: bash tool/comments_ci_run.sh ios
+      - name: Record every gate outcome
+        if: always()
+        env:
+          COMMENTS_STEP_OUTCOMES: ${{ toJSON(steps) }}
+        run: bash tool/comments_ci_run.sh outcomes
+      - name: Upload raw logs, exits, golden PNG and validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comments-ios-evidence
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload package and checksum even on downstream failure
+        if: ${{ always() && steps.ios.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: comments-ios-unsigned-device
+          path: build/comments-artifacts/
+          if-no-files-found: error
+          retention-days: 14

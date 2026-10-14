@@ -15,6 +15,9 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/components/custom_slider.dart';
 import 'package:venera/components/rich_comment_content.dart';
+import 'package:venera/components/comment_presentation.dart';
+import 'package:venera/components/comments_feed.dart';
+import 'package:venera/foundation/comments_controller.dart';
 import 'package:venera/components/window_frame.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
@@ -231,6 +234,58 @@ class _ReaderState extends State<Reader>
     return _shouldShowChapterCommentsAtEnd && _page > maxPage;
   }
 
+  // Availability and the rendered footer share one controller/request generation.
+  final Map<String, CommentsController> _chapterCommentFeeds = {};
+  String? _commentChapter;
+  CommentsController chapterCommentsFeed(ComicSource source, String epId) {
+    final revision = source.commentScopeRevision;
+    final key = '${source.key}:$revision:$cid:$epId';
+    return _chapterCommentFeeds.putIfAbsent(key, () {
+      final feed = CommentsController(
+        sort: source.chapterCommentCapabilities?.defaultSort,
+        block: _shouldBlockComment,
+        loader: (page, sort) async {
+          final result = await source.loadCommentPage(cid, epId, page, null,
+            chapter: true, sort: sort);
+          if (revision != source.commentScopeRevision) {
+            return const Res.error('Source settings changed; refresh comments');
+          }
+          return result;
+        });
+      feed.addListener(() {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() {
+            if (epId == eid && (feed.unavailable || feed.confirmedEmpty) && _page > maxPage) {
+              _page = maxPage;
+            }
+          });
+        });
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) feed.refresh();
+      });
+      return feed;
+    });
+  }
+
+  bool chapterCommentsAvailable(String epId) {
+    final source = ComicSource.find(type.sourceKey);
+    if (source?.hasChapterComments != true) return false;
+    final feed = chapterCommentsFeed(source!, epId);
+    // Re-entering a chapter refreshes an earlier empty/error result; no permanent probe set.
+    if (_commentChapter != eid) {
+      _commentChapter = eid;
+      if (epId == eid && (feed.loaded || feed.error != null) && !feed.loading) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) feed.refresh();
+        });
+        return true;
+      }
+    }
+    return !feed.unavailable && !feed.confirmedEmpty;
+  }
+
   bool get _shouldShowChapterCommentsAtEnd {
     if (mode != ReaderMode.galleryLeftToRight &&
         mode != ReaderMode.galleryRightToLeft) {
@@ -238,7 +293,7 @@ class _ReaderState extends State<Reader>
     }
     if (widget.chapters == null) return false;
     var source = ComicSource.find(type.sourceKey);
-    if (source?.chapterCommentsLoader == null) return false;
+    if (source?.hasChapterComments != true || !chapterCommentsAvailable(eid)) return false;
     return appdata.settings.getReaderSetting(
               cid,
               type.sourceKey,
@@ -414,6 +469,8 @@ class _ReaderState extends State<Reader>
 
   @override
   void dispose() {
+    for (final feed in _chapterCommentFeeds.values) { feed.dispose(); }
+    _chapterCommentFeeds.clear();
     _stopReadingTimer();
     App.rootRouteObserver.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);

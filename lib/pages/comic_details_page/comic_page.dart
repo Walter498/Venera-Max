@@ -11,6 +11,9 @@ import 'package:url_launcher/url_launcher_string.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/components/related_sources_dialog.dart';
 import 'package:venera/components/rich_comment_content.dart';
+import 'package:venera/components/comment_presentation.dart';
+import 'package:venera/components/comments_feed.dart';
+import 'package:venera/foundation/comments_controller.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/chapter_duplicates.dart';
@@ -1122,7 +1125,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                     text: 'Locate last chapter'.tl,
                     onPressed: () => jumpToLastReadChapter?.call(),
                   ),
-                if (source?.commentsLoader != null)
+                if (source?.hasComments == true && !_hideCommentsEntry)
                   _ActionButton(
                     icon: const Icon(Icons.chat_bubble_outline_rounded),
                     text: (comic.commentCount ?? 'Comments'.tl).toString(),
@@ -1611,20 +1614,43 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
   /// 內嵌評論（源在詳情不帶評論時，用 commentsLoader 抓第一頁顯示在章節下面）
   List<Comment>? _inlineComments;
+  String? _inlineCommentsError;
+  int _inlineCommentsGeneration = 0;
+  int? _inlineCommentsTotal, _inlineCommentsMaxPage;
+  bool _inlineCommentsUnavailable = false;
+  bool get _hideCommentsEntry => _inlineCommentsUnavailable || _inlineComments != null && _inlineComments!.isEmpty &&
+    (comic.comments?.isNotEmpty != true) && (comic.commentCount == null || comic.commentCount == 0) &&
+    (_inlineCommentsTotal == null || _inlineCommentsTotal == 0) &&
+    (_inlineCommentsMaxPage == null || _inlineCommentsMaxPage <= 1);
+
 
   Future<void> _loadInlineComments() async {
     final source = ComicSource.find(widget.sourceKey);
-    final loader = source?.commentsLoader;
-    if (loader == null) return;
-    if (comic.comments?.isNotEmpty == true) return;
-    if (_inlineComments != null) return;
+    if (source?.hasComments != true || comic.comments?.isNotEmpty == true) return;
+    final generation = ++_inlineCommentsGeneration;
+    final id = comic.id, subId = comic.subId;
+    final revision = source!.commentScopeRevision;
+    setState(() { _inlineCommentsError = null; _inlineComments = null; _inlineCommentsUnavailable = false; });
     try {
-      final res = await loader(comic.id, comic.subId, 1, null);
-      if (!mounted) return;
-      if (!res.error && res.data.isNotEmpty) {
-        setState(() => _inlineComments = res.data);
+      final res = await source.loadCommentPage(id, subId, 1, null,
+        sort: source.commentCapabilities?.defaultSort);
+      if (!mounted || generation != _inlineCommentsGeneration || id != comic.id || subId != comic.subId) return;
+      if (revision != source.commentScopeRevision) {
+        setState(() => _inlineCommentsError = "Source settings changed; refresh comments");
+        return;
       }
-    } catch (_) {}
+      setState(() {
+        if (res.error) _inlineCommentsError = res.errorMessage;
+        else { _inlineCommentsUnavailable = res.available == false;
+          _inlineComments = res.data; _inlineCommentsTotal = res.total;
+          _inlineCommentsMaxPage = res.subData is int ? res.subData as int : null; }
+      });
+    } catch (e) {
+      if (mounted && generation == _inlineCommentsGeneration && id == comic.id &&
+          subId == comic.subId && revision == source.commentScopeRevision) {
+        setState(() => _inlineCommentsError = e.toString());
+      }
+    }
   }
 
   void _onCollectionChanged() {
@@ -1825,14 +1851,14 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   }
 
   Widget buildComments() {
-    // 優先用詳情自帶的評論；沒有就用 commentsLoader 抓回來的內嵌評論
-    final list = (comic.comments?.isNotEmpty == true)
-        ? comic.comments!
-        : (_inlineComments ?? const <Comment>[]);
-    if (list.isEmpty) {
-      return const SliverPadding(padding: EdgeInsets.zero);
-    }
-    return _CommentsPart(comments: list, showMore: showComments);
+    final source = ComicSource.find(widget.sourceKey);
+    if (source?.hasComments != true || _hideCommentsEntry) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (_inlineCommentsError != null) return SliverToBoxAdapter(child: Column(children: [
+      Text(_inlineCommentsError!), TextButton(onPressed: _loadInlineComments, child: const Text('重试评论'))]));
+    final list = comic.comments?.isNotEmpty == true ? comic.comments! : _inlineComments;
+    if (list == null) return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(16),
+      child: Center(child: CircularProgressIndicator())));
+    return _CommentsPart(comments: list, showMore: showComments, source: source!, data: comic);
   }
 
   void _viewCover(BuildContext context) {

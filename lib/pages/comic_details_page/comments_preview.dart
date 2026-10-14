@@ -1,8 +1,10 @@
 part of 'comic_page.dart';
 
 class _CommentsPart extends StatefulWidget {
-  const _CommentsPart({required this.comments, required this.showMore});
+  const _CommentsPart({required this.comments, required this.showMore, required this.source, required this.data});
 
+  final ComicSource source;
+  final ComicDetails data;
   final List<Comment> comments;
 
   final void Function() showMore;
@@ -26,6 +28,12 @@ class _CommentsPartState extends State<_CommentsPart> {
   void dispose() {
     scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CommentsPart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    comments = widget.comments.where((c) => !_shouldBlockComment(c)).toList();
   }
 
   void _scrollBy(double delta) {
@@ -93,7 +101,7 @@ class _CommentsPartState extends State<_CommentsPart> {
                     itemBuilder: (context, index) {
                       return _CommentWidget(
                         comment: comments[index],
-                        width: cardWidth,
+                        width: cardWidth, source: widget.source, data: widget.data,
                       );
                     },
                   ),
@@ -109,57 +117,18 @@ class _CommentsPartState extends State<_CommentsPart> {
 }
 
 class _CommentWidget extends StatelessWidget {
-  const _CommentWidget({required this.comment, required this.width});
-
+  const _CommentWidget({required this.comment, required this.width, required this.source, required this.data});
   final Comment comment;
   final double width;
-
+  final ComicSource source;
+  final ComicDetails data;
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: double.infinity,
-      margin: const EdgeInsets.all(4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      width: width,
-      decoration: BoxDecoration(
-        color: context.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              if (comment.avatar != null)
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    color: context.colorScheme.surfaceContainer,
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Image(
-                    image: CachedImageProvider(comment.avatar!),
-                    width: 36,
-                    height: 36,
-                    fit: BoxFit.cover,
-                  ),
-                ).paddingRight(8),
-              Text(comment.userName, style: ts.bold),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: RichCommentContent(
-              text: comment.content,
-              showImages: false,
-            ).fixWidth(width - 32),
-          ),
-          const SizedBox(height: 4),
-          if (comment.time != null)
-            Text(comment.time!, style: ts.s12).toAlign(Alignment.centerLeft),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    width: width, margin: const EdgeInsets.all(4),
+    decoration: BoxDecoration(color: context.colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(12)),
+    child: SingleChildScrollView(child: CommentPresentation(comment: comment,
+      sourceKey: source.key, fontSize: commentsFontSize,
+      onReply: source.canReadReplies(comment) ? () => showSideBar(context,
+        CommentsPage(data: data, source: source, replyComment: comment), showBarrier: false) : null)));
 }

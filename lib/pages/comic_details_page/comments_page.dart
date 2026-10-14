@@ -32,170 +32,65 @@ class CommentsPage extends StatefulWidget {
 }
 
 class _CommentsPageState extends State<CommentsPage> {
-  bool _loading = true;
-  List<Comment>? _comments;
-  String? _error;
-  int _page = 1;
-  int? maxPage;
-  var controller = TextEditingController();
+  late CommentsController feed;
+  final controller = TextEditingController();
   bool sending = false;
-
-  /// Both loads are build-triggered (loading placeholder / list tail); a
-  /// rebuild during the request used to fire a duplicate one, double-loading
-  /// the same page.
-  bool _requestInFlight = false;
-
-  void firstLoad() async {
-    if (_requestInFlight) return;
-    _requestInFlight = true;
-    var res = await widget.source.commentsLoader!(
-        widget.data.comicId, widget.data.subId, 1, widget.replyComment?.id);
-    _requestInFlight = false;
-    if (res.error) {
-      setState(() {
-        _error = res.errorMessage;
-        _loading = false;
-      });
-    } else if (mounted) {
-      var filteredComments = res.data.where((c) => !_shouldBlockComment(c)).toList();
-      setState(() {
-        _comments = filteredComments;
-        _loading = false;
-        maxPage = res.subData;
-      });
+  late String _scopeRevision;
+  void _createFeed() {
+    _scopeRevision = widget.source.commentScopeRevision;
+    feed = CommentsController(loader: (page, sort) async {
+      final revision = _scopeRevision;
+      final result = await widget.source.loadCommentPage(widget.data.comicId, widget.data.subId, page, widget.replyComment?.id, sort: sort);
+      if (revision != widget.source.commentScopeRevision) return const Res.error("Source settings changed; refresh comments");
+      return result;
+    },
+      sort: widget.source.commentsOptionsLoader == null ? null : widget.source.commentCapabilities?.defaultSort,
+      block: _shouldBlockComment);
+    feed.refresh();
+  }
+  @override
+  void initState() { super.initState(); _createFeed(); }
+  @override
+  void didUpdateWidget(covariant CommentsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_scopeRevision != widget.source.commentScopeRevision || oldWidget.source != widget.source || oldWidget.replyComment?.id != widget.replyComment?.id ||
+        oldWidget.data != widget.data) {
+      feed.dispose(); _createFeed();
     }
   }
-
-  void loadMore() async {
-    if (_requestInFlight) return;
-    _requestInFlight = true;
-    var res = await widget.source.commentsLoader!(
-      widget.data.comicId,
-      widget.data.subId,
-      _page + 1,
-      widget.replyComment?.id,
-    );
-    _requestInFlight = false;
-    if (res.error) {
-      context.showMessage(message: res.errorMessage ?? "Unknown Error");
-    } else {
-      var filteredComments = res.data.where((c) => !_shouldBlockComment(c)).toList();
-      setState(() {
-        _comments!.addAll(filteredComments);
-        _page++;
-        if (maxPage == null && res.data.isEmpty) {
-          maxPage = _page;
-        }
-      });
-    }
-  }
+  @override
+  void dispose() { feed.dispose(); controller.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: Appbar(
-        title: Text("Comments".tl),
+        title: Text(widget.replyComment == null ? "Comments".tl : "评论详情"),
         style: AppbarStyle.shadow,
       ),
-      body: buildBody(context),
+      body: AnimatedBuilder(animation: feed, builder: (context, _) =>
+        feed.unavailable ? const SizedBox.shrink() : buildBody(context)),
     );
   }
 
   Widget buildBody(BuildContext context) {
-    if (_loading) {
-      firstLoad();
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    } else if (_error != null) {
-      return NetworkError(
-        message: _error!,
-        retry: () {
-          setState(() {
-            _loading = true;
-          });
-        },
-        withAppbar: false,
-      );
-    } else {
-      var showAvatar =
-          _comments!.any((e) {
-            return e.avatar != null;
-          }) ||
-          (widget.replyComment?.avatar != null);
-      return Column(
-        children: [
-          Expanded(
-            child: SmoothScrollProvider(
-              builder: (context, controller, physics) {
-                return ListView.builder(
-                  controller: controller,
-                  physics: physics,
-                  primary: false,
-                  padding: EdgeInsets.zero,
-                  itemCount: _comments!.length + 2,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      if (widget.replyComment != null) {
-                        return Column(
-                          children: [
-                            _CommentTile(
-                              comment: widget.replyComment!,
-                              source: widget.source,
-                              comic: widget.data,
-                              showAvatar: showAvatar,
-                              showActions: false,
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  top: BorderSide(
-                                    color: context.colorScheme.outlineVariant,
-                                    width: 0.6,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                "Replies".tl,
-                                style: ts.s18,
-                              ),
-                            ),
-                          ],
-                        );
-                      } else {
-                        return const SizedBox();
-                      }
-                    }
-                    index--;
-
-                    if (index == _comments!.length) {
-                      if (_page < (maxPage ?? _page + 1)) {
-                        loadMore();
-                        return const ListLoadingIndicator();
-                      } else {
-                        return const SizedBox();
-                      }
-                    }
-
-                    return _CommentTile(
-                      comment: _comments![index],
-                      source: widget.source,
-                      comic: widget.data,
-                      showAvatar: showAvatar,
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          buildBottom(context)
-        ],
-      );
-    }
+    if (!widget.source.hasComments) return const SizedBox.shrink();
+    Widget tile(Comment comment, {bool actions = true}) => _CommentTile(
+      key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
+      comment: comment, source: widget.source, comic: widget.data,
+      showAvatar: true, showActions: actions);
+    return Column(children: [Expanded(child: CommentsFeed(
+      controller: feed,
+      sorts: widget.source.commentsOptionsLoader == null ? const [] : widget.source.commentCapabilities?.sorts ?? const [],
+      totalLabel: widget.replyComment == null ? '评论' : '回复',
+      parent: widget.replyComment == null ? null : Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          tile(widget.replyComment!, actions: false),
+          const Divider(height: 1),
+          const Padding(padding: EdgeInsets.all(16), child: Text('回复列表')),
+        ]),
+      itemBuilder: (comment) => tile(comment))), buildBottom(context)]);
   }
 
   Widget buildBottom(BuildContext context) {
@@ -256,14 +151,12 @@ class _CommentsPageState extends State<CommentsPage> {
                       widget.data.subId,
                       controller.text,
                       widget.replyComment?.id);
+                  if (!mounted) return;
                   if (!b.error) {
                     controller.text = "";
                     setState(() {
                       sending = false;
-                      _loading = true;
-                      _comments?.clear();
-                      _page = 1;
-                      maxPage = null;
+                      feed.refresh();
                     });
                   } else {
                     context.showMessage(message: b.errorMessage ?? "Error");
@@ -286,6 +179,7 @@ class _CommentsPageState extends State<CommentsPage> {
 
 class _CommentTile extends StatefulWidget {
   const _CommentTile({
+    super.key,
     required this.comment,
     required this.source,
     required this.comic,
@@ -317,72 +211,39 @@ class _CommentTileState extends State<_CommentTile> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.showAvatar)
-            Container(
-              width: 36,
-              height: 36,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: Theme.of(context).colorScheme.secondaryContainer),
-              child: widget.comment.avatar == null
-                  ? null
-                  : AnimatedImage(
-                      image: CachedImageProvider(
-                        widget.comment.avatar!,
-                        sourceKey: widget.source.key,
-                      ),
-                    ),
-            ).paddingRight(8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.comment.userName,
-                  style: ts.bold.copyWith(fontSize: commentsFontSize),
-                ),
-                if (widget.comment.time != null)
-                  Text(widget.comment.time!, style: ts.s12),
-                const SizedBox(height: 4),
-                _CommentContent(text: widget.comment.content),
-                buildActions(),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
+  void didUpdateWidget(covariant _CommentTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.comment != widget.comment) {
+      likes = widget.comment.score ?? 0;
+      isLiked = widget.comment.isLiked ?? false;
+      voteStatus = widget.comment.voteStatus;
+    }
   }
+  void openReply() {
+    if (!widget.source.canReadReplies(widget.comment, chapter: false)) return;
+    showSideBar(context, CommentsPage(data: widget.comic, source: widget.source,
+      replyComment: widget.comment), showBarrier: false);
+  }
+  @override
+  Widget build(BuildContext context) => CommentPresentation(
+    comment: widget.comment, sourceKey: widget.source.key, fontSize: commentsFontSize,
+    actions: widget.showActions ? buildActions() : CommentReadOnlyStats(comment: widget.comment),
+    onReply: widget.showActions && widget.source.canReadReplies(widget.comment, chapter: false) ? openReply : null);
 
   Widget buildActions() {
-    if (!widget.showActions) {
-      return const SizedBox();
-    }
-    if (widget.comment.score == null && widget.comment.replyCount == null) {
-      return const SizedBox();
-    }
-    return SizedBox(
-      height: 36,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          if (widget.comment.score != null &&
-              widget.source.voteCommentFunc != null)
-            buildVote(),
-          if (widget.comment.score != null &&
-              widget.source.likeCommentFunc != null)
-            buildLike(),
-          if (widget.comment.replyCount != null) buildReply(),
-        ],
-      ),
-    ).paddingTop(8);
+    if (!widget.showActions) return const SizedBox.shrink();
+    final hasId = widget.comment.id != null;
+    final canReply = widget.source.canReadReplies(widget.comment, chapter: false);
+    return Padding(padding: const EdgeInsets.only(top: 8), child: Wrap(
+      spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+      if (widget.comment.score != null)
+        if (hasId && widget.source.voteCommentFunc != null) buildVote()
+        else if (hasId && widget.source.likeCommentFunc != null) buildLike()
+        else CommentReadOnlyStats(comment: Comment.fromJson({'score': widget.comment.score})),
+      if (widget.comment.replyCount != null)
+        if (canReply) buildReply()
+        else CommentReadOnlyStats(comment: Comment.fromJson({'replyCount': widget.comment.replyCount})),
+    ]));
   }
 
   Widget buildReply() {
@@ -397,17 +258,7 @@ class _CommentTileState extends State<_CommentTile> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          showSideBar(
-            context,
-            CommentsPage(
-              data: widget.comic,
-              source: widget.source,
-              replyComment: widget.comment,
-            ),
-            showBarrier: false,
-          );
-        },
+        onTap: openReply,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -449,7 +300,8 @@ class _CommentTileState extends State<_CommentTile> {
             widget.comment.id!,
             !isLiked,
           );
-          if (res.success) {
+          if (!mounted) return;
+    if (res.success) {
             isLiked = !isLiked;
             likes += isLiked ? 1 : -1;
           } else {
@@ -507,6 +359,7 @@ class _CommentTileState extends State<_CommentTile> {
       isUp,
       isCancel,
     );
+    if (!mounted) return;
     if (res.success) {
       if (isCancel) {
         voteStatus = 0;

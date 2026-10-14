@@ -1213,7 +1213,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
     // Check if comic source supports chapter comments
     var source = ComicSource.find(context.reader.type.sourceKey);
-    if (source == null || source.chapterCommentsLoader == null) return false;
+    if (source?.hasChapterComments != true || !context.reader.chapterCommentsAvailable(context.reader.eid)) return false;
 
     return true;
   }

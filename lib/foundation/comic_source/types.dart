@@ -14,6 +14,30 @@ typedef LoadComicFunc = Future<Res<ComicDetails>> Function(String id);
 typedef LoadComicPagesFunc =
     Future<Res<List<String>>> Function(String id, String? ep);
 
+/// Optional fifth-argument hook. Legacy loaders retain exactly four arguments.
+typedef CommentsOptionsLoader = Future<Res<List<Comment>>> Function(
+  String id, String? subId, int page, String? replyTo, Map<String, dynamic> options);
+
+class CommentCapabilities {
+  final List<String> sorts;
+  final String? defaultSort;
+  final bool? canLoadReplies;
+  final bool enabled;
+  const CommentCapabilities({this.sorts = const [], this.defaultSort,
+    this.canLoadReplies, this.enabled = true});
+  factory CommentCapabilities.fromJson(dynamic value) {
+    final map = value is Map ? value : const {};
+    final sorts = (map['sorts'] is List ? map['sorts'] as List : const [])
+      .whereType<String>().where((s) => const ['new','hot','wonderful'].contains(s))
+      .toSet().toList();
+    return CommentCapabilities(sorts: sorts,
+      defaultSort: sorts.contains(map['defaultSort']) ? map['defaultSort'] :
+        (sorts.isEmpty ? null : sorts.first),
+      canLoadReplies: map['canLoadReplies'] is bool ? map['canLoadReplies'] : null,
+      enabled: map['enabled'] != false);
+  }
+}
+
 typedef CommentsLoader =
     Future<Res<List<Comment>>> Function(
       String id,

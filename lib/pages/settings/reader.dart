@@ -1037,6 +1037,18 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   widget.onChanged?.call("commentsFontSize");
                 },
               ),
+              _SliderSetting(
+                title: '章末评论可见长度（倍）',
+                description: '默认 2.0 倍；1.0 倍为旧版三条、每条正文最多三行的可见区域。0.5–4.0 倍，增加实际可滚动评论区域。',
+                settingsIndex: 'chapterCommentsHeightScale', interval: 0.5, min: 0.5, max: 4,
+                comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                comicSource: isEnabledSpecificSettings ? widget.comicSource : null,
+                useDeviceSettings: useDeviceSpecificSettings,
+                onChanged: () {
+                  appdata.saveData();
+                  widget.onChanged?.call('chapterCommentsHeightScale');
+                },
+              ),
               if (_isChapterCommentsAtEndSupported())
                 _SwitchSetting(
                   title: "Show Comments at Chapter End".tl,
