@@ -532,11 +532,10 @@ class ComicSource {
 
   final String version;
 
-  final CommentCapabilities? _commentCapabilities;
-  final CommentCapabilities? _chapterCommentCapabilities;
+  final ({CommentCapabilities? work, CommentCapabilities? chapter}) _initialCommentCapabilities;
   final CommentCapabilities? Function(bool chapter)? resolveCommentCapabilities;
-  CommentCapabilities? get commentCapabilities => resolveCommentCapabilities?.call(false) ?? _commentCapabilities;
-  CommentCapabilities? get chapterCommentCapabilities => resolveCommentCapabilities?.call(true) ?? _chapterCommentCapabilities;
+  CommentCapabilities? get commentCapabilities => resolveCommentCapabilities?.call(false) ?? _initialCommentCapabilities.work;
+  CommentCapabilities? get chapterCommentCapabilities => resolveCommentCapabilities?.call(true) ?? _initialCommentCapabilities.chapter;
   /// Only source settings, never account/JWT, participate in comment scope.
   String get commentScopeRevision => '$version:${jsonEncode(data['settings'] ?? const {})}';
   final CommentsOptionsLoader? commentsOptionsLoader;
@@ -549,7 +548,9 @@ class ComicSource {
       String? replyTo, {bool chapter = false, String? sort}) {
     final capability = chapter ? chapterCommentCapabilities : commentCapabilities;
     final options = chapter ? chapterCommentsOptionsLoader : commentsOptionsLoader;
-    final legacy = chapter ? chapterCommentsLoader : commentsLoader;
+    if (chapter && (subId == null || subId.trim().isEmpty || subId.trim() == 'null')) {
+      return Future.value(const Res.error('Chapter comments require a valid episode id'));
+    }
     if (capability?.enabled == false || (replyTo != null && capability?.canLoadReplies == false)) {
       return Future.value(const Res.error('Comments capability unavailable'));
     }
@@ -558,12 +559,28 @@ class ComicSource {
         if (sort != null && capability.sorts.contains(sort)) 'sort': sort,
       });
     }
-    if (legacy == null) return Future.value(const Res.error('Comments loader unavailable'));
-    return legacy(id, subId, page, replyTo);
+    if (chapter) {
+      final loader = chapterCommentsLoader;
+      if (loader == null) return Future.value(const Res.error('Comments loader unavailable'));
+      // The chapter guard above rejects invalid ids before either hook is called.
+      return loader(id, subId!, page, replyTo);
+    }
+    final loader = commentsLoader;
+    if (loader == null) return Future.value(const Res.error('Comments loader unavailable'));
+    return loader(id, subId, page, replyTo);
   }
-  bool canReadReplies(Comment comment, {bool chapter = false}) =>
-      comment.id != null && (chapter ? hasChapterComments : hasComments) &&
-      (chapter ? chapterCommentCapabilities : commentCapabilities)?.canLoadReplies == true;
+  bool canReadReplies(Comment comment, {bool chapter = false}) {
+    if (comment.id == null || !(chapter ? hasChapterComments : hasComments)) {
+      return false;
+    }
+    final capability = chapter ? chapterCommentCapabilities : commentCapabilities;
+    if (capability?.canLoadReplies == false) return false;
+    if (capability?.canLoadReplies == true) return true;
+    // Unknown is not disabled: preserve the pre-capability replyCount + id
+    // entry only for a legacy loader. Preview alone cannot prove that path.
+    final legacy = chapter ? chapterCommentsLoader : commentsLoader;
+    return legacy != null && comment.replyCount != null;
+  }
 
   final CommentsLoader? commentsLoader;
 
@@ -736,8 +753,7 @@ class ComicSource {
     this.resolveCommentCapabilities,
     this.commentsOptionsLoader,
     this.chapterCommentsOptionsLoader,
-  }) : _commentCapabilities = commentCapabilities,
-       _chapterCommentCapabilities = chapterCommentCapabilities;
+  }) : _initialCommentCapabilities = (work: commentCapabilities, chapter: chapterCommentCapabilities);
 }
 
 class AccountConfig {

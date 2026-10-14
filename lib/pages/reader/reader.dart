@@ -32,7 +32,6 @@ import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/global_state.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/image_enhance_shader.dart';
-import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/foundation/image_provider/reader_image.dart';
 import 'package:venera/foundation/image_translation/translation_config.dart';
 import 'package:venera/foundation/image_translation/translation_service.dart';
@@ -60,7 +59,6 @@ import 'package:venera/utils/translations.dart';
 import 'package:venera/utils/volume.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:battery_plus/battery_plus.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 part 'scaffold.dart';
 

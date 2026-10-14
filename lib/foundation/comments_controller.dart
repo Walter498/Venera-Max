@@ -19,7 +19,7 @@ class CommentsController extends ChangeNotifier {
   bool _disposed = false;
   bool _rawEmpty = false;
   bool get confirmedEmpty => loaded && error == null && _rawEmpty &&
-      (total == null || total == 0) && (maxPage == null || maxPage <= 1);
+      (total == null || total == 0) && (maxPage == null || maxPage! <= 1);
   bool get hasMore => loaded && !unavailable && (maxPage == null || page < maxPage!);
 
   Future<void> refresh({String? nextSort}) async {

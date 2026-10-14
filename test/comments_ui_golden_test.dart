@@ -40,8 +40,9 @@ void main() {
             replyComment:thread ? commentFixture('parent-topic',replies:6) : null))));
         await tester.pumpAndSettle();
         expect(tester.takeException(),isNull);
-        if (thread) expect(find.text('评论详情'),findsOneWidget);
-        else {
+        if (thread) {
+          expect(find.text('评论详情'),findsOneWidget);
+        } else {
           expect(find.text('最新'),findsOneWidget);
           expect(find.text('最热'),findsOneWidget);
           expect(find.text('精彩'),findsOneWidget);

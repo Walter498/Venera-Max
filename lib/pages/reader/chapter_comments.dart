@@ -428,17 +428,6 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
   }
 }
 
-class _CommentContent extends StatelessWidget {
-  const _CommentContent({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return CommentContent(text: text, fontSize: commentsFontSize);
-  }
-}
-
 /// Embedded chapter comments page for displaying at end of chapter in gallery mode.
 class _EmbeddedChapterCommentsPage extends StatefulWidget {
   const _EmbeddedChapterCommentsPage({

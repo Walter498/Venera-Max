@@ -1232,6 +1232,9 @@ class ComicSourceParser {
         final res = await JsEngine().runCode('ComicSource.sources.$_key.$path('
           '${jsonEncode(id)},${jsonEncode(subId)},${jsonEncode(page)},'
           '${jsonEncode(replyTo)},${jsonEncode(options)})');
+        if (res['available'] == false) {
+          return const Res<List<Comment>>([], available: false, total: 0, subData: 0);
+        }
         return Res((res['comments'] as List).map((e) => Comment.fromJson(e)).toList(),
           subData: res['maxPage'], total: Comment.nonNegativeInt(res['total']),
           available: res['available'] is bool ? res['available'] as bool : null);
@@ -1247,6 +1250,9 @@ class ComicSourceParser {
           ComicSource.sources.$_key.comic.loadComments(
             ${jsonEncode(id)}, ${jsonEncode(subId)}, ${jsonEncode(page)}, ${jsonEncode(replyTo)})
         """);
+        if (res['available'] == false) {
+          return const Res<List<Comment>>([], available: false, total: 0, subData: 0);
+        }
         return Res(
           (res["comments"] as List).map((e) => Comment.fromJson(e)).toList(),
           subData: res["maxPage"],
@@ -1297,6 +1303,9 @@ class ComicSourceParser {
           ComicSource.sources.$_key.comic.loadChapterComments(
             ${jsonEncode(comicId)}, ${jsonEncode(epId)}, ${jsonEncode(page)}, ${jsonEncode(replyTo)})
         """);
+        if (res['available'] == false) {
+          return const Res<List<Comment>>([], available: false, total: 0, subData: 0);
+        }
         return Res(
           (res["comments"] as List).map((e) => Comment.fromJson(e)).toList(),
           subData: res["maxPage"],

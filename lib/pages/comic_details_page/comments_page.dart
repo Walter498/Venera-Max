@@ -425,14 +425,3 @@ class _CommentTileState extends State<_CommentTile> {
     );
   }
 }
-
-class _CommentContent extends StatelessWidget {
-  const _CommentContent({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return CommentContent(text: text, fontSize: commentsFontSize);
-  }
-}

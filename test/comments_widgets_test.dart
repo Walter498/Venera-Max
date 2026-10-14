@@ -132,7 +132,7 @@ void main() {
           builder:(context,child) => MediaQuery(data:MediaQuery.of(context).copyWith(
             textScaler:TextScaler.linear(fontScale)),child:child!),
           home:Scaffold(body:SingleChildScrollView(child:ChapterCommentsPreview(
-            comicId:'work',epId:'ep',source:source,comicTitle:'Work',chapterTitle:'Chapter'))))));
+            comicId:'work',epId:'ep',source:source,comicTitle:'Work',chapterTitle:'Chapter')))));
         await tester.pumpAndSettle();
         final legacy=tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height;
         expect(legacy,greaterThan(0));

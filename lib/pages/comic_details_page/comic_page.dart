@@ -1621,7 +1621,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   bool get _hideCommentsEntry => _inlineCommentsUnavailable || _inlineComments != null && _inlineComments!.isEmpty &&
     (comic.comments?.isNotEmpty != true) && (comic.commentCount == null || comic.commentCount == 0) &&
     (_inlineCommentsTotal == null || _inlineCommentsTotal == 0) &&
-    (_inlineCommentsMaxPage == null || _inlineCommentsMaxPage <= 1);
+    (_inlineCommentsMaxPage == null || _inlineCommentsMaxPage! <= 1);
 
 
   Future<void> _loadInlineComments() async {
@@ -1640,8 +1640,9 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         return;
       }
       setState(() {
-        if (res.error) _inlineCommentsError = res.errorMessage;
-        else { _inlineCommentsUnavailable = res.available == false;
+        if (res.error) {
+          _inlineCommentsError = res.errorMessage;
+        } else { _inlineCommentsUnavailable = res.available == false;
           _inlineComments = res.data; _inlineCommentsTotal = res.total;
           _inlineCommentsMaxPage = res.subData is int ? res.subData as int : null; }
       });
@@ -1853,11 +1854,15 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   Widget buildComments() {
     final source = ComicSource.find(widget.sourceKey);
     if (source?.hasComments != true || _hideCommentsEntry) return const SliverToBoxAdapter(child: SizedBox.shrink());
-    if (_inlineCommentsError != null) return SliverToBoxAdapter(child: Column(children: [
-      Text(_inlineCommentsError!), TextButton(onPressed: _loadInlineComments, child: const Text('重试评论'))]));
+    if (_inlineCommentsError != null) {
+      return SliverToBoxAdapter(child: Column(children: [
+        Text(_inlineCommentsError!), TextButton(onPressed: _loadInlineComments, child: const Text('重试评论'))]));
+    }
     final list = comic.comments?.isNotEmpty == true ? comic.comments! : _inlineComments;
-    if (list == null) return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(16),
-      child: Center(child: CircularProgressIndicator())));
+    if (list == null) {
+      return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator())));
+    }
     return _CommentsPart(comments: list, showMore: showComments, source: source!, data: comic);
   }
 
