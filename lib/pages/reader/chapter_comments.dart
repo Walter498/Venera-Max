@@ -428,32 +428,33 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
   }
 }
 
-/// Embedded chapter comments page for displaying at end of chapter in gallery mode.
-class _EmbeddedChapterCommentsPage extends StatefulWidget {
-  const _EmbeddedChapterCommentsPage({
-    required this.comicId,
-    required this.epId,
-    required this.source,
-    required this.comicTitle,
-    required this.chapterTitle,
-  });
-
-  final String comicId;
-  final String epId;
-  final ComicSource source;
-  final String comicTitle;
-  final String chapterTitle;
-
-  @override
-  State<_EmbeddedChapterCommentsPage> createState() =>
-      _EmbeddedChapterCommentsPageState();
-}
-
-class _EmbeddedChapterCommentsPageState extends State<_EmbeddedChapterCommentsPage> {
-  @override
-  Widget build(BuildContext context) => ChapterCommentsPage(
-    comicId: widget.comicId, epId: widget.epId, source: widget.source,
-    comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle);
+/// Shared by chapter-load entry and lazy footer. Requests start synchronously;
+/// each source revision / work / episode owns an isolated controller generation.
+class ReaderChapterCommentsFeeds {
+  ReaderChapterCommentsFeeds({this.onChanged});
+  final void Function(String epId, String revision, CommentsController feed)? onChanged;
+  final Map<String, CommentsController> _feeds = {};
+  CommentsController chapterLoading(ComicSource source,String comicId,String epId) {
+    final revision = source.commentScopeRevision;
+    final key = '${source.key}:$revision:$comicId:$epId';
+    return _feeds.putIfAbsent(key, () {
+      final feed = CommentsController(
+        sort: source.chapterCommentsOptionsLoader == null ? null : source.chapterCommentCapabilities?.defaultSort,
+        block:_shouldBlockComment,
+        loader:(page,sort) async {
+          final result = await source.loadCommentPage(comicId,epId,page,null,chapter:true,sort:sort);
+          if(revision!=source.commentScopeRevision) return const Res.error('Source settings changed; refresh comments');
+          return result;
+        });
+      feed.addListener(() => onChanged?.call(epId,revision,feed));
+      unawaited(feed.refresh());
+      return feed;
+    });
+  }
+  void dispose() {
+    for(final feed in _feeds.values) { feed.dispose(); }
+    _feeds.clear();
+  }
 }
 
 /// A compact chapter footer in the reader, with a full comments route.
@@ -461,7 +462,8 @@ class _EmbeddedChapterCommentsPageState extends State<_EmbeddedChapterCommentsPa
 class ChapterCommentsPreview extends StatefulWidget {
   const ChapterCommentsPreview({super.key, required this.comicId,
     required this.epId, required this.source, required this.comicTitle,
-    required this.chapterTitle, this.sharedFeed});
+    required this.chapterTitle, this.sharedFeed, this.horizontal = false, this.reverse = false});
+  final bool horizontal, reverse;
   final String comicId, epId, comicTitle, chapterTitle;
   final CommentsController? sharedFeed;
   final ComicSource source;
@@ -506,115 +508,95 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
     comicId: widget.comicId, epId: widget.epId, source: widget.source,
     comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle, replyComment: comment));
 
-  final _legacyKey = GlobalKey();
-  final _headerKey = GlobalKey();
-  final _bottomKey = GlobalKey();
-  double? _legacyHeight, _chromeHeight;
-  bool _measureQueued = false;
-  // Layout the fa7afe19 footer measurement copy under the same inherited
-  // width/theme/textScaler. The normal-size header retains Row + Expanded;
-  // enlarged text or a narrow inner width uses Wrap in both independent copies.
-  // The original fa7afe19 source is unchanged; responsive cases are exceptions.
-  // The entire natural region (not just its list) remains the 1x baseline.
-  Widget _legacyFooter(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16,18,16,18),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      LayoutBuilder(builder:(context,constraints) {
-        final responsive = MediaQuery.textScalerOf(context).scale(18) > 18 ||
-          constraints.maxWidth < 328;
-        if (responsive) {
-          return Wrap(spacing:8, crossAxisAlignment:WrapCrossAlignment.center, children: [
-            const Icon(Icons.chat_bubble_outline_rounded,size:20),
-            Text('Chapter Comments'.tl,style:ts.s18),
-            TextButton(onPressed:_openAll,child:Text('View all comments'.tl))]);
-        }
-        return Row(children:[const Icon(Icons.chat_bubble_outline_rounded,size:20),
-          const SizedBox(width:8), Expanded(child:Text('Chapter Comments'.tl,style:ts.s18)),
-          TextButton(onPressed:_openAll,child:Text('View all comments'.tl))]);
-      }),
-      Text(widget.chapterTitle,style:ts.s12.withColor(context.colorScheme.outline)),
-      const SizedBox(height:10),
-      if (feed.loading) const Center(child:Padding(padding:EdgeInsets.all(12),child:CircularProgressIndicator()))
-      else if (feed.error != null) TextButton(onPressed:feed.refresh,child:Text('Retry'.tl))
-      else for(final comment in feed.comments.take(3)) Padding(
-        padding:const EdgeInsets.symmetric(vertical:8),
-        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text(comment.userName,style:const TextStyle(fontWeight:FontWeight.w600)),
-          if(comment.time!=null) Text(comment.time!,style:ts.s12.withColor(context.colorScheme.outline)),
-          Text(comment.content,maxLines:3,overflow:TextOverflow.ellipsis),
-        ])),
-      const SizedBox(height:8),
-      OutlinedButton.icon(onPressed:_openAll,icon:const Icon(Icons.edit_outlined,size:18),
-        label:Text('View comments and reply'.tl)),
-    ]));
-  void _measure() {
-    if (_measureQueued) return;
-    _measureQueued = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _measureQueued = false;
-      if (!mounted) return;
-      final legacy = _legacyKey.currentContext?.findRenderObject();
-      final header = _headerKey.currentContext?.findRenderObject();
-      final bottom = _bottomKey.currentContext?.findRenderObject();
-      if (legacy is! RenderBox || header is! RenderBox || bottom is! RenderBox) return;
-      final height = legacy.size.height;
-      final chrome = header.size.height + bottom.size.height;
-      if (_legacyHeight != height || _chromeHeight != chrome) {
-        setState(() { _legacyHeight = height; _chromeHeight = chrome; });
-      }
-    });
-  }
+  // Natural chapter content; old persisted height multipliers are inert.
+  static const previewLimit = 4;
   @override
   Widget build(BuildContext context) {
     if (!widget.source.hasChapterComments) return const SizedBox.shrink();
     return AnimatedBuilder(animation: Listenable.merge([feed, appdata.settings]),
       builder: (context, _) {
-        if (!widget.source.hasChapterComments || feed.unavailable || feed.confirmedEmpty) return const SizedBox.shrink();
-        final scale = chapterCommentsScale(appdata.settings.getReaderSetting(
-          widget.comicId, widget.source.key, 'chapterCommentsHeightScale'));
-        return Material(color: context.colorScheme.surface, child: LayoutBuilder(
-          builder: (context, constraints) {
-            _measure();
-            final viewport = SizedBox(
-              height: math.max(1, (_legacyHeight ?? 300) * scale - (_chromeHeight ?? 100)),
-              child: CommentsFeed(controller: feed,
-                sorts: widget.source.chapterCommentsOptionsLoader == null ? const [] :
-                  widget.source.chapterCommentCapabilities?.sorts ?? const [],
-                itemBuilder: (comment) => CommentPresentation(
-                  key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
-                  comment: comment, sourceKey: widget.source.key, fontSize: commentsFontSize,
-                  onReply: widget.source.canReadReplies(comment, chapter:true) ? () => _openReply(comment) : null)));
-            return Stack(children: [
-              // Offstage still lays out its child. Remove only the vertical
-              // viewport bound so this copy measures natural content, not the
-              // available screen height, and never overflows a finite Column.
-              Offstage(child:constraints.hasBoundedHeight
-                ? OverflowBox(minHeight:0,maxHeight:double.infinity,
-                    alignment:Alignment.topCenter,child:SizedBox(width:constraints.maxWidth,
-                      child:SizedBox(key:_legacyKey,child:_legacyFooter(context))))
-                : SizedBox(width:constraints.maxWidth,
-                    child:SizedBox(key:_legacyKey,child:_legacyFooter(context)))),
-              Column(key:const ValueKey('chapter-comments-region'),
-                crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Column(key:_headerKey,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        if (feed.unavailable || feed.confirmedEmpty) return const SizedBox.shrink();
+        final sorts = widget.source.chapterCommentsOptionsLoader == null
+            ? const <String>[] : widget.source.chapterCommentCapabilities?.sorts ?? const <String>[];
+        if (widget.horizontal) {
+          final width = MediaQuery.sizeOf(context).width;
+          // Each semantic section occupies a chapter-scroll panel. No nested
+          // scrollable: at large text/short heights the reply action gets its
+          // own reachable panel instead of overflowing below the viewport.
+          Widget panel(List<Widget> children) => SizedBox(width: width,
+            child: Padding(padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: children)));
+          Widget preview(String text, {TextStyle? style, int maxLines = 2}) => Expanded(
+            child: LayoutBuilder(builder: (context, constraints) {
+              final base = style?.fontSize ?? 14;
+              final lineHeight = MediaQuery.textScalerOf(context).scale(base) * 1.5;
+              final lines = (constraints.maxHeight / lineHeight).floor();
+              if (lines < 1) return const SizedBox.shrink();
+              return Text(text, maxLines: lines.clamp(1, maxLines), overflow: TextOverflow.ellipsis,
+                style: (style ?? const TextStyle()).copyWith(height: 1.5));
+            }));
+          return Material(color:context.colorScheme.surface,child:Row(
+            textDirection:widget.reverse ? TextDirection.rtl : TextDirection.ltr,
+            key:const ValueKey('chapter-comments-region'),
+            crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            panel([
+              Text('Chapter Comments'.tl,style:ts.s18,maxLines:1,overflow:TextOverflow.ellipsis),
+              preview(widget.chapterTitle),
+              TextButton(onPressed:_openAll,child:Text('View all comments'.tl)),
+            ]),
+            if(sorts.length>1) for(final sort in sorts) panel([
+              TextButton(onPressed:()=>feed.refresh(nextSort:sort),
+                child:Text(const {'new':'最新','hot':'最热','wonderful':'精彩'}[sort] ?? sort)),
+            ]),
+            if(feed.loading) panel([const Center(child:CircularProgressIndicator())]),
+            if(feed.error!=null) panel([
+              preview(feed.error!),
+              TextButton(onPressed:feed.refresh,child:const Text('重试')),
+            ]),
+            if(!feed.loading && feed.error==null)
+              for(final comment in feed.comments.take(previewLimit)) ...[
+                panel([
+                  CommentAvatar(url:comment.avatar,sourceKey:widget.source.key),
+                  preview(comment.userName),
+                  if(comment.time!=null) preview(comment.time!,style:ts.s12),
+                ]),
+                panel([preview(comment.content,style:TextStyle(fontSize:commentsFontSize),maxLines:3)]),
+                panel([
+                  if(comment.replyPreview!=null) preview(comment.replyPreview!.content)
+                  else const Spacer(),
+                  CommentReadOnlyStats(comment:comment,onReply:
+                    widget.source.canReadReplies(comment,chapter:true) ? ()=>_openReply(comment) : null),
+                ]),
+              ],
+            panel([OutlinedButton(onPressed:_openAll,child:Text('View all comments'.tl))]),
+          ]));
+        }
+        return Material(color: context.colorScheme.surface,
+          child: Column(key: const ValueKey('chapter-comments-region'),
+            crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(padding: const EdgeInsets.fromLTRB(16,12,16,0), child: Wrap(
               alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
               children: [Text('Chapter Comments'.tl, style: ts.s18),
                 TextButton(onPressed: _openAll, child: Text('View all comments'.tl))])),
             if (widget.chapterTitle.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal:16),
               child: Text(widget.chapterTitle,style: ts.s12)),
-            ]),
-            // A finite reader viewport cannot accommodate the provisional
-            // 300 * scale plus chrome before the first natural measurement.
-            // Flex constrains only the feed to the remaining available height;
-            // an unbounded footer retains the exact whole-region scale formula.
-            if (constraints.hasBoundedHeight)
-              Flexible(fit:FlexFit.loose,child:viewport)
-            else viewport,
-            Padding(key:_bottomKey,padding: const EdgeInsets.fromLTRB(16,0,16,12), child: OutlinedButton(
-              onPressed: _openAll, child: Text('View all comments'.tl))),
-          ]),]);
-          }));
+            if (sorts.length > 1) Padding(padding: const EdgeInsets.symmetric(horizontal:12),
+              child: Wrap(spacing:8,children:[for (final sort in sorts)
+                TextButton(onPressed: () => feed.refresh(nextSort: sort),
+                  child: Text(const {'new':'最新','hot':'最热','wonderful':'精彩'}[sort] ?? sort))])),
+            if (feed.loading) const Padding(padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()))
+            else if (feed.error != null) Padding(padding: const EdgeInsets.all(16),
+              child: Column(children:[Text(feed.error!),
+                TextButton(onPressed:feed.refresh,child:const Text('重试'))]))
+            else for (final comment in feed.comments.take(previewLimit))
+              CommentPresentation(key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
+                comment:comment,sourceKey:widget.source.key,fontSize:commentsFontSize,
+                onReply:widget.source.canReadReplies(comment,chapter:true) ? () => _openReply(comment) : null),
+            Padding(padding: const EdgeInsets.fromLTRB(16,0,16,12), child: OutlinedButton(
+              onPressed:_openAll,child:Text('View all comments'.tl))),
+          ]));
       });
   }
 }

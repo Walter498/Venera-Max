@@ -233,63 +233,75 @@ class _ReaderState extends State<Reader>
   }
 
   // Availability and the rendered footer share one controller/request generation.
-  final Map<String, CommentsController> _chapterCommentFeeds = {};
   String? _commentChapter;
-  CommentsController chapterCommentsFeed(ComicSource source, String epId) {
-    final revision = source.commentScopeRevision;
-    final key = '${source.key}:$revision:$cid:$epId';
-    return _chapterCommentFeeds.putIfAbsent(key, () {
-      final feed = CommentsController(
-        sort: source.chapterCommentCapabilities?.defaultSort,
-        block: _shouldBlockComment,
-        loader: (page, sort) async {
-          final result = await source.loadCommentPage(cid, epId, page, null,
-            chapter: true, sort: sort);
-          if (revision != source.commentScopeRevision) {
-            return const Res.error('Source settings changed; refresh comments');
-          }
-          return result;
-        });
-      feed.addListener(() {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          setState(() {
-            if (epId == eid && (feed.unavailable || feed.confirmedEmpty) && _page > maxPage) {
-              _page = maxPage;
-            }
-          });
-        });
+  late final _chapterCommentFeeds = ReaderChapterCommentsFeeds(onChanged:(epId,revision,feed) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final source = ComicSource.find(type.sourceKey);
+      if (!mounted || epId != eid || revision != source?.commentScopeRevision) return;
+      setState(() {
+        if ((feed.unavailable || feed.confirmedEmpty) && _page > maxPage) _page = maxPage;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) feed.refresh();
-      });
-      return feed;
+      galleryFooterEndReached = false;
+      continuousChapterEndReached = false;
+      _imageViewController?.onCommentsChanged();
+      if (images != null && !isLoading) updateHistory();
     });
+  });
+  CommentsController chapterCommentsFeed(ComicSource source,String epId) =>
+      _chapterCommentFeeds.chapterLoading(source,cid,epId);
+
+  bool get chapterCommentsEnabled => widget.chapters != null &&
+      appdata.settings.getReaderSetting(cid, type.sourceKey, 'showChapterComments') == true &&
+      appdata.settings.getReaderSetting(cid, type.sourceKey, 'showChapterCommentsAtEnd') == true;
+
+  void prefetchChapterComments(int chapter) {
+    if (!chapterCommentsEnabled) return;
+    final source = ComicSource.find(type.sourceKey);
+    final epId = widget.chapters?.ids.elementAtOrNull(chapter - 1);
+    if (source?.hasChapterComments != true || epId == null) return;
+    final feed = chapterCommentsFeed(source!, epId);
+    if (chapter == this.chapter && _commentChapter != epId) {
+      _commentChapter = epId;
+      if (!feed.loading && (feed.error != null || feed.confirmedEmpty || feed.unavailable)) {
+        unawaited(feed.refresh());
+      }
+    }
+  }
+
+  // A short spinner/error footer is not a completed first page. Keep all
+  // implicit navigation paths at this chapter until a real result is known.
+  bool chapterCommentsSettled(int chapterIndex) {
+    if (!chapterCommentsEnabled) return true;
+    final ep = widget.chapters!.ids.elementAt(chapterIndex - 1);
+    final source = ComicSource.find(type.sourceKey);
+    if (source?.hasChapterComments != true) return true;
+    final feed = chapterCommentsFeed(source!, ep);
+    return !feed.loading && feed.error == null;
+  }
+
+  // Continuous modes set this from the complete footer's trailing geometry.
+  bool continuousChapterEndReached = false;
+  bool galleryFooterEndReached = false;
+  bool get chapterEndReached {
+    if (!chapterCommentsSettled(chapter)) return false;
+    return mode.isGallery
+      ? page >= totalPages && (!isOnChapterCommentsPage || galleryFooterEndReached)
+      : !chapterCommentsEnabled || !chapterCommentsAvailable(eid)
+          ? page >= maxPage : continuousChapterEndReached;
   }
 
   bool chapterCommentsAvailable(String epId) {
     final source = ComicSource.find(type.sourceKey);
     if (source?.hasChapterComments != true) return false;
     final feed = chapterCommentsFeed(source!, epId);
-    // Re-entering a chapter refreshes an earlier empty/error result; no permanent probe set.
-    if (_commentChapter != eid) {
-      _commentChapter = eid;
-      if (epId == eid && (feed.loaded || feed.error != null) && !feed.loading) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) feed.refresh();
-        });
-        return true;
-      }
-    }
     return !feed.unavailable && !feed.confirmedEmpty;
   }
 
   bool get _shouldShowChapterCommentsAtEnd {
-    if (mode != ReaderMode.galleryLeftToRight &&
-        mode != ReaderMode.galleryRightToLeft) {
+    if (!mode.isGallery) {
       return false;
     }
-    if (widget.chapters == null) return false;
+    if (!chapterCommentsEnabled) return false;
     var source = ComicSource.find(type.sourceKey);
     if (source?.hasChapterComments != true || !chapterCommentsAvailable(eid)) return false;
     return appdata.settings.getReaderSetting(
@@ -467,8 +479,7 @@ class _ReaderState extends State<Reader>
 
   @override
   void dispose() {
-    for (final feed in _chapterCommentFeeds.values) { feed.dispose(); }
-    _chapterCommentFeeds.clear();
+    _chapterCommentFeeds.dispose();
     _stopReadingTimer();
     App.rootRouteObserver.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);
@@ -686,6 +697,11 @@ class _ReaderState extends State<Reader>
             history!.page = (page - 2) * imagesPerPage + 2;
           }
         }
+      }
+      // Keep image numbering in history, but do not mark a chapter complete
+      // while its enabled footer still lies ahead of the reader.
+      if (page >= maxPage && !chapterEndReached) {
+        history!.page = math.max(0, (images?.length ?? 1) - 1);
       }
       history!.maxPage = images?.length ?? 1;
       if (widget.chapters?.isGrouped ?? false) {
@@ -973,6 +989,7 @@ abstract mixin class _VolumeListener {
 }
 
 abstract mixin class _ReaderLocation {
+  bool get chapterEndReached;
   /// 當前閱讀模式（由宿主 _ReaderState 提供）
   ReaderMode get mode;
 
@@ -1111,6 +1128,9 @@ abstract mixin class _ReaderLocation {
 
   /// Returns true if the chapter is changed
   bool toNextChapter() {
+    // Volume/pointer/key fallbacks share this path. A footer wait is handled
+    // input, not permission to escape the last image into the next chapter.
+    if (page >= maxPage && !chapterEndReached) return false;
     final target = _nextVisibleChapter(1);
     return target != null && toChapter(target);
   }
@@ -1186,7 +1206,7 @@ abstract mixin class _ReaderLocation {
       // 翻頁用動畫過渡（500ms），比瞬移順；到章末自動進下一話，
       // 既沒下一頁也沒下一話就整體停下。
       _autoTurnPage().then((ok) {
-        if (!ok && !toNextChapter()) {
+        if (!ok && chapterEndReached && !toNextChapter()) {
           stopAutoReading();
         }
       });
@@ -1200,7 +1220,7 @@ abstract mixin class _ReaderLocation {
     if (vc == null) return false;
     if (vc.turnPage(true)) return true; // 連續模式自己處理
     final target = page + 1;
-    if (target > maxPage) return false;
+    if (target > totalPages) return false;
     page = target;
     update();
     await vc.animateToPage(target, duration: const Duration(milliseconds: 500));
@@ -1284,6 +1304,7 @@ enum ReaderMode {
 }
 
 abstract interface class _ImageViewController {
+  void onCommentsChanged();
   void toPage(int page);
 
   /// [duration] 不給就用默認過渡時長（自動閱讀會給更長的過渡，看起來更順）

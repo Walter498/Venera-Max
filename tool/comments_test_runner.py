@@ -74,9 +74,28 @@ def png_metadata(path):
     channels = 4 if color == 6 else 3
     if len(pixels) != height * (1 + width * channels):
         raise ValueError(f'PNG decoded size mismatch: {path}')
-    if (width, height) != (390, 844):
-        raise ValueError(f'wrong fixed viewport: {path}: {width}x{height}')
-    return dict(path=str(path), width=width, height=height,
+    fixed_names = {f'{scenario}_{theme}_{scale}.png'
+                   for scenario in ('thread', 'chapter_sort')
+                   for theme in ('light', 'dark') for scale in ('100', '200')}
+    whole_footer_names = {f'footer_{theme}_{scale}.png'
+                          for theme in ('light', 'dark') for scale in ('100', '200')}
+    if path.name in fixed_names:
+        if (width, height) != (390, 844):
+            raise ValueError(f'wrong fixed viewport: {path}: {width}x{height}')
+        capture_scope = 'fixed viewport'
+    elif path.name in whole_footer_names:
+        # The source widget uses a whole-component RepaintBoundary inside the
+        # chapter scroll. Its natural four-row height must not be cropped to 844.
+        if width != 390 or not 1 <= height <= 16384:
+            raise ValueError(f'wrong whole footer dimensions: {path}: {width}x{height}')
+        capture_scope = 'whole natural footer at 390-wide viewport'
+    elif path.name == 'parser-fixture.png':
+        if (width, height) != (390, 844):
+            raise ValueError(f'wrong parser fixture: {path}: {width}x{height}')
+        capture_scope = 'synthetic parser selftest only'
+    else:
+        raise ValueError(f'unregistered golden capture: {path}')
+    return dict(path=str(path), width=width, height=height, capture_scope=capture_scope,
                 bytes=len(data), sha256=hashlib.sha256(data).hexdigest())
 
 
@@ -159,10 +178,12 @@ def render(evidence):
                     metadata.append(png_metadata(target))
                 except ValueError as exc:
                     validation.append(str(exc))
-            for theme in ('light', 'dark'):
-                for scale in ('100', '200'):
-                    if not any(p.name.endswith(f'_{theme}_{scale}.png') for p in generated):
-                        validation.append(f'missing actual render: {theme} font {scale}%')
+            required_names = {f'{scenario}_{theme}_{scale}.png'
+                              for scenario in ('thread', 'chapter_sort', 'footer')
+                              for theme in ('light', 'dark') for scale in ('100', '200')}
+            actual_names = {p.name for p in generated}
+            if actual_names != required_names:
+                validation.append(f'actual render set mismatch: missing={sorted(required_names - actual_names)}, unexpected={sorted(actual_names - required_names)}')
             if not generated:
                 validation.append('zero fresh PNG files')
             report = dict(renderer='Flutter test widgets on pinned macOS SDK, not iOS device screenshot',
@@ -215,10 +236,22 @@ class SelfTests(unittest.TestCase):
             path = Path(tmp) / 'parser-fixture.png'
             def chunk(kind, payload):
                 return struct.pack('>I', len(payload)) + kind + payload + struct.pack('>I', zlib.crc32(kind + payload) & 0xffffffff)
-            data = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 390, 844, 8, 6, 0, 0, 0))
-            data += chunk(b'IDAT', zlib.compress(b'\0' * (844 * (1 + 390 * 4)))) + chunk(b'IEND', b'')
+            def image_bytes(width, height):
+                data = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0))
+                return data + chunk(b'IDAT', zlib.compress(b'\0' * (height * (1 + width * 4)))) + chunk(b'IEND', b'')
+            data = image_bytes(390, 844)
             path.write_bytes(data)
             self.assertEqual(png_metadata(path)['width'], 390)
+            whole = Path(tmp) / 'footer_light_200.png'
+            whole.write_bytes(image_bytes(390, 1700))
+            self.assertEqual(png_metadata(whole)['height'], 1700)
+            for name, width, height in [('thread_light_200.png', 390, 1700),
+                                        ('footer_dark_100.png', 389, 100),
+                                        ('unknown_light_100.png', 390, 844)]:
+                bad = Path(tmp) / name
+                bad.write_bytes(image_bytes(width, height))
+                with self.assertRaises(ValueError):
+                    png_metadata(bad)
             for broken in (b'not png', data[:-1], data[:24]):
                 path.write_bytes(broken)
                 with self.assertRaises(ValueError):

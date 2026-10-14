@@ -62,7 +62,7 @@ void main() {
     expect(requested,['new','hot','wonderful']);
     expect(find.text('查看回复详情'),findsNothing);expect(tester.takeException(),isNull);
   });
-  testWidgets('actual footer doubles whole region and reacts to persisted scale', (tester) async {
+  testWidgets('fixed footer ignores deprecated persisted height scale', (tester) async {
     tester.view.physicalSize=const Size(390,844); tester.view.devicePixelRatio=1;
     addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
     final old=appdata.settings['chapterCommentsHeightScale'];
@@ -77,9 +77,9 @@ void main() {
     final legacy=tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height;
     expect(legacy,greaterThan(0));
     appdata.settings['chapterCommentsHeightScale']=2.0;await tester.pumpAndSettle();
-    expect(tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height,closeTo(legacy*2,0.01));
+    expect(tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height,closeTo(legacy,0.01));
     appdata.settings['chapterCommentsHeightScale']=0.5;await tester.pumpAndSettle();
-    expect(tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height,closeTo(legacy*0.5,0.01));
+    expect(tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height,closeTo(legacy,0.01));
     expect(tester.takeException(),isNull);
   });
   testWidgets('successful empty footer hides but error footer keeps retry', (tester) async {
@@ -91,14 +91,14 @@ void main() {
         comicTitle:'Work',chapterTitle:'Chapter')))));
     await tester.pumpAndSettle();expect(find.text('重试'),findsOneWidget);
     fail=false;await tester.tap(find.text('重试'));await tester.pumpAndSettle();
-    expect(find.byType(CommentsFeed),findsNothing);expect(tester.takeException(),isNull);
+    expect(find.byKey(const ValueKey('chapter-comments-region')),findsNothing);expect(tester.takeException(),isNull);
   });
   testWidgets('disabled capability produces no footer UI', (tester) async {
     final source=commentsSource(chapterCapabilities:const CommentCapabilities(enabled:false),
       chapterLegacy:(id,ep,page,reply) async => const Res([],subData:0));
     await tester.pumpWidget(MaterialApp(home:Scaffold(body:ChapterCommentsPreview(
       comicId:'work',epId:'ep',source:source,comicTitle:'Work',chapterTitle:'Chapter'))));
-    await tester.pumpAndSettle();expect(find.byType(CommentsFeed),findsNothing);
+    await tester.pumpAndSettle();expect(find.byKey(const ValueKey('chapter-comments-region')),findsNothing);
   });
   testWidgets('error retry in the actual feed restores content', (tester) async {
     var requests=0;
@@ -118,7 +118,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home:Scaffold(body:ChapterCommentsPreview(
       comicId:'work',epId:'ep',source:source,comicTitle:'Work',chapterTitle:'Chapter'))));
     await tester.pumpAndSettle();
-    expect(find.byType(CommentsFeed),findsNothing); expect(find.text('暂无评论'),findsNothing);
+    expect(find.byKey(const ValueKey('chapter-comments-region')),findsNothing); expect(find.text('暂无评论'),findsNothing);
     expect(find.text('重试'),findsNothing); expect(tester.takeException(),isNull);
   });
   for (final unavailable in [true,false]) {
@@ -135,11 +135,11 @@ void main() {
         builder:(context,child) => MediaQuery(
           data:MediaQuery.of(context).copyWith(textScaler:const TextScaler.linear(2.0)),
           child:child!),
-        home:Scaffold(body:ChapterCommentsPreview(comicId:'work',epId:'ep',
-          source:source,comicTitle:'Work',chapterTitle:'Chapter'))));
+        home:Scaffold(body:SingleChildScrollView(child:ChapterCommentsPreview(comicId:'work',epId:'ep',
+          source:source,comicTitle:'Work',chapterTitle:'Chapter')))));
       // Do not settle an intentionally pending spinner. Both the provisional
       // frame and the measured loading frame must fit their real constraints.
-      expect(find.byType(CommentsFeed),findsOneWidget);
+      expect(find.byKey(const ValueKey('chapter-comments-region')),findsOneWidget);
       expect(tester.takeException(),isNull);
       await tester.pump();
       expect(tester.takeException(),isNull);
@@ -147,11 +147,11 @@ void main() {
         : const Res.error('offline'));
       await tester.pumpAndSettle();
       if (unavailable) {
-        expect(find.byType(CommentsFeed),findsNothing);
+        expect(find.byKey(const ValueKey('chapter-comments-region')),findsNothing);
         expect(find.text('暂无评论'),findsNothing);
         expect(find.text('重试'),findsNothing);
       } else {
-        expect(find.byType(CommentsFeed),findsOneWidget);
+        expect(find.byKey(const ValueKey('chapter-comments-region')),findsOneWidget);
         expect(find.text('重试'),findsOneWidget);
         expect(find.text('暂无评论'),findsNothing);
       }
@@ -161,7 +161,7 @@ void main() {
   }
   for (final brightness in [Brightness.light,Brightness.dark]) {
     for (final fontScale in [1.0,2.0]) {
-      testWidgets('real footer iOS $brightness font $fontScale viewport doubles', (tester) async {
+      testWidgets('real footer iOS $brightness font $fontScale natural footer ignores old viewport multiplier', (tester) async {
         final previousPlatform=debugDefaultTargetPlatformOverride;
         debugDefaultTargetPlatformOverride=TargetPlatform.iOS;
         try {
@@ -182,11 +182,11 @@ void main() {
         await tester.pumpAndSettle();
         final legacy=tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height;
         expect(legacy,greaterThan(0));
-        expect(find.byType(CommentPresentation),findsWidgets);
-        expect(find.textContaining('genuine preview'),findsWidgets);
+        expect(find.byType(CommentPresentation),findsNWidgets(4));
+        expect(find.textContaining('genuine preview'),findsNWidgets(4));
         appdata.settings['chapterCommentsHeightScale']=2.0;
         await tester.pumpAndSettle();
-        expect(tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height,closeTo(legacy*2,0.01));
+        expect(tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height,closeTo(legacy,0.01));
         expect(tester.takeException(),isNull);
         await tester.pumpWidget(const SizedBox.shrink());
         } finally {

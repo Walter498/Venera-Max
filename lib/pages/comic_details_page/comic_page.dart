@@ -285,6 +285,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   @override
   void initState() {
     scrollController.addListener(onScroll);
+    appdata.settings.addListener(_onCommentsSettingsChanged);
     ComicCollectionStore.changes.addListener(_onCollectionChanged);
     PreTranslationTaskManager.instance.addListener(update);
     // The per-comic translation toggle lives in the service; listen so the
@@ -295,6 +296,8 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
   @override
   void dispose() {
+    appdata.settings.removeListener(_onCommentsSettingsChanged);
+    _releaseComments();
     scrollController.removeListener(onScroll);
     ComicCollectionStore.changes.removeListener(_onCollectionChanged);
     PreTranslationTaskManager.instance.removeListener(update);
@@ -506,6 +509,11 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   Future<Res<ComicDetails>> loadData() async {
     var state = _comicStateRepository.load(widget.sourceKey, widget.id);
     var localComic = state.localComic;
+    final commentsSource = ComicSource.find(widget.sourceKey);
+    if (commentsSource != null) {
+      final cached = ComicDetailsCache().find(widget.sourceKey, widget.id);
+      _preloadComments(commentsSource, widget.id, cached?.subId);
+    }
 
     // Local-first: if the comic is already in the local library (whether a
     // purely local import or downloaded from a source), show its details
@@ -704,8 +712,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
             data = res.data;
           });
           ComicDetailsCache().update(widget.sourceKey, widget.id, res.data);
-        // 詳情沒帶評論、但源有評論接口 → 抓第一頁顯示在章節下方
-        unawaited(_loadInlineComments());
+          _preloadComments(source, res.data.id, res.data.subId);
           await onDataLoaded();
           return true;
         }
@@ -1612,46 +1619,57 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     }
   }
 
-  /// 內嵌評論（源在詳情不帶評論時，用 commentsLoader 抓第一頁顯示在章節下面）
-  List<Comment>? _inlineComments;
-  String? _inlineCommentsError;
-  int _inlineCommentsGeneration = 0;
-  int? _inlineCommentsTotal, _inlineCommentsMaxPage;
-  bool _inlineCommentsUnavailable = false;
-  bool get _hideCommentsEntry => _inlineCommentsUnavailable || _inlineComments != null && _inlineComments!.isEmpty &&
-    (comic.comments?.isNotEmpty != true) && (comic.commentCount == null || comic.commentCount == 0) &&
-    (_inlineCommentsTotal == null || _inlineCommentsTotal == 0) &&
-    (_inlineCommentsMaxPage == null || _inlineCommentsMaxPage! <= 1);
+  DetailsCommentsSession? _commentsSession;
 
+  void _onCommentsSettingsChanged() {
+    final session = _commentsSession;
+    if (session == null || session.isCurrent) return;
+    // Invalidate synchronously; notify/reload outside settings notification.
+    _releaseComments();
+    scheduleMicrotask(() {
+      if (!mounted) return;
+      final source = ComicSource.find(widget.sourceKey);
+      if (source != null) {
+        _preloadComments(source, data?.id ?? session.cid,
+            data != null ? data!.subId : session.subId);
+      }
+      update();
+    });
+  }
 
-  Future<void> _loadInlineComments() async {
+  bool get _hideCommentsEntry {
     final source = ComicSource.find(widget.sourceKey);
-    if (source?.hasComments != true || comic.comments?.isNotEmpty == true) return;
-    final generation = ++_inlineCommentsGeneration;
-    final id = comic.id, subId = comic.subId;
-    final revision = source!.commentScopeRevision;
-    setState(() { _inlineCommentsError = null; _inlineComments = null; _inlineCommentsUnavailable = false; });
-    try {
-      final res = await source.loadCommentPage(id, subId, 1, null,
-        sort: source.commentCapabilities?.defaultSort);
-      if (!mounted || generation != _inlineCommentsGeneration || id != comic.id || subId != comic.subId) return;
-      if (revision != source.commentScopeRevision) {
-        setState(() => _inlineCommentsError = "Source settings changed; refresh comments");
-        return;
-      }
-      setState(() {
-        if (res.error) {
-          _inlineCommentsError = res.errorMessage;
-        } else { _inlineCommentsUnavailable = res.available == false;
-          _inlineComments = res.data; _inlineCommentsTotal = res.total;
-          _inlineCommentsMaxPage = res.subData is int ? res.subData as int : null; }
-      });
-    } catch (e) {
-      if (mounted && generation == _inlineCommentsGeneration && id == comic.id &&
-          subId == comic.subId && revision == source.commentScopeRevision) {
-        setState(() => _inlineCommentsError = e.toString());
-      }
+    return source == null ||
+        _commentsSession?.matches(source, comic.id, comic.subId) != true ||
+        _commentsSession?.showEntry != true;
+  }
+
+  void _preloadComments(ComicSource source, String id, String? subId) {
+    if (!source.hasComments) {
+      _releaseComments();
+      return;
     }
+    if (_commentsSession?.matches(source, id, subId) != true) {
+      _releaseComments();
+      _commentsSession = DetailsCommentsSession(
+        source: source, cid: id, subId: subId, block: _shouldBlockComment);
+      _commentsSession!.controller.addListener(update);
+    }
+    unawaited(_commentsSession!.preload());
+  }
+
+  void _releaseComments() {
+    _commentsSession?.controller.removeListener(update);
+    _commentsSession?.dispose();
+    _commentsSession = null;
+  }
+
+  @override
+  void showComments() {
+    final source = comicSource;
+    if (source == null || _hideCommentsEntry) return;
+    showSideBar(App.rootContext, CommentsPage(data: comic, source: source,
+      sharedSession: _commentsSession));
   }
 
   void _onCollectionChanged() {
@@ -1853,17 +1871,20 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
   Widget buildComments() {
     final source = ComicSource.find(widget.sourceKey);
-    if (source?.hasComments != true || _hideCommentsEntry) return const SliverToBoxAdapter(child: SizedBox.shrink());
-    if (_inlineCommentsError != null) {
+    final session = _commentsSession;
+    if (source != null && session != null && session.matches(source, comic.id, comic.subId) &&
+        session.controller.error != null) {
       return SliverToBoxAdapter(child: Column(children: [
-        Text(_inlineCommentsError!), TextButton(onPressed: _loadInlineComments, child: const Text('重试评论'))]));
+        Text(session.controller.error!),
+        TextButton(onPressed: () => session.controller.refresh(),
+          child: Text('Retry'.tl)),
+      ]));
     }
-    final list = comic.comments?.isNotEmpty == true ? comic.comments! : _inlineComments;
-    if (list == null) {
-      return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator())));
+    if (source?.hasComments != true || _hideCommentsEntry) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
-    return _CommentsPart(comments: list, showMore: showComments, source: source!, data: comic);
+    return _CommentsPart(comments: _commentsSession!.controller.comments,
+      showMore: showComments, source: source!, data: comic);
   }
 
   void _viewCover(BuildContext context) {

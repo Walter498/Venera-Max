@@ -3,7 +3,7 @@ part of 'comic_page.dart';
 bool _shouldBlockComment(Comment comment) {
   var blockedWords = appdata.settings["blockedCommentWords"] as List;
   if (blockedWords.isEmpty) return false;
-  
+
   var content = comment.content.toLowerCase();
   for (var word in blockedWords) {
     if (content.contains(word.toString().toLowerCase())) {
@@ -19,6 +19,7 @@ class CommentsPage extends StatefulWidget {
     required this.data,
     required this.source,
     this.replyComment,
+    this.sharedSession,
   });
 
   final ComicDetails data;
@@ -26,6 +27,9 @@ class CommentsPage extends StatefulWidget {
   final ComicSource source;
 
   final Comment? replyComment;
+
+  /// Detail owns this session. Reply pages always have their own dataset.
+  final DetailsCommentsSession? sharedSession;
 
   @override
   State<CommentsPage> createState() => _CommentsPageState();
@@ -36,8 +40,28 @@ class _CommentsPageState extends State<CommentsPage> {
   final controller = TextEditingController();
   bool sending = false;
   late String _scopeRevision;
+  bool _ownsFeed = true;
+  DetailsCommentsSession? _borrowedSession;
+  bool get _scopeCurrent =>
+      _scopeRevision == widget.source.commentScopeRevision &&
+      (widget.replyComment != null || widget.sharedSession == null ||
+          _borrowedSession?.isCurrent == true);
+
   void _createFeed() {
     _scopeRevision = widget.source.commentScopeRevision;
+    final session = widget.sharedSession;
+    if (widget.replyComment == null && session != null &&
+        session.matches(widget.source, widget.data.comicId, widget.data.subId) &&
+        session.borrow()) {
+      _ownsFeed = false;
+      _borrowedSession = session;
+      feed = session.controller;
+      unawaited(session.preload());
+      return;
+    }
+    _ownsFeed = true;
+    // A stale shared route must stay blank, never start an independent request
+    // against its old source/subId. Reply pages still own their separate feed.
     feed = CommentsController(loader: (page, sort) async {
       final revision = _scopeRevision;
       final result = await widget.source.loadCommentPage(widget.data.comicId, widget.data.subId, page, widget.replyComment?.id, sort: sort);
@@ -46,20 +70,58 @@ class _CommentsPageState extends State<CommentsPage> {
     },
       sort: widget.source.commentsOptionsLoader == null ? null : widget.source.commentCapabilities?.defaultSort,
       block: _shouldBlockComment);
-    feed.refresh();
+    if (_scopeCurrent) unawaited(feed.refresh());
   }
+
+  void _onFeedChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onSettingsChanged() {
+    if (_scopeRevision == widget.source.commentScopeRevision) return;
+    if (_ownsFeed) feed.invalidate();
+    // Settings can change during another widget's build/notification.
+    scheduleMicrotask(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _detachFeed() {
+    feed.removeListener(_onFeedChanged);
+    final borrowed = _borrowedSession;
+    _borrowedSession = null;
+    if (_ownsFeed) {
+      feed.dispose();
+    } else {
+      // Detach our listener before allowing the owner to dispose the notifier.
+      borrowed!.releaseBorrow();
+    }
+  }
+
   @override
-  void initState() { super.initState(); _createFeed(); }
+  void initState() {
+    super.initState();
+    _createFeed();
+    feed.addListener(_onFeedChanged);
+    appdata.settings.addListener(_onSettingsChanged);
+  }
   @override
   void didUpdateWidget(covariant CommentsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_scopeRevision != widget.source.commentScopeRevision || oldWidget.source != widget.source || oldWidget.replyComment?.id != widget.replyComment?.id ||
-        oldWidget.data != widget.data) {
-      feed.dispose(); _createFeed();
+        oldWidget.data != widget.data || oldWidget.sharedSession != widget.sharedSession) {
+      _detachFeed();
+      _createFeed();
+      feed.addListener(_onFeedChanged);
     }
   }
   @override
-  void dispose() { feed.dispose(); controller.dispose(); super.dispose(); }
+  void dispose() {
+    appdata.settings.removeListener(_onSettingsChanged);
+    _detachFeed();
+    controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,8 +131,8 @@ class _CommentsPageState extends State<CommentsPage> {
         title: Text(widget.replyComment == null ? "Comments".tl : "评论详情"),
         style: AppbarStyle.shadow,
       ),
-      body: AnimatedBuilder(animation: feed, builder: (context, _) =>
-        feed.unavailable ? const SizedBox.shrink() : buildBody(context)),
+      body: feed.unavailable || !_scopeCurrent
+          ? const SizedBox.shrink() : buildBody(context),
     );
   }
 
@@ -151,7 +213,7 @@ class _CommentsPageState extends State<CommentsPage> {
                       widget.data.subId,
                       controller.text,
                       widget.replyComment?.id);
-                  if (!mounted) return;
+                  if (!mounted || !_scopeCurrent) return;
                   if (!b.error) {
                     controller.text = "";
                     setState(() {

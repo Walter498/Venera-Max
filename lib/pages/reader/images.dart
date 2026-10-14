@@ -2,6 +2,22 @@ part of 'reader.dart';
 
 const _readerPageLoadTimeout = Duration(seconds: 30);
 
+/// Images and comments start together. This does not promise the network can
+/// finish before a reader immediately reaches the footer.
+@visibleForTesting
+Future<T> loadReaderChapter<T>({required VoidCallback prefetchComments,
+  required Future<T> Function() loadImages}) {
+  prefetchComments();
+  return loadImages();
+}
+
+@visibleForTesting
+bool readerFooterReachedEnd({required Rect footer,required Rect viewport,
+  required Axis axis,bool reverse=false}) => axis == Axis.vertical
+    ? footer.bottom <= viewport.bottom + 1
+    : reverse ? footer.left >= viewport.left - 1
+    : footer.right <= viewport.right + 1;
+
 class _ReaderImages extends StatefulWidget {
   const _ReaderImages({super.key});
 
@@ -37,9 +53,17 @@ class _ReaderImagesState extends State<_ReaderImages> {
     }
   }
 
-  void load() async {
+  void load() {
     if (inProgress) return;
     inProgress = true;
+    reader.continuousChapterEndReached = false;
+    unawaited(loadReaderChapter<void>(
+      prefetchComments: () => reader.prefetchChapterComments(reader.chapter),
+      loadImages: _loadImages,
+    ));
+  }
+
+  Future<void> _loadImages() async {
     if (reader.type == ComicType.local ||
         (LocalManager().isDownloaded(
           reader.cid,
@@ -175,6 +199,16 @@ class _GalleryMode extends StatefulWidget {
 class _GalleryModeState extends State<_GalleryMode>
     implements _ImageViewController {
   late PageController controller;
+  final footerScrollController = ScrollController();
+  void _resolveFooterEnd() {
+    if (!mounted || !footerScrollController.hasClients) return;
+    final reached = reader.chapterCommentsSettled(reader.chapter) &&
+        footerScrollController.position.extentAfter <= 1;
+    if (reader.galleryFooterEndReached != reached) {
+      reader.galleryFooterEndReached = reached;
+      reader.updateHistory();
+    }
+  }
 
   int get preCacheCount => appdata.settings["preloadImageCount"];
 
@@ -183,11 +217,10 @@ class _GalleryModeState extends State<_GalleryMode>
   late _ReaderState reader;
 
   bool get showChapterCommentsAtEnd {
-    if (reader.mode != ReaderMode.galleryLeftToRight &&
-        reader.mode != ReaderMode.galleryRightToLeft) {
+    if (!reader.mode.isGallery) {
       return false;
     }
-    if (reader.widget.chapters == null) return false;
+    if (!reader.chapterCommentsEnabled) return false;
     var source = ComicSource.find(reader.type.sourceKey);
     if (source?.hasChapterComments != true || !reader.chapterCommentsAvailable(reader.eid)) return false;
     return appdata.settings.getReaderSetting(
@@ -226,6 +259,8 @@ class _GalleryModeState extends State<_GalleryMode>
   void initState() {
     reader = context.reader;
     controller = PageController(initialPage: reader.page);
+    reader.galleryFooterEndReached = false;
+    footerScrollController.addListener(_resolveFooterEnd);
     reader._imageViewController = this;
     Future.microtask(() {
       if (!mounted) {
@@ -242,6 +277,7 @@ class _GalleryModeState extends State<_GalleryMode>
     keyRepeatTimer?.cancel();
     _precacheTimer?.cancel();
     controller.dispose();
+    footerScrollController.dispose();
     for (final controller in photoViewControllers.values) {
       controller.dispose();
     }
@@ -353,13 +389,22 @@ class _GalleryModeState extends State<_GalleryMode>
     var chapters = reader.widget.chapters;
     if (source == null || chapters == null) return const SizedBox();
     var chapterIndex = reader.chapter - 1;
-    return _EmbeddedChapterCommentsPage(
-      comicId: reader.cid,
-      epId: chapters.ids.elementAt(chapterIndex),
-      source: source,
-      comicTitle: reader.widget.name,
-      chapterTitle: chapters.titles.elementAt(chapterIndex),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resolveFooterEnd());
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _resolveFooterEnd());
+        return false;
+      }, child: SingleChildScrollView(
+      controller: footerScrollController,
+      child: ChapterCommentsPreview(
+        comicId: reader.cid,
+        epId: chapters.ids.elementAt(chapterIndex),
+        source: source,
+        comicTitle: reader.widget.name,
+        chapterTitle: chapters.titles.elementAt(chapterIndex),
+        sharedFeed: reader.chapterCommentsFeed(source, chapters.ids.elementAt(chapterIndex)),
+      ),
+    ));
   }
 
   @override
@@ -481,7 +526,8 @@ class _GalleryModeState extends State<_GalleryMode>
               controller.jumpToPage(1);
             }
           } else if (i == totalPages + 1) {
-            if (reader.isLastChapterOfGroup || !reader.toNextChapter()) {
+            if (!reader.chapterEndReached ||
+                reader.isLastChapterOfGroup || !reader.toNextChapter()) {
               controller.jumpToPage(totalPages);
             }
           } else {
@@ -603,6 +649,19 @@ class _GalleryModeState extends State<_GalleryMode>
   void startAutoScroll(double pixelsPerSecond) {}
 
   @override
+  void onCommentsChanged() {
+    if (!mounted) return;
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (controller.hasClients && (controller.page ?? 0) > totalPages) {
+        controller.jumpToPage(totalPages);
+      }
+      _resolveFooterEnd();
+    });
+  }
+
+  @override
   void stopAutoScroll() {}
 
   @override
@@ -611,7 +670,19 @@ class _GalleryModeState extends State<_GalleryMode>
   }
 
   @override
-  bool turnPage(bool forward) => false; // gallery 用默认按页码翻页
+  bool turnPage(bool forward) {
+    if (!reader.isOnChapterCommentsPage || !footerScrollController.hasClients) return false;
+    final pos = footerScrollController.position;
+    if (forward && pos.extentAfter > 1 || !forward && pos.extentBefore > 1) {
+      final target = (pos.pixels + (forward ? 1 : -1) * pos.viewportDimension)
+          .clamp(pos.minScrollExtent,pos.maxScrollExtent);
+      unawaited(footerScrollController.animateTo(target,
+        duration:const Duration(milliseconds:200),curve:Curves.ease));
+      return true;
+    }
+    // Consume forward input while pending/error, including a short footer.
+    return forward && !reader.chapterEndReached;
+  }
 
   @override
   bool jumpToChapter(int chapter, {bool toLastPage = false}) => false; // gallery keyed by chapter; uses the default remount path
@@ -706,9 +777,9 @@ class _GalleryModeState extends State<_GalleryMode>
         keyRepeatTimer = null;
       }
       if (forward == true) {
-        reader.toPage(reader.page + 1);
+        reader.toNextPage();
       } else if (forward == false) {
-        reader.toPage(reader.page - 1);
+        reader.toPrevPage();
       }
     }
     if (event is KeyRepeatEvent && keyRepeatTimer == null) {
@@ -721,9 +792,9 @@ class _GalleryModeState extends State<_GalleryMode>
             timer.cancel();
             return;
           } else if (forward == true) {
-            reader.toPage(reader.page + 1);
+            reader.toNextPage();
           } else if (forward == false) {
-            reader.toPage(reader.page - 1);
+            reader.toPrevPage();
           }
         },
       );
@@ -1202,7 +1273,12 @@ class _ContinuousModeState extends State<_ContinuousMode>
     return future;
   }
 
-  Future<List<String>> _loadContinuousChapterImages(int chapter) async {
+  Future<List<String>> _loadContinuousChapterImages(int chapter) => loadReaderChapter(
+    prefetchComments: () => reader.prefetchChapterComments(chapter),
+    loadImages: () => _loadContinuousImages(chapter),
+  );
+
+  Future<List<String>> _loadContinuousImages(int chapter) async {
     if (reader.type == ComicType.local ||
         LocalManager().isDownloaded(
           reader.cid,
@@ -1236,6 +1312,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
     // readerScaffold.update() (a full setState on the toolbar/battery/clock/
     // progress) on every tick was a steady source of dropped frames.
     if (reader.chapter != entry.chapter) {
+      reader.continuousChapterEndReached = false;
       reader.chapter = entry.chapter;
       reader.images = images;
       reader.page = entry.page;
@@ -1313,10 +1390,15 @@ class _ContinuousModeState extends State<_ContinuousMode>
       final itemBox = ctx.findRenderObject();
       if (itemBox is! RenderBox || !itemBox.attached) continue;
       final topLeft = itemBox.localToGlobal(Offset.zero);
+      final extent = vertical ? itemBox.size.height : itemBox.size.width;
+      // Logical distance from the reading-leading edge: right edge for RTL.
+      // Entry order is reading order even when physical x decreases.
       final start = vertical
           ? topLeft.dy - viewportLeadingGlobal.dy
-          : topLeft.dx - viewportLeadingGlobal.dx;
-      final extent = vertical ? itemBox.size.height : itemBox.size.width;
+          : _reverse
+              ? viewportLeadingGlobal.dx + box.size.width -
+                  (topLeft.dx + extent)
+              : topLeft.dx - viewportLeadingGlobal.dx;
       // The entry crossing the anchor line: starts at/above it and ends below.
       if (start <= probe && start + extent > probe) {
         current = entry;
@@ -1334,11 +1416,9 @@ class _ContinuousModeState extends State<_ContinuousMode>
       break;
     }
     current ??= lastAbove;
-    // Scrolled to the very bottom: a final image shorter than the viewport
-    // sits fully below the leading edge (its top never reaches it), so the
-    // straddle search stops one image early and the indicator sticks at e.g.
-    // 29/30 — never equalling maxPage, so the read-complete mark never shows
-    // (issue #115, non-seamless case). Snap to the last laid-out image.
+    // Final image numbering still snaps at the complete scroll tail, not at
+    // the last image's bottom. Completion separately checks the footer below.
+    // This retains the short-final-image position fix without early completion.
     final pos = _scrollController.position;
     if (pos.hasContentDimensions &&
         pos.maxScrollExtent > pos.minScrollExtent &&
@@ -1352,7 +1432,30 @@ class _ContinuousModeState extends State<_ContinuousMode>
           : _entries.first,
     );
     if (!current.isImage) return;
+    // A seamless window can already contain the next chapter's images. Do
+    // not let a drag/ticker resolve into them across an unresolved footer.
+    if (current.chapter > reader.chapter &&
+        !reader.chapterCommentsSettled(reader.chapter)) {
+      final footer = _footerKeys[reader.chapter]?.currentContext?.findRenderObject();
+      if (footer is RenderBox && footer.attached) {
+        final origin = footer.localToGlobal(Offset.zero);
+        final end = vertical
+            ? origin.dy - viewportLeadingGlobal.dy + footer.size.height
+            : _reverse
+                ? viewportLeadingGlobal.dx + box.size.width - origin.dx
+                : origin.dx - viewportLeadingGlobal.dx + footer.size.width;
+        final target = (pos.pixels + end - viewExtent)
+            .clamp(pos.minScrollExtent, pos.maxScrollExtent);
+        if ((target - pos.pixels).abs() > 1) _scrollController.jumpTo(target);
+      }
+      return;
+    }
     _syncReaderLocation(current);
+    final reached = !showChapterCommentsAtEnd || _footerReached(reader.chapter);
+    if (reader.continuousChapterEndReached != reached) {
+      reader.continuousChapterEndReached = reached;
+      reader.updateHistory();
+    }
     if (seamlessChapterReading) {
       _maybeLoadAroundCurrent(current);
       _cacheAround(current);
@@ -1672,11 +1775,14 @@ class _ContinuousModeState extends State<_ContinuousMode>
           () => _ensureContinuousChapterLoaded(entry.nextChapter!),
         );
       }
-      return Column(children: [
-        if (entry.chapter > 0 && showChapterCommentsAtEnd)
+      final children = <Widget>[
+        if (entry.chapter > 0 && reader.chapterCommentsEnabled)
           _buildChapterCommentsBlock(chapter: entry.chapter),
         _buildChapterJoinPage(context, entry),
-      ]);
+      ];
+      return _axis == Axis.vertical ? Column(children:children)
+          : Row(textDirection:_reverse ? TextDirection.rtl : TextDirection.ltr,
+              children:children);
     }
     Widget child = _buildImageEntry(entry);
     // 相邻图片之间的可选间隙(issue #117-3)。沿主轴在图片后加内边距，间隙区域
@@ -1729,7 +1835,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
   /// ⑧ 連續滾動模式：滑過最後一頁後直接往下滑就能看到本章評論，
   /// 不必再點右上角的評論按鈕。
   bool get showChapterCommentsAtEnd {
-    if (reader.widget.chapters == null) return false;
+    if (!reader.chapterCommentsEnabled) return false;
     var source = ComicSource.find(reader.type.sourceKey);
     if (source?.hasChapterComments != true || !reader.chapterCommentsAvailable(reader.eid)) return false;
     return appdata.settings.getReaderSetting(
@@ -1746,6 +1852,20 @@ class _ContinuousModeState extends State<_ContinuousMode>
             true;
   }
 
+  final Map<int, GlobalKey> _footerKeys = {};
+
+  bool _footerReached(int chapter) {
+    final box = _footerKeys[chapter]?.currentContext?.findRenderObject();
+    final viewport = context.findRenderObject();
+    if (box is! RenderBox || viewport is! RenderBox || !box.attached) return false;
+    final origin = viewport.localToGlobal(Offset.zero);
+    final trailing = box.localToGlobal(Offset(box.size.width,box.size.height));
+    final leading = box.localToGlobal(Offset.zero);
+    return readerFooterReachedEnd(
+      footer:Rect.fromPoints(leading,trailing),
+      viewport:origin & viewport.size,axis:_axis,reverse:_reverse);
+  }
+
   Widget _buildChapterCommentsBlock({int? chapter}) {
     var source = ComicSource.find(reader.type.sourceKey);
     var chapters = reader.widget.chapters;
@@ -1756,6 +1876,9 @@ class _ContinuousModeState extends State<_ContinuousMode>
     }
     if (!reader.chapterCommentsAvailable(chapters.ids.elementAt(chapterIndex))) return const SizedBox.shrink();
     return ChapterCommentsPreview(
+        key: _footerKeys.putIfAbsent(chapterIndex + 1, () => GlobalKey()),
+        horizontal: _axis == Axis.horizontal,
+        reverse: _reverse,
         comicId: reader.cid,
         epId: chapters.ids.elementAt(chapterIndex),
         source: source,
@@ -1767,7 +1890,15 @@ class _ContinuousModeState extends State<_ContinuousMode>
 
   Widget _buildScrollView() {
     final before = _anchorIndex; // entries strictly before the pivot
-    final afterCount = _entries.length - _anchorIndex; // pivot + following
+    var afterCount = _entries.length - _anchorIndex; // pivot + following
+    // Keep preloaded next chapters out of the scrollable range while the
+    // current first page is unresolved (or awaiting retry). The separator and
+    // its real footer remain reachable; no fabricated empty result is used.
+    if (!reader.chapterCommentsSettled(reader.chapter)) {
+      final boundary = _entries.indexWhere((entry) =>
+          entry.isSeparator && entry.chapter == reader.chapter);
+      if (boundary >= _anchorIndex) afterCount = boundary - _anchorIndex + 1;
+    }
     // 连续滚动模式的卡顿主因：cacheExtent 决定 SliverList 在视口外提前多远
     // 构建并解码 item。原值仅 1.5 个视口，而漫画竖图常达 1~3 屏高，往往连下一
     // 张完整图都覆盖不到 —— 该图滚入视口时才在主 isolate 即时解码大图，导致掉帧
@@ -1819,9 +1950,12 @@ class _ContinuousModeState extends State<_ContinuousMode>
 
   @override
   Widget build(BuildContext context) {
-    Widget widget = NotificationListener<ScrollNotification>(
-      onNotification: _onAutoScrollNotification,
-      child: _buildScrollView(),
+    Widget widget = NotificationListener<ScrollMetricsNotification>(
+      onNotification: (_) { _schedulePositionResolve(); return false; },
+      child:NotificationListener<ScrollNotification>(
+        onNotification: _onAutoScrollNotification,
+        child: _buildScrollView(),
+      ),
     );
 
     widget = Stack(
@@ -1861,7 +1995,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
           if (jumpToPrevChapter) {
             context.readerScaffold.setFloatingButton(0);
             reader.toPrevChapter(toLastPage: true);
-          } else if (jumpToNextChapter) {
+          } else if (jumpToNextChapter && reader.chapterEndReached) {
             context.readerScaffold.setFloatingButton(0);
             reader.toNextChapter();
           }
@@ -2256,6 +2390,17 @@ class _ContinuousModeState extends State<_ContinuousMode>
         ? _indexOfEntry(reader.chapter, reader.page)
         : _indexOfEntry(intended.chapter, intended.page);
     final step = forward ? 1 : -1;
+    final currentEntry = intended ?? _entries[curIdx];
+    final chapterImages = _continuousChapterImages[currentEntry.chapter] ?? reader.images;
+    if (forward && chapterImages != null && currentEntry.page >= chapterImages.length &&
+        reader.chapterCommentsEnabled && reader.chapterCommentsAvailable(
+          reader.widget.chapters!.ids.elementAt(currentEntry.chapter - 1)) &&
+        (!reader.chapterCommentsSettled(currentEntry.chapter) ||
+          !_footerReached(currentEntry.chapter))) {
+      // Consume taps/keys before selecting a next image across the separator.
+      smoothTo(_axis == Axis.vertical ? reader.size.height : reader.size.width);
+      return true;
+    }
     for (var i = curIdx + step; i >= 0 && i < _entries.length; i += step) {
       final entry = _entries[i];
       if (!entry.isImage) continue;
@@ -2430,6 +2575,13 @@ class _ContinuousModeState extends State<_ContinuousMode>
     }
   }
 
+  @override
+  void onCommentsChanged() {
+    if (!mounted) return;
+    setState(() {});
+    _schedulePositionResolve();
+  }
+
   // ===== 連續模式自動滾動：固定速度（像素/秒）平滑推進 =====
   Ticker? _autoScrollTicker;
   Duration? _lastAutoTick;
@@ -2466,8 +2618,13 @@ class _ContinuousModeState extends State<_ContinuousMode>
     final pos = _scrollController.position;
     final next = pos.pixels + _autoScrollSpeed * dt;
     if (next >= pos.maxScrollExtent - 0.5) {
-      // 到底：自動進下一話並繼續；沒有下一話就整體停下
-      if (!reader.toNextChapter()) reader.stopAutoReading();
+      // Land on the actual tail before resolving it. A pending/error footer
+      // may fit in one viewport; its current geometry alone is not completion.
+      _scrollController.jumpTo(pos.maxScrollExtent);
+      _onScrollPositionSettled();
+      if (reader.chapterEndReached && !reader.toNextChapter()) {
+        reader.stopAutoReading();
+      }
     } else {
       _scrollController.jumpTo(next);
     }

@@ -2,13 +2,13 @@ name: venerax-ios
 on:
   workflow_dispatch:
   push:
-    branches-ignore: [feat/comments-ui-replies-20261014]
+    branches-ignore: [feat/comments-ui-replies-20261014, fix/comments-preview-four-20261014]
     tags: ['**']
 permissions:
   contents: write
 jobs:
   Build_IOS:
-    if: github.ref != 'refs/heads/fix/author-search-236249-20261013' && github.ref != 'refs/heads/feat/comments-ui-replies-20261014'
+    if: github.ref != 'refs/heads/fix/author-search-236249-20261013' && github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4

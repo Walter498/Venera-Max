@@ -21,7 +21,7 @@ trap finish EXIT
 printf 'step=%s commit=%s platform=%s\n' "$step" "$(git rev-parse HEAD)" "$(uname -sm)"
 case "$step" in
   init)
-    test "${GITHUB_REF:-$(git symbolic-ref HEAD)}" = refs/heads/feat/comments-ui-replies-20261014
+    test "${GITHUB_REF:-$(git symbolic-ref HEAD)}" = refs/heads/fix/comments-preview-four-20261014
     # Root verified remote 5290afd9 has exactly the local fa7afe19 tree.
     test "$(git rev-parse '5290afd9ceeaeedda63ed54fff6b15a57c6c5674^{tree}')" = b0a56c3a52b47ea79986eade62c90218e1e6f593
     git merge-base --is-ancestor 5290afd9ceeaeedda63ed54fff6b15a57c6c5674 HEAD

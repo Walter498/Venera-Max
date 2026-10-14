@@ -1,7 +1,7 @@
 name: Comments UI validation
 on:
   push:
-    branches: [feat/comments-ui-replies-20261014]
+    branches: [fix/comments-preview-four-20261014]
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   ios:
-    if: github.ref == 'refs/heads/feat/comments-ui-replies-20261014' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/fix/comments-preview-four-20261014' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: macos-15
     timeout-minutes: 60
     defaults:
