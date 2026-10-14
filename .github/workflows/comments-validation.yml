@@ -9,6 +9,51 @@ concurrency:
   group: comments-validation-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  candidate_ipa:
+    name: Build candidate IPA independently of test gates
+    if: github.ref == 'refs/heads/fix/comments-preview-four-20261014'
+    runs-on: macos-15
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Initialize candidate provenance
+        run: bash tool/comments_ci_run.sh init
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - name: Pinned SDK and locked candidate dependencies
+        timeout-minutes: 12
+        run: bash tool/comments_ci_run.sh dependencies-ios
+      - name: Compile unsigned candidate device IPA and validate package
+        timeout-minutes: 25
+        run: bash tool/comments_ci_run.sh ios
+      - name: Label candidate package without claiming acceptance
+        run: |
+          python3 -c 'import json,os,pathlib; p=pathlib.Path("build/comments-artifacts/candidate-status.json"); p.write_text(json.dumps({"commit":os.environ["GITHUB_SHA"],"kind":"unsigned candidate device IPA","release_accepted":False,"full_test_acceptance_pending":True},indent=2))'
+      - name: Upload candidate IPA - full test acceptance pending
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comments-ios-candidate-device
+          path: build/comments-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload candidate compiler errors and package evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comments-ios-candidate-evidence
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+          retention-days: 14
   ios:
     if: github.ref == 'refs/heads/fix/comments-preview-four-20261014' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: macos-15

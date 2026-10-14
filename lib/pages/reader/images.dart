@@ -274,6 +274,9 @@ class _GalleryModeState extends State<_GalleryMode>
 
   @override
   void dispose() {
+    if (identical(reader._imageViewController, this)) {
+      reader._imageViewController = null;
+    }
     keyRepeatTimer?.cancel();
     _precacheTimer?.cancel();
     controller.dispose();
@@ -1089,6 +1092,14 @@ class _ContinuousModeState extends State<_ContinuousMode>
 
   @override
   void dispose() {
+    // Crossing a non-seamless chapter remounts this image state while auto
+    // reading may still be running. Dispose its ticker BEFORE the mixin.
+    _autoScrollTicker?.dispose();
+    _autoScrollTicker = null;
+    _lastAutoTick = null;
+    if (identical(reader._imageViewController, this)) {
+      reader._imageViewController = null;
+    }
     _pageTurnCoordinator.cancel();
     _scrollController.removeListener(onScroll);
     _scrollController.dispose();
@@ -3010,7 +3021,7 @@ class _SwipeChangeChapterProgressState
             size: 16,
           ),
           const SizedBox(width: 4),
-          Text(msg),
+          Flexible(child: Text(msg, textAlign: TextAlign.center)),
         ],
       ).paddingVertical(6).paddingHorizontal(16),
     );

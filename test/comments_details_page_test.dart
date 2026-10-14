@@ -44,6 +44,38 @@ Comment _comment(String id) => Comment.fromJson({
 Finder get _topEntry => find.byIcon(Icons.chat_bubble_outline_rounded);
 Finder get _previewEntry => find.text('View more');
 
+// SideBarRoute is a non-opaque PopupRoute: the detail preview stays mounted.
+// Check route identity/count BEFORE scoping text so a duplicate full route is
+// a failure, not something hidden by .first or hitTestable filtering.
+Finder get _fullRoute => find.byType(CommentsPage, skipOffstage: false);
+
+CommentsPage _activeFullPage(WidgetTester tester) {
+  expect(_fullRoute, findsOneWidget);
+  final route = ModalRoute.of(tester.element(_fullRoute));
+  expect(route, isA<SideBarRoute>());
+  expect(route!.isCurrent, isTrue);
+  return tester.widget<CommentsPage>(_fullRoute);
+}
+
+Finder _fullText(String text) => find.descendant(
+  of: _fullRoute,
+  matching: find.text(text, skipOffstage: false),
+  skipOffstage: false,
+);
+
+Finder _previewText(String text) => find.descendant(
+  of: find.byType(ComicPage, skipOffstage: false),
+  matching: find.text(text, skipOffstage: false),
+  skipOffstage: false,
+);
+
+void _expectFullText(WidgetTester tester, String text) {
+  _activeFullPage(tester);
+  // Exact count within the full page also catches duplicate feed rendering.
+  expect(_fullText(text), findsOneWidget);
+  expect(_fullText(text).hitTestable(), findsOneWidget);
+}
+
 // Real database/file work must get real event turns. Fixed-clock settling is
 // unsuitable for a pending probe (spinner), so all polling has a hard bound.
 // setUpAll runs on the real event loop (not a testWidgets fake clock).
@@ -320,7 +352,7 @@ void main() {
     await tester.tap(_topEntry);
     await _until(tester, () => find.byType(CommentsPage).evaluate().isNotEmpty);
     await _frames(tester, 20);
-    final full = tester.widget<CommentsPage>(find.byType(CommentsPage));
+    final full = _activeFullPage(tester);
     expect(full.sharedSession, isNotNull);
     expect(full.sharedSession!.controller.loaded, isTrue);
     return full;
@@ -396,7 +428,7 @@ void main() {
         return Res([_comment('shared')], subData: 1, total: 1);
       }));
     final first = await openFull(tester);
-    expect(find.text('Discussion shared'), findsOneWidget);
+    _expectFullText(tester, 'Discussion shared');
     expect(calls, 1);
     App.rootNavigatorKey.currentState!.pop();
     await _frames(tester, 20);
@@ -406,9 +438,9 @@ void main() {
     await tester.tap(_previewEntry);
     await _until(tester, () => find.byType(CommentsPage).evaluate().isNotEmpty);
     await _frames(tester, 20);
-    final reopened = tester.widget<CommentsPage>(find.byType(CommentsPage));
+    final reopened = _activeFullPage(tester);
     expect(reopened.sharedSession, same(first.sharedSession));
-    expect(find.text('Discussion shared'), findsOneWidget);
+    _expectFullText(tester, 'Discussion shared');
     expect(calls, 1);
     App.rootNavigatorKey.currentState!.pop();
     await _frames(tester, 20);
@@ -441,12 +473,14 @@ void main() {
       expect(oldSession.controller.comments, isEmpty);
       expect(find.text('Discussion settings-old'), findsNothing);
       expect(find.byType(CommentsPage), findsOneWidget);
+      expect(_activeFullPage(tester), same(full));
+      expect(_fullText('Discussion settings-old'), findsNothing);
       expect(tester.takeException(), isNull);
       App.rootNavigatorKey.currentState!.pop();
       await _frames(tester, 20);
       final reopened = await openFull(tester);
       expect(reopened.sharedSession, isNot(same(oldSession)));
-      expect(find.text('Discussion settings-new'), findsOneWidget);
+      _expectFullText(tester, 'Discussion settings-new');
       expect(calls, 2, reason: 'new scope and reopening share one first page');
     } finally {
       appdata.settings['blockedCommentWords'] = oldWords;
@@ -480,7 +514,7 @@ void main() {
       await mount(tester, source);
       final full = await openFull(tester);
       final oldSession = full.sharedSession!;
-      expect(find.text('Discussion old'), findsOneWidget);
+      _expectFullText(tester, 'Discussion old');
       // Start a real controller refresh while the borrowed route remains open.
       final oldRefresh = refreshPending
         ? oldSession.controller.refresh() : Future<void>.value();
@@ -514,17 +548,20 @@ void main() {
       if (refreshPending) expect(oldSession.controller.comments, isEmpty);
       expect(find.text('Discussion old'), findsNothing);
       expect(find.text('Discussion late-old'), findsNothing);
+      expect(_activeFullPage(tester), same(full));
+      expect(_fullText('Discussion old'), findsNothing);
+      expect(_fullText('Discussion late-old'), findsNothing);
       expect(tester.takeException(), isNull);
       App.rootNavigatorKey.currentState!.pop();
       await _frames(tester, 20);
       await _bottom(tester);
       await _entries(tester, true);
-      expect(find.text('Discussion new'), findsOneWidget);
+      expect(_previewText('Discussion new'), findsOneWidget);
       final reopened = await openFull(tester);
       expect(reopened.sharedSession, isNot(same(oldSession)));
       expect(reopened.sharedSession!.subId, change == 'subId' ? 'new-sub' : null);
       expect(reopened.sharedSession!.source, same(ComicSource.find(source.key)));
-      expect(find.text('Discussion new'), findsOneWidget);
+      _expectFullText(tester, 'Discussion new');
       expect(newCalls, 1, reason: 'new scope first page is reused on reopen');
       App.rootNavigatorKey.currentState!.pop();
       await _frames(tester, 20);

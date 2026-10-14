@@ -948,8 +948,24 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       ),
     ];
 
+    // The slider consumes 48px plus the top 8px. Measure the actual label
+    // font/scaler: a fixed105px left only41px inside each button's padding,
+    // less than its icon+gap+label even at100% on the real CJK font.
+    var buttonHeight = 48.0;
+    for (final item in items) {
+      final label = TextPainter(
+        text: TextSpan(text: item.label,
+            style: DefaultTextStyle.of(context).style.merge(
+                const TextStyle(fontSize: 11))),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      buttonHeight = math.max(buttonHeight, 22 + 4 + label.height + 8);
+      label.dispose();
+    }
     Widget child = SizedBox(
-      height: kBottomBarHeight,
+      height: math.max(kBottomBarHeight, (56 + buttonHeight + 1).ceilToDouble()),
       child: Column(
         children: [
           const SizedBox(height: 8),

@@ -292,12 +292,19 @@ class ReaderCommentsFixture extends ComicSource {
         resolve(nonempty()); await frames(tester,30);
         // Physical drag along the chapter's reading direction, exercising the
         // mounted PhotoView -> scroll resolver rather than a Rect helper.
-        // tester.drag normally spends 18px winning the gesture arena; a
-        // nominal 844px move then stops before the next image's leading edge.
+        // dragFrom with zero slop emits only ONE move: it wins the arena
+        // but DragStartBehavior.start has no subsequent update to scroll.
+        // Default slop emits the recognition move followed by the actual move;
+        // 870 minus18 leaves852px, just beyond this real844px image.
+        final scroll = tester.widget<CustomScrollView>(find.descendant(
+          of: find.byType(Reader), matching: find.byType(CustomScrollView)));
+        final beforeDrag = scroll.controller!.offset;
         await tester.drag(find.byType(Reader),
-          Offset(mode.endsWith('RightToLeft') ? 846 : -846, 0),
-          touchSlopX: 0, touchSlopY: 0);
+          Offset(mode.endsWith('RightToLeft') ? 870 : -870, 0));
         await frames(tester,30);
+        debugPrint('COMMENTS_READER_DRAG $mode '
+            'before=$beforeDrag after=${scroll.controller!.offset} page=${state.page}');
+        expect(scroll.controller!.offset, greaterThan(beforeDrag));
         expect(state.page,2);
         await tester.sendKeyEvent(mode.endsWith('RightToLeft')
           ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight);
