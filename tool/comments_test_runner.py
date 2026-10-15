@@ -111,6 +111,9 @@ def execute(label, files, evidence, update=False, minimum=1):
         for line in process.stdout:
             print(line, end='', flush=True)
             output.write(line)
+            # Preserve the same events as stdout even when the outer CI step
+            # is terminated; never infer a stalled stage from buffered output.
+            output.flush()
         rc = process.wait()
     (evidence / f'{label}.exit').write_text(str(rc) + '\n')
     report = inspect_events(raw.read_text(), rc, minimum)

@@ -82,12 +82,13 @@ void _expectFullText(WidgetTester tester, String text) {
 // Fail with the exact pending dependency instead of consuming the CI step.
 Future<void> _hostStage(String name, FutureOr<void> Function() action) async {
   final elapsed = Stopwatch()..start();
-  debugPrint('COMMENTS_DETAILS_HOST start $name');
+  // Do not let debugPrint's throttle hide the last synchronous native close.
+  debugPrintSynchronously('COMMENTS_DETAILS_HOST start $name');
   try {
     await Future<void>.sync(action).timeout(const Duration(seconds: 30));
-    debugPrint('COMMENTS_DETAILS_HOST done $name ${elapsed.elapsedMilliseconds}ms');
+    debugPrintSynchronously('COMMENTS_DETAILS_HOST done $name ${elapsed.elapsedMilliseconds}ms');
   } catch (error) {
-    debugPrint('COMMENTS_DETAILS_HOST failed $name '
+    debugPrintSynchronously('COMMENTS_DETAILS_HOST failed $name '
         '${elapsed.elapsedMilliseconds}ms: $error');
     rethrow;
   }
@@ -152,9 +153,24 @@ void _pageTest(String name, Future<void> Function(WidgetTester) body) {
       } finally {
         // Borrowed page and owner must unmount before registry/DB teardown.
         try {
-          await tester.pumpWidget(const SizedBox.shrink());
-          await _frames(tester, 2);
-          expect(tester.takeException(), isNull);
+          final borrowed = tester.widgetList<CommentsPage>(_fullRoute)
+              .map((page) => page.sharedSession).where((session) => session != null)
+              .toList();
+          await _hostStage('page.unmount', () async {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await _frames(tester, 2);
+            expect(_fullRoute, findsNothing);
+            expect(find.byType(ComicPage, skipOffstage: false), findsNothing);
+            for (final session in borrowed) {
+              expect(session!.isCurrent, isFalse);
+            }
+            // Settings restoration can enqueue a reload microtask immediately
+            // before unmount. Give it real event turns to observe !mounted,
+            // while the source registry, engine and stores are still alive.
+            await Future<void>.delayed(Duration.zero);
+            await tester.pump();
+            expect(tester.takeException(), isNull);
+          });
         } finally {
           tester.view.resetPhysicalSize();
           tester.view.resetDevicePixelRatio();
@@ -173,18 +189,22 @@ void main() {
   late String cover;
   final sources = <ComicSource>[];
 
-  final closers = <void Function()>[];
+  final closers = <MapEntry<String, FutureOr<void> Function()>>[];
+  final storePaths = <String>[];
   var pathsChanged = false;
   var hostReady = false;
+
+  void registerClose(String name, FutureOr<void> Function() close) {
+    closers.add(MapEntry(name, close));
+  }
 
   // Run every close even if saving or a preceding close fails. Consume the
   // stack so failed setup and tearDownAll cannot close the same host twice.
   Future<void> closeStores() async {
     if (closers.isEmpty) return;
-    final stage = closers.length;
     final close = closers.removeLast();
     try {
-      await _hostStage('cleanup.resource.$stage', close);
+      await _hostStage('cleanup.${close.key}', close.value);
     } finally {
       await closeStores();
     }
@@ -192,13 +212,14 @@ void main() {
 
   void registerStore(String filename, void Function() close) {
     final path = '${directory.path}/$filename';
-    closers.add(() {
+    storePaths.add(path);
+    registerClose(filename, () async {
       try {
-        close();
+        await _hostStage('cleanup.$filename.managerClose', close);
       } finally {
-        // Some managers' close() returns before isInitialized becomes true.
-        // Release a handle opened by a failed/partial init as well.
-        DatabaseGateway.instance.closeManaged(path);
+        // Partial init may have opened a handle before isInitialized was set.
+        await _hostStage('cleanup.$filename.gatewayClose',
+            () => DatabaseGateway.instance.closeManaged(path));
       }
     });
   }
@@ -206,17 +227,33 @@ void main() {
   Future<void> releaseHost() async {
     if (!pathsChanged) return;
     try {
+      // The shared tearDown restores language after page.unmount and can
+      // synchronously notify Settings listeners. Drain a real event turn here,
+      // not a fake-clock delay or a discarded Future.
+      await _hostStage('cleanup.settingsEventTurn',
+          () => Future<void>.delayed(Duration.zero));
       // Drain settings/implicit-data writes before removing their real files.
       await _hostStage('appdata.saveData', () => appdata.saveData(false));
+      await _hostStage('cleanup.database.backgroundReads',
+          () => DatabaseGateway.instance.runExclusive(() async {}));
     } finally {
       try {
         await closeStores();
       } finally {
-        App.dataPath = oldDataPath;
-        App.cachePath = oldCachePath;
-        pathsChanged = false;
-        hostReady = false;
-        directory.deleteSync(recursive: true);
+        try {
+          await _hostStage('cleanup.database.noLiveHandles',
+              () => DatabaseGateway.instance.assertNoLiveHandles(storePaths));
+          await _hostStage('cleanup.directory.delete', () async {
+            await directory.delete(recursive: true);
+          });
+        } finally {
+          await _hostStage('cleanup.paths.restore', () {
+            App.dataPath = oldDataPath;
+            App.cachePath = oldCachePath;
+            pathsChanged = false;
+            hostReady = false;
+          });
+        }
       }
     }
   }
@@ -230,12 +267,13 @@ void main() {
     pathsChanged = true;
     try {
       // The shared host already awaited real translations and FontLoader.load.
-      debugPrint('COMMENTS_DETAILS_HOST translations/fonts ready');
+      debugPrintSynchronously('COMMENTS_DETAILS_HOST translations/fonts ready');
       // LocalFavoritesManager.init awaits appdata.ensureInit(). That is a
       // readiness barrier, NOT an initializer. Complete the real Init contract
       // in this isolated directory before awaiting the dependent store.
       await _hostStage('appdata.init', appdata.init);
-      closers.add(App.domain.close);
+      storePaths.add('${directory.path}/data/venera.db');
+      registerClose('domain.close', App.domain.close);
       await _hostStage('domain.init', () => App.domain.init(directory.path));
       await _hostStage('authorIndex.init',
           () => App.authorIndex.init(directory.path));
@@ -255,20 +293,18 @@ void main() {
       // LocalManager so ComicPage.onDataLoaded can query the real local DB.
       // Register cleanup before init to release partially initialized resources.
       final js = JsEngine();
-      closers.add(js.dispose);
+      registerClose('jsEngine.dispose', js.dispose);
       await _hostStage('jsEngine.init', js.init);
       expect(js.runCode('typeof ComicSource'), 'function',
           reason: 'real JS init must expose the source contract');
       expect(js.runCode('typeof ComicSource.sources'), 'object');
       final registry = ComicSourceManager();
-      closers.add(() {
-        try {
-          for (final source in registry.all()) {
-            registry.remove(source.key);
-          }
-        } finally {
-          registry.dispose();
+      registerClose('sourceManager.dispose', registry.dispose);
+      registerClose('sourceManager.removeAll', () {
+        for (final source in registry.all()) {
+          registry.remove(source.key);
         }
+        expect(registry.all(), isEmpty);
       });
       await _hostStage('sourceManager.init', registry.init);
       // Use LocalManager's real persisted path contract in the isolated host;
@@ -279,21 +315,23 @@ void main() {
         await File('${directory.path}/local_path').writeAsString(local.path);
       });
       final localManager = LocalManager();
-      registerStore('local.db', () {
-        try {
-          localManager.close();
-        } finally {
-          localManager.dispose();
-        }
-      });
+      registerClose('localManager.dispose', localManager.dispose);
+      registerStore('local.db', localManager.close);
       await _hostStage('localManager.init', localManager.init);
+      registerClose('localManager.tasks.flush', () async {
+        expect(localManager.downloadingTasks, isEmpty,
+            reason: 'details fixtures must not launch background downloads');
+        await localManager.saveCurrentDownloadingTasks();
+      });
       // init schedules auto-resume after 3s. Drain that real callback while
       // dependencies are alive, including when an assertion/setup later fails.
       await _hostStage('localManager.deferredResume',
           () => Future<void>.delayed(const Duration(seconds: 3)));
       // Open the real cache here so teardown never creates an unused database.
       await _hostStage('detailsCache.open', () {
-        closers.add(ComicDetailsCache().close);
+        final cache = ComicDetailsCache();
+        storePaths.add('${directory.path}/details_cache.db');
+        registerClose('detailsCache.close', cache.close);
       });
       // A local valid image prevents a cover request without mocking providers.
       await _hostStage('cover.write', () {

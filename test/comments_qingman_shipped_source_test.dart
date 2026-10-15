@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/js_engine.dart';
+import 'package:venera/utils/translations.dart';
 
 // Intentionally the entire comments.5 release, not the simplified fixture or .6.
 // No capability/loadSetting/transport patches, profile, widget, or device access.
@@ -69,6 +70,9 @@ void main() {
     oldPath = App.dataPath;
     temp = Directory.systemTemp.createTempSync('qingman_shipped_source_');
     App.dataPath = temp.path;
+    // The full source parser translates existing page labels while parsing.
+    // This is the real bundled translation loader, not a fake ready flag.
+    await AppTranslation.init();
     await JsEngine().init();
   });
   tearDown(() {

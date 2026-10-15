@@ -106,22 +106,97 @@ void main() {
   for (final scale in [1.0, 2.0]) {
     for (final unavailable in [false, true]) {
     testWidgets('footer recovery error/unavailable=$unavailable at scale $scale', (tester) async {
-      final source = providerSource(loader: (_, __, ___, ____) async => unavailable
-        ? const Res<List<Comment>>([], available: false) : const Res.error('offline'));
-      await source.setCommentProvider('qingman');
+      final tag = 'recovery unavailable=$unavailable scale=$scale';
+      void stage(String name) => debugPrintSynchronously('[$tag] $name');
+      var calls = 0, events = 0;
+      late ComicSource source;
+      source = providerSource(loader: (_, __, ___, ____) async {
+        calls++;
+        stage('loader ${source.commentProviderValue} call=$calls');
+        if (source.commentProviderValue == 'qingman') {
+          return unavailable ? const Res<List<Comment>>([], available: false)
+            : const Res.error('offline');
+        }
+        return Res(List.generate(6, (i) => Comment.fromJson({
+          'id': 'tencent-$i', 'userName': 'Tencent reader',
+          'content': 'tencent-recovered-$i',
+        })));
+      });
+      stage('setup-save start');
+      // Real filesystem IO must run outside testWidgets' fake-async zone.
+      await tester.runAsync(() => source.setCommentProvider('qingman')
+        .timeout(const Duration(seconds: 5)));
+      stage('setup-save done');
+      void changed() { events++; stage('settings-event $events'); }
+      ComicSource.settingsChanges.addListener(changed);
+      addTearDown(() => ComicSource.settingsChanges.removeListener(changed));
+      stage('mount');
       await tester.pumpWidget(MaterialApp(home: MediaQuery(
         data: MediaQueryData(size: const Size(320, 700), textScaler: TextScaler.linear(scale)),
         child: Scaffold(body: SingleChildScrollView(child: ChapterCommentsPreview(
           source: source, comicId: 'work', epId: 'ep', comicTitle: 'Work', chapterTitle: 'Chapter'))))));
-      await tester.pumpAndSettle();
+      final state = tester.state<ChapterCommentsPreviewState>(find.byType(ChapterCommentsPreview));
+      Future<void> loaded(String phase) async {
+        for (var i = 0; i < 20; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+          if (!state.feed.loading) {
+            stage('$phase loaded=${state.feed.loaded} error=${state.feed.error} available=${state.feed.available}');
+            return;
+          }
+        }
+        fail('$tag $phase spinner persisted after 20 frames; calls=$calls events=$events');
+      }
+      await loaded('initial');
+      if (unavailable) {
+        expect(state.feed.unavailable, isTrue);
+      } else {
+        expect(state.feed.error, contains('offline'));
+      }
+      expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.descendant(of: find.byType(ChapterCommentsPreview), matching: find.byType(Scrollable)), findsNothing);
+      stage('menu open');
       await tester.tap(find.byType(PopupMenuButton<String>));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('青漫连接配置'), findsOneWidget);
-      await tester.tap(find.text('腾讯'));
-      await tester.pumpAndSettle();
+      stage('select tencent');
+      await tester.tap(find.text('腾讯').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      // The menu callback performs real saveData IO, not just a UI mutation.
+      var persisted = false;
+      for (var i = 0; i < 50 && !persisted; i++) {
+        persisted = await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          final file = File('${temp.path}/comic_source/provider_fixture.data');
+          final saved = jsonDecode(await file.readAsString()
+            .timeout(const Duration(seconds: 2)));
+          return saved['settings']['provider'] == 'tencent';
+        }) ?? false;
+        // IO was launched by the real menu callback in fake-async: process
+        // its continuations between real-IO checks instead of awaiting it there.
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(persisted, isTrue, reason: '$tag selection was not persisted after 50 checks');
+      stage('selection-save done');
+      await loaded('recovered');
       expect(source.commentProviderValue, 'tencent');
+      expect(events, 1);
+      expect(calls, 2);
+      expect(state.feed.error, isNull);
+      expect(state.feed.loaded, isTrue);
+      expect(state.feed.comments.length, 6);
+      for (var i = 0; i < 4; i++) {
+        expect(find.text('tencent-recovered-$i'), findsOneWidget);
+      }
+      expect(find.text('tencent-recovered-4'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.descendant(of: find.byType(ChapterCommentsPreview), matching: find.byType(Scrollable)), findsNothing);
       expect(tester.takeException(), isNull);
+      stage('unmount');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      stage('done');
     });
     }
   }

@@ -90,6 +90,20 @@ void main() {
     }
   });
 
+  test('verified search permits only a bounded keyword before profile access', () async {
+    const path = '/api/comic/history/fu893u94/search';
+    await expectLater(transport.request(path, {'keyword': '我独自升级'}),
+      throwsA(isA<QingmanException>().having((e) => e.code, 'code', 'missingProfile')));
+    for (final params in <Map<String, dynamic>>[
+      {}, {'keyword': ''}, {'keyword': '   '}, {'keyword': 42},
+      {'keyword': 'title', 'page': 1}, {'keyword': List.filled(201, 'x').join()},
+      {'keyword': 'title\nother'},
+    ]) {
+      await expectLater(transport.request(path, params),
+        throwsA(isA<QingmanException>().having((e) => e.code, 'code', 'path')));
+    }
+  });
+
   test('only exact read-only paths and bounded scalar query accepted', () async {
     for (final path in ['https://evil.example', '/api/comic/comments/fu893u94/list?x=1',
       '/api/comic/comments/fu893u94/reply', '/bootstrap/domain', '/api/search']) {

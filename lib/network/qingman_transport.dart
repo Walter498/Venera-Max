@@ -121,6 +121,7 @@ class QingmanTransport {
     '/api/comic/comments/fu893u94/list',
     '/api/comic/comments/fu893u94/chapterList',
     '/api/comic/comics/ie84hfh8/detail',
+    '/api/comic/history/fu893u94/search',
   };
 
   static bool _isCatalog(String path) => RegExp(
@@ -323,6 +324,21 @@ class QingmanTransport {
       })().timeout(_deadline);
     } finally {
       pending?.abort();
+      client.close(force: true);
+    }
+  }
+}
+
+class _WireResult {
+  final int status;
+  final String body;
+  const _WireResult(this.status, this.body);
+}
+
+String _randomHex(int bytes) {
+  final random = Random.secure();
+  return List.generate(bytes, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+}
       client.close(force: true);
     }
   }
