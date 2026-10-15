@@ -458,6 +458,21 @@ function Cookie({name, value, domain}) {
  * Network object for sending HTTP requests and managing cookies.
  * @namespace Network
  */
+// Native-only Qingman transport. No profile/key/token enters the JS runtime.
+// request resolves parsed business JSON ({code, data, ...}), not an HTTP envelope.
+// Import/replace/clear are available only on the native QingmanProfilePage.
+const Qingman = Object.freeze({
+    async request(path, params = {}) {
+        const result = await sendMessage({method: 'qingman', path, params});
+        if (result.error) throw new Error(result.error);
+        try { return JSON.parse(result.body); }
+        catch (_) { throw new Error('青漫响应格式无效'); }
+    },
+    async profileStatus() {
+        return await sendMessage({method: 'qingman', action: 'profileStatus'});
+    }
+});
+
 let Network = {
     /**
      * Sends an HTTP request.

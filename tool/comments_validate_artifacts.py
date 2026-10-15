@@ -65,7 +65,7 @@ def validate():
     match = re.search(r'^version:\s*(\S+)\s*$', Path('pubspec.yaml').read_text(), re.M)
     assert match, 'pubspec version missing'
     version, build = match[1].split('+')
-    assert (version, build) == ('2.3.6', '251'), 'root must finalize 2.3.6+251'
+    assert (version, build) == ('2.3.6', '252'), 'root must finalize 2.3.6+252'
     out = Path('build/comments-artifacts')
     out.mkdir(parents=True, exist_ok=True)
     evidence = Path(os.environ['RUNNER_TEMP']) / 'venera-comments-evidence'

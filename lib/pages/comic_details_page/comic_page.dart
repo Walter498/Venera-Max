@@ -286,6 +286,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   void initState() {
     scrollController.addListener(onScroll);
     appdata.settings.addListener(_onCommentsSettingsChanged);
+    ComicSource.settingsChanges.addListener(_onCommentsSettingsChanged);
     ComicCollectionStore.changes.addListener(_onCollectionChanged);
     PreTranslationTaskManager.instance.addListener(update);
     // The per-comic translation toggle lives in the service; listen so the
@@ -297,6 +298,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   @override
   void dispose() {
     appdata.settings.removeListener(_onCommentsSettingsChanged);
+    ComicSource.settingsChanges.removeListener(_onCommentsSettingsChanged);
     _releaseComments();
     scrollController.removeListener(onScroll);
     ComicCollectionStore.changes.removeListener(_onCollectionChanged);
@@ -1623,7 +1625,17 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
   void _onCommentsSettingsChanged() {
     final session = _commentsSession;
-    if (session == null || session.isCurrent) return;
+    if (session == null) {
+      if (data == null) return;
+      scheduleMicrotask(() {
+        if (!mounted || data == null) return;
+        final source = ComicSource.find(widget.sourceKey);
+        if (source != null) _preloadComments(source, data!.id, data!.subId);
+        update();
+      });
+      return;
+    }
+    if (session.isCurrent) return;
     // Invalidate synchronously; notify/reload outside settings notification.
     _releaseComments();
     scheduleMicrotask(() {
@@ -1875,10 +1887,15 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     if (source != null && session != null && session.matches(source, comic.id, comic.subId) &&
         session.controller.error != null) {
       return SliverToBoxAdapter(child: Column(children: [
+        Align(alignment: Alignment.centerRight, child: CommentProviderSelector(source: source)),
         Text(session.controller.error!),
         TextButton(onPressed: () => session.controller.refresh(),
           child: Text('Retry'.tl)),
       ]));
+    }
+    if (source != null && source.commentProviderOptions.isNotEmpty && _hideCommentsEntry) {
+      return SliverToBoxAdapter(child: Align(alignment: Alignment.centerRight,
+        child: CommentProviderSelector(source: source)));
     }
     if (source?.hasComments != true || _hideCommentsEntry) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());

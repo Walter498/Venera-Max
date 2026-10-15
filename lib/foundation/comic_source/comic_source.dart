@@ -29,6 +29,8 @@ import 'package:venera/utils/translations.dart';
 import '../js_engine.dart';
 import '../log.dart';
 
+export 'package:venera/components/comment_provider_selector.dart';
+
 part 'category.dart';
 
 part 'favorites.dart';
@@ -537,12 +539,56 @@ class ComicSource {
   CommentCapabilities? get commentCapabilities => resolveCommentCapabilities?.call(false) ?? _initialCommentCapabilities.work;
   CommentCapabilities? get chapterCommentCapabilities => resolveCommentCapabilities?.call(true) ?? _initialCommentCapabilities.chapter;
   /// Only source settings, never account/JWT, participate in comment scope.
-  String get commentScopeRevision => '$version:${jsonEncode(data['settings'] ?? const {})}';
+  int _commentConnectionRevision = 0;
+  String get commentScopeRevision => '$version:${_commentConnectionRevision == 0 ? '' : '$_commentConnectionRevision:'}${jsonEncode(data['settings'] ?? const {})}';
+  /// Profile import can change transport without changing the selected provider.
+  void refreshCommentProvider() {
+    ++_commentConnectionRevision;
+    settingsChanges.notifyListeners();
+  }
+  /// Source-declared select setting; absent means legacy UI is unchanged.
+  final String? commentProviderSetting;
+  static final settingsChanges = ChangeNotifier();
+  String? _lastSavedCommentRevision;
+  Map<String, String> get commentProviderOptions {
+    final key = commentProviderSetting;
+    if (key == null) return const {};
+    final definition = (getSettingsDynamic() ?? settings)?[key];
+    if (definition == null || definition['type'] != 'select' || definition['options'] is! List) return const {};
+    return {for (final option in definition['options'] as List)
+      if (option is Map && option['value'] is String)
+        option['value'] as String: (option['text'] ?? option['value']).toString()};
+  }
+  String? get commentProviderValue {
+    final key = commentProviderSetting;
+    if (key == null) return null;
+    return (data['settings']?[key] ?? (getSettingsDynamic() ?? settings)?[key]?['default'])?.toString();
+  }
+  Future<void> setCommentProvider(String value) async {
+    final key = commentProviderSetting;
+    if (key == null || !commentProviderOptions.containsKey(value) || commentProviderValue == value) return;
+    data.putIfAbsent('settings', () => <String, dynamic>{});
+    final hadValue = (data['settings'] as Map).containsKey(key);
+    final oldValue = data['settings'][key];
+    data['settings'][key] = value;
+    try {
+      await saveData();
+    } catch (_) {
+      // Do not undo a newer selection while an earlier save is finishing.
+      if (data['settings'][key] == value) {
+        if (hadValue) { data['settings'][key] = oldValue; }
+        else { (data['settings'] as Map).remove(key); }
+        _lastSavedCommentRevision = commentScopeRevision;
+        settingsChanges.notifyListeners();
+      }
+      rethrow;
+    }
+  }
   final CommentsOptionsLoader? commentsOptionsLoader;
   final CommentsOptionsLoader? chapterCommentsOptionsLoader;
   bool get hasComments => commentCapabilities?.enabled != false &&
       (commentsLoader != null || (commentCapabilities != null && commentsOptionsLoader != null));
-  bool get hasChapterComments => chapterCommentCapabilities?.enabled != false &&
+  bool get hasChapterComments => (commentProviderSetting != null || chapterCommentCapabilities?.enabled != false) &&
       (chapterCommentsLoader != null || (chapterCommentCapabilities != null && chapterCommentsOptionsLoader != null));
   Future<Res<List<Comment>>> loadCommentPage(String id, String? subId, int page,
       String? replyTo, {bool chapter = false, String? sort}) {
@@ -646,6 +692,13 @@ class ComicSource {
   bool _haveWaitingTask = false;
 
   Future<void> saveData() async {
+    // Shared by the original source settings page and the inline selector.
+    // Emit before IO so pending results cannot paint a stale provider.
+    final revision = commentScopeRevision;
+    if (_lastSavedCommentRevision != revision) {
+      _lastSavedCommentRevision = revision;
+      settingsChanges.notifyListeners();
+    }
     if (_haveWaitingTask) return;
     while (_isSaving) {
       _haveWaitingTask = true;
@@ -748,6 +801,7 @@ class ComicSource {
     this.starRatingFunc,
     this.archiveDownloader, {
     this.handleClickAuthorEvent,
+    this.commentProviderSetting,
     CommentCapabilities? commentCapabilities,
     CommentCapabilities? chapterCommentCapabilities,
     this.resolveCommentCapabilities,

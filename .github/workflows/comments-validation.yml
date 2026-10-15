@@ -1,7 +1,7 @@
 name: Comments UI validation
 on:
   push:
-    branches: [fix/comments-preview-four-20261014]
+    branches: [feat/lizi-qingman-provider-20261015]
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency:
 jobs:
   candidate_ipa:
     name: Build candidate IPA independently of test gates
-    if: github.ref == 'refs/heads/fix/comments-preview-four-20261014'
+    if: github.ref == 'refs/heads/feat/lizi-qingman-provider-20261015'
     runs-on: macos-15
     timeout-minutes: 40
     defaults:
@@ -55,7 +55,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   ios:
-    if: github.ref == 'refs/heads/fix/comments-preview-four-20261014' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/feat/lizi-qingman-provider-20261015' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: macos-15
     timeout-minutes: 60
     defaults:

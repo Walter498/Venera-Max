@@ -50,10 +50,20 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
     },
       sort: widget.source.chapterCommentsOptionsLoader == null ? null : widget.source.chapterCommentCapabilities?.defaultSort,
       block: _shouldBlockComment);
-    feed.refresh();
+    if (widget.replyComment == null || !_replyScopeExpired) feed.refresh();
   }
+  bool _replyScopeExpired = false;
   @override
-  void initState() { super.initState(); _createFeed(); }
+  void initState() { super.initState(); _createFeed(); ComicSource.settingsChanges.addListener(_settingsChanged); }
+  void _settingsChanged() {
+    if (_scopeRevision == widget.source.commentScopeRevision) return;
+    feed.invalidate();
+    _replyScopeExpired = widget.replyComment != null;
+    scheduleMicrotask(() {
+      if (!mounted) return;
+      setState(() { feed.dispose(); _createFeed(); });
+    });
+  }
   @override
   void didUpdateWidget(covariant ChapterCommentsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -63,7 +73,7 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
     }
   }
   @override
-  void dispose() { feed.dispose(); controller.dispose(); super.dispose(); }
+  void dispose() { ComicSource.settingsChanges.removeListener(_settingsChanged); feed.dispose(); controller.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -71,10 +81,11 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
       resizeToAvoidBottomInset: false,
       appBar: Appbar(
         title: Text(widget.replyComment == null ? 'Chapter Comments'.tl : '评论详情'),
+        actions: [CommentProviderSelector(source: widget.source)],
         style: AppbarStyle.shadow,
       ),
       body: AnimatedBuilder(animation: feed, builder: (context, _) =>
-        feed.unavailable ? const SizedBox.shrink() : buildBody(context)),
+        feed.unavailable || _replyScopeExpired ? const SizedBox.shrink() : buildBody(context)),
     );
   }
 
@@ -102,7 +113,8 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
   }
 
   Widget buildBottom(BuildContext context) {
-    if (widget.source.sendChapterCommentFunc == null) {
+    if (widget.source.sendChapterCommentFunc == null ||
+        (widget.source.commentProviderSetting != null && widget.source.chapterCommentCapabilities?.canLoadReplies == false)) {
       return const SizedBox(height: 0);
     }
     return Container(
@@ -243,8 +255,8 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
     return Padding(padding: const EdgeInsets.only(top: 8), child: Wrap(
       spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
       if (widget.comment.score != null)
-        if (hasId && widget.source.voteCommentFunc != null) buildVote()
-        else if (hasId && widget.source.likeCommentFunc != null) buildLike()
+        if (hasId && widget.source.voteCommentFunc != null && (widget.source.commentProviderSetting == null || widget.source.chapterCommentCapabilities?.canLoadReplies != false)) buildVote()
+        else if (hasId && widget.source.likeCommentFunc != null && (widget.source.commentProviderSetting == null || widget.source.chapterCommentCapabilities?.canLoadReplies != false)) buildLike()
         else CommentReadOnlyStats(comment: Comment.fromJson({'score': widget.comment.score})),
       if (widget.comment.replyCount != null)
         if (canReply) buildReply()
@@ -430,15 +442,51 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
 
 /// Shared by chapter-load entry and lazy footer. Requests start synchronously;
 /// each source revision / work / episode owns an isolated controller generation.
+// A declared provider always retains a recovery footer, even for an explicit
+// unavailable/empty result. Payload and metadata remain unmodified.
+class _ProviderChapterFeed extends CommentsController {
+  _ProviderChapterFeed({required this.source, required super.loader, super.sort, super.block});
+  final ComicSource source;
+  @override
+  bool get unavailable => source.commentProviderOptions.isEmpty && super.unavailable;
+  @override
+  bool get confirmedEmpty => source.commentProviderOptions.isEmpty && super.confirmedEmpty;
+}
+
 class ReaderChapterCommentsFeeds {
-  ReaderChapterCommentsFeeds({this.onChanged});
+  ReaderChapterCommentsFeeds({this.onChanged}) {
+    ComicSource.settingsChanges.addListener(_settingsChanged);
+  }
+  final Map<String, (ComicSource, String, String)> _requests = {};
+  final Map<String, String> _revisions = {};
+  void _settingsChanged() {
+    final changed = _requests.entries.where((entry) =>
+      _revisions[entry.key] != entry.value.$1.commentScopeRevision).toList();
+    final sources = changed.map((entry) => entry.value.$1.key).toSet();
+    for (final cached in _feeds.entries.toList()) {
+      if (sources.any((key) => cached.key.startsWith('$key:'))) {
+        cached.value.invalidate();
+        // Existing preview widgets may still be attached until next frame.
+        scheduleMicrotask(cached.value.dispose);
+        _feeds.remove(cached.key);
+      }
+    }
+    for (final entry in changed) {
+      final (source, comicId, epId) = entry.value;
+      final feed = chapterLoading(source, comicId, epId);
+      onChanged?.call(epId, source.commentScopeRevision, feed);
+    }
+  }
   final void Function(String epId, String revision, CommentsController feed)? onChanged;
   final Map<String, CommentsController> _feeds = {};
   CommentsController chapterLoading(ComicSource source,String comicId,String epId) {
+    final requestKey = '${source.key}:$comicId:$epId';
+    _requests[requestKey] = (source, comicId, epId);
+    _revisions[requestKey] = source.commentScopeRevision;
     final revision = source.commentScopeRevision;
     final key = '${source.key}:$revision:$comicId:$epId';
     return _feeds.putIfAbsent(key, () {
-      final feed = CommentsController(
+      final feed = _ProviderChapterFeed(source: source,
         sort: source.chapterCommentsOptionsLoader == null ? null : source.chapterCommentCapabilities?.defaultSort,
         block:_shouldBlockComment,
         loader:(page,sort) async {
@@ -452,6 +500,8 @@ class ReaderChapterCommentsFeeds {
     });
   }
   void dispose() {
+    ComicSource.settingsChanges.removeListener(_settingsChanged);
+    _requests.clear(); _revisions.clear();
     for(final feed in _feeds.values) { feed.dispose(); }
     _feeds.clear();
   }
@@ -472,11 +522,28 @@ class ChapterCommentsPreview extends StatefulWidget {
 }
 
 class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
+  bool _ownsFeed = false;
+  bool _ignoreShared = false;
+  void _settingsChanged() {
+    if (_scopeRevision == widget.source.commentScopeRevision) return;
+    feed.invalidate();
+    _ignoreShared = true;
+    scheduleMicrotask(() {
+      if (!mounted) return;
+      setState(() {
+        if (_ownsFeed) feed.dispose();
+        _createFeed();
+      });
+    });
+  }
   late CommentsController feed;
   late String _scopeRevision;
   void _createFeed() {
     _scopeRevision = widget.source.commentScopeRevision;
-    if (widget.sharedFeed != null) { feed = widget.sharedFeed!; return; }
+    if (!_ignoreShared && widget.sharedFeed != null) {
+      _ownsFeed = false; feed = widget.sharedFeed!; return;
+    }
+    _ownsFeed = true;
     feed = CommentsController(loader: (page, sort) async {
       final revision = _scopeRevision;
       final result = await widget.source.loadCommentPage(
@@ -489,18 +556,19 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
     feed.refresh();
   }
   @override
-  void initState() { super.initState(); _createFeed(); }
+  void initState() { super.initState(); _createFeed(); ComicSource.settingsChanges.addListener(_settingsChanged); }
   @override
   void didUpdateWidget(covariant ChapterCommentsPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_scopeRevision != widget.source.commentScopeRevision || oldWidget.epId != widget.epId || oldWidget.comicId != widget.comicId ||
         oldWidget.source != widget.source || oldWidget.sharedFeed != widget.sharedFeed) {
-      if (oldWidget.sharedFeed == null) feed.dispose();
+      if (_ownsFeed) feed.dispose();
+      _ignoreShared = false;
       _createFeed();
     }
   }
   @override
-  void dispose() { if (widget.sharedFeed == null) feed.dispose(); super.dispose(); }
+  void dispose() { ComicSource.settingsChanges.removeListener(_settingsChanged); if (_ownsFeed) feed.dispose(); super.dispose(); }
   void _openAll() => context.to(() => ChapterCommentsPage(
     comicId: widget.comicId, epId: widget.epId, source: widget.source,
     comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle));
@@ -512,10 +580,11 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
   static const previewLimit = 4;
   @override
   Widget build(BuildContext context) {
-    if (!widget.source.hasChapterComments) return const SizedBox.shrink();
+    final hasSelector = widget.source.commentProviderOptions.isNotEmpty;
+    if (!widget.source.hasChapterComments && !hasSelector) return const SizedBox.shrink();
     return AnimatedBuilder(animation: Listenable.merge([feed, appdata.settings]),
       builder: (context, _) {
-        if (feed.unavailable || feed.confirmedEmpty) return const SizedBox.shrink();
+        if ((feed.unavailable || feed.confirmedEmpty) && !hasSelector) return const SizedBox.shrink();
         final sorts = widget.source.chapterCommentsOptionsLoader == null
             ? const <String>[] : widget.source.chapterCommentCapabilities?.sorts ?? const <String>[];
         if (widget.horizontal) {
@@ -541,7 +610,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             key:const ValueKey('chapter-comments-region'),
             crossAxisAlignment:CrossAxisAlignment.stretch,children:[
             panel([
-              Text('Chapter Comments'.tl,style:ts.s18,maxLines:1,overflow:TextOverflow.ellipsis),
+              Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [Text('Chapter Comments'.tl,style:ts.s18), CommentProviderSelector(source: widget.source)]),
               preview(widget.chapterTitle),
               TextButton(onPressed:_openAll,child:Text('View all comments'.tl)),
             ]),
@@ -578,6 +647,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             Padding(padding: const EdgeInsets.fromLTRB(16,12,16,0), child: Wrap(
               alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
               children: [Text('Chapter Comments'.tl, style: ts.s18),
+                CommentProviderSelector(source: widget.source),
                 TextButton(onPressed: _openAll, child: Text('View all comments'.tl))])),
             if (widget.chapterTitle.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal:16),
               child: Text(widget.chapterTitle,style: ts.s12)),

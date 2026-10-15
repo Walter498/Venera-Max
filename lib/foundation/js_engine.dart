@@ -29,6 +29,7 @@ import 'package:venera/network/app_dio.dart';
 import 'package:venera/network/app_dio_io.dart';
 import 'package:venera/network/cookie_jar.dart';
 import 'package:venera/network/proxy.dart';
+import 'package:venera/network/qingman.dart';
 import 'package:venera/utils/init.dart';
 
 import 'comic_source/comic_source.dart';
@@ -121,6 +122,10 @@ class JsEngine with _JSEngineApi, JsUiApi, Init {
   }
 
   Object? _messageReceiver(dynamic message) {
+    // Qingman handles/sanitizes its own errors. Never log its incoming payload.
+    if (message is Map && message['method'] == 'qingman') {
+      return handleQingmanMessage(message);
+    }
     try {
       if (message is Map<dynamic, dynamic>) {
         if (message["method"] == null) return null;

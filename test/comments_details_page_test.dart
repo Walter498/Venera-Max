@@ -443,9 +443,11 @@ void main() {
     _expectFullText(tester, 'Discussion shared');
     expect(calls, 1);
     App.rootNavigatorKey.currentState!.pop();
-    await _frames(tester, 20);
+    // Wait for actual unmount, not for a visible host behind a non-opaque route.
+    await _until(tester, () => _fullRoute.evaluate().isEmpty);
     App.rootNavigatorKey.currentState!.pop();
-    await _frames(tester, 20);
+    await _until(tester, () => find.byType(ComicPage,
+        skipOffstage: false).evaluate().isEmpty);
     expect(find.text('Open real details'), findsOneWidget);
     expect(first.sharedSession!.isCurrent, isFalse);
   });

@@ -217,6 +217,8 @@ class ComicSourceParser {
       _parseStarRatingFunc(),
       _parseArchiveDownloader(),
       handleClickAuthorEvent: _parseClickAuthorEvent(),
+      commentProviderSetting: _getValue('comic.commentProviderSetting') is String
+          ? _getValue('comic.commentProviderSetting') as String : null,
       resolveCommentCapabilities: _parseCommentCapabilities,
       commentsOptionsLoader: _parseCommentsOptionsLoader(false),
       chapterCommentsOptionsLoader: _parseCommentsOptionsLoader(true),

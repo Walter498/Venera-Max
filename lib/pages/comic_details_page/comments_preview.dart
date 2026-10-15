@@ -64,6 +64,7 @@ class _CommentsPartState extends State<_CommentsPart> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                CommentProviderSelector(source: widget.source),
                 if (context.width >= 600) ...[
                   IconButton(
                     tooltip: "Previous".tl,

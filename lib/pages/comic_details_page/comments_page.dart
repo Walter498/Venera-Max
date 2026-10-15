@@ -44,12 +44,12 @@ class _CommentsPageState extends State<CommentsPage> {
   DetailsCommentsSession? _borrowedSession;
   bool get _scopeCurrent =>
       _scopeRevision == widget.source.commentScopeRevision &&
-      (widget.replyComment != null || widget.sharedSession == null ||
+      (_providerChanged || widget.replyComment != null || widget.sharedSession == null ||
           _borrowedSession?.isCurrent == true);
 
   void _createFeed() {
     _scopeRevision = widget.source.commentScopeRevision;
-    final session = widget.sharedSession;
+    final session = _providerChanged ? null : widget.sharedSession;
     if (widget.replyComment == null && session != null &&
         session.matches(widget.source, widget.data.comicId, widget.data.subId) &&
         session.borrow()) {
@@ -70,7 +70,7 @@ class _CommentsPageState extends State<CommentsPage> {
     },
       sort: widget.source.commentsOptionsLoader == null ? null : widget.source.commentCapabilities?.defaultSort,
       block: _shouldBlockComment);
-    if (_scopeCurrent) unawaited(feed.refresh());
+    if (_scopeCurrent && !(_providerChanged && widget.replyComment != null)) unawaited(feed.refresh());
   }
 
   void _onFeedChanged() {
@@ -86,6 +86,19 @@ class _CommentsPageState extends State<CommentsPage> {
     });
   }
 
+  bool _providerChanged = false;
+  void _onProviderChanged() {
+    if (_scopeRevision == widget.source.commentScopeRevision) return;
+    feed.invalidate();
+    _providerChanged = true;
+    scheduleMicrotask(() {
+      if (!mounted) return;
+      _detachFeed();
+      _createFeed();
+      feed.addListener(_onFeedChanged);
+      setState(() {});
+    });
+  }
   void _detachFeed() {
     feed.removeListener(_onFeedChanged);
     final borrowed = _borrowedSession;
@@ -104,6 +117,7 @@ class _CommentsPageState extends State<CommentsPage> {
     _createFeed();
     feed.addListener(_onFeedChanged);
     appdata.settings.addListener(_onSettingsChanged);
+    ComicSource.settingsChanges.addListener(_onProviderChanged);
   }
   @override
   void didUpdateWidget(covariant CommentsPage oldWidget) {
@@ -118,6 +132,7 @@ class _CommentsPageState extends State<CommentsPage> {
   @override
   void dispose() {
     appdata.settings.removeListener(_onSettingsChanged);
+    ComicSource.settingsChanges.removeListener(_onProviderChanged);
     _detachFeed();
     controller.dispose();
     super.dispose();
@@ -129,9 +144,10 @@ class _CommentsPageState extends State<CommentsPage> {
       resizeToAvoidBottomInset: false,
       appBar: Appbar(
         title: Text(widget.replyComment == null ? "Comments".tl : "评论详情"),
+        actions: [CommentProviderSelector(source: widget.source)],
         style: AppbarStyle.shadow,
       ),
-      body: feed.unavailable || !_scopeCurrent
+      body: feed.unavailable || !_scopeCurrent || (_providerChanged && widget.replyComment != null)
           ? const SizedBox.shrink() : buildBody(context),
     );
   }
@@ -156,7 +172,8 @@ class _CommentsPageState extends State<CommentsPage> {
   }
 
   Widget buildBottom(BuildContext context) {
-    if (widget.source.sendCommentFunc == null) {
+    if (widget.source.sendCommentFunc == null ||
+        (widget.source.commentProviderSetting != null && widget.source.commentCapabilities?.canLoadReplies == false)) {
       return const SizedBox(
         height: 0,
       );
@@ -299,8 +316,8 @@ class _CommentTileState extends State<_CommentTile> {
     return Padding(padding: const EdgeInsets.only(top: 8), child: Wrap(
       spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
       if (widget.comment.score != null)
-        if (hasId && widget.source.voteCommentFunc != null) buildVote()
-        else if (hasId && widget.source.likeCommentFunc != null) buildLike()
+        if (hasId && widget.source.voteCommentFunc != null && (widget.source.commentProviderSetting == null || widget.source.commentCapabilities?.canLoadReplies != false)) buildVote()
+        else if (hasId && widget.source.likeCommentFunc != null && (widget.source.commentProviderSetting == null || widget.source.commentCapabilities?.canLoadReplies != false)) buildLike()
         else CommentReadOnlyStats(comment: Comment.fromJson({'score': widget.comment.score})),
       if (widget.comment.replyCount != null)
         if (canReply) buildReply()
