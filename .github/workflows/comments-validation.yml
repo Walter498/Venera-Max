@@ -100,6 +100,11 @@ jobs:
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
         timeout-minutes: 3
         run: python3 tool/comments_capability_probe.py capability
+      - name: Automatic full source matching through real App bridge
+        id: auto
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 3
+        run: python3 tool/comments_capability_probe.py auto
       - name: Complete shipped source capability and provider probe
         id: shipped
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
@@ -130,7 +135,7 @@ jobs:
         run: bash tool/comments_ci_run.sh render
       - name: Build unsigned iPhoneOS Release and validate IPA
         id: ios
-        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.capability.outcome == 'success' && steps.shipped.outcome == 'success' && steps.recovery.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.capability.outcome == 'success' && steps.auto.outcome == 'success' && steps.shipped.outcome == 'success' && steps.recovery.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
         timeout-minutes: 20
         run: bash tool/comments_ci_run.sh ios
       - name: Record every gate outcome

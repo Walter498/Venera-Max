@@ -348,18 +348,3 @@ String _randomHex(int bytes) {
   final random = Random.secure();
   return List.generate(bytes, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
 }
-      client.close(force: true);
-    }
-  }
-}
-
-class _WireResult {
-  final int status;
-  final String body;
-  const _WireResult(this.status, this.body);
-}
-
-String _randomHex(int bytes) {
-  final random = Random.secure();
-  return List.generate(bytes, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
-}
