@@ -41,6 +41,10 @@ part 'models.dart';
 
 part 'types.dart';
 
+class CommentSettingsNotifier extends ChangeNotifier {
+  void changed() => notifyListeners();
+}
+
 class ComicSourceManager with ChangeNotifier, Init {
   final List<ComicSource> _sources = [];
 
@@ -544,11 +548,11 @@ class ComicSource {
   /// Profile import can change transport without changing the selected provider.
   void refreshCommentProvider() {
     ++_commentConnectionRevision;
-    settingsChanges.notifyListeners();
+    settingsChanges.changed();
   }
   /// Source-declared select setting; absent means legacy UI is unchanged.
   final String? commentProviderSetting;
-  static final settingsChanges = ChangeNotifier();
+  static final settingsChanges = CommentSettingsNotifier();
   String? _lastSavedCommentRevision;
   Map<String, String> get commentProviderOptions {
     final key = commentProviderSetting;
@@ -579,7 +583,7 @@ class ComicSource {
         if (hadValue) { data['settings'][key] = oldValue; }
         else { (data['settings'] as Map).remove(key); }
         _lastSavedCommentRevision = commentScopeRevision;
-        settingsChanges.notifyListeners();
+        settingsChanges.changed();
       }
       rethrow;
     }
@@ -597,8 +601,12 @@ class ComicSource {
     if (chapter && (subId == null || subId.trim().isEmpty || subId.trim() == 'null')) {
       return Future.value(const Res.error('Chapter comments require a valid episode id'));
     }
-    if (capability?.enabled == false || (replyTo != null && capability?.canLoadReplies == false)) {
-      return Future.value(const Res.error('Comments capability unavailable'));
+    if (capability?.enabled == false) {
+      final label = commentProviderOptions[commentProviderValue] ?? '当前来源';
+      return Future.value(Res.error('$label评论已停用，请在源设置中开启评论后重试（comments-disabled）'));
+    }
+    if (replyTo != null && capability?.canLoadReplies == false) {
+      return Future.value(const Res.error('当前评论接口不支持读取回复；请返回章节评论列表（replies-unsupported）'));
     }
     if (capability != null && options != null) {
       return options(id, subId, page, replyTo, {
@@ -697,7 +705,7 @@ class ComicSource {
     final revision = commentScopeRevision;
     if (_lastSavedCommentRevision != revision) {
       _lastSavedCommentRevision = revision;
-      settingsChanges.notifyListeners();
+      settingsChanges.changed();
     }
     if (_haveWaitingTask) return;
     while (_isSaving) {

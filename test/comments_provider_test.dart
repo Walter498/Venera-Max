@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:venera/components/comment_provider_selector.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/res.dart';
@@ -104,7 +103,8 @@ void main() {
     expect(find.byType(PopupMenuButton<String>), findsNothing);
   });
 
-  for (final scale in [1.0, 2.0]) for (final unavailable in [false, true]) {
+  for (final scale in [1.0, 2.0]) {
+    for (final unavailable in [false, true]) {
     testWidgets('footer recovery error/unavailable=$unavailable at scale $scale', (tester) async {
       final source = providerSource(loader: (_, __, ___, ____) async => unavailable
         ? const Res<List<Comment>>([], available: false) : const Res.error('offline'));
@@ -123,5 +123,6 @@ void main() {
       expect(source.commentProviderValue, 'tencent');
       expect(tester.takeException(), isNull);
     });
+    }
   }
 }

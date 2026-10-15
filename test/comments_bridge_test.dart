@@ -15,10 +15,16 @@ void main() {
   var serial = 0;
   final keys = <String>[];
 
-  Future<ComicSource> parse(String comic) async {
+  void stage(String tag, String value) {
+    // Synchronous output survives a subsequent native evaluate stall.
+    stdout.writeln('BRIDGE_MATRIX [$tag] $value');
+  }
+
+  Future<ComicSource> parse(String comic, {String? tag}) async {
     final key = 'comments_bridge_${serial++}';
     keys.add(key);
-    return ComicSourceParser().parse('''
+    if (tag != null) stage(tag, 'parse:start key=$key');
+    final source = await ComicSourceParser().parse('''
 class CommentsBridgeFixture extends ComicSource {
   name = "Comments bridge fixture";
   key = "$key";
@@ -28,12 +34,24 @@ class CommentsBridgeFixture extends ComicSource {
   // comments. Supply optional containers, not fake executable loaders.
   search = {};
   categoryComics = {};
+  init() {
+    super.init();
+    this.bridgeInitDone = true;
+  }
   comic = {
     async loadInfo(id) { return {title: id, cover: "", tags: {}}; },
     $comic
   };
 }
 ''', '${temp.path}/$key.js');
+    if (tag != null) stage(tag, 'parse:done init:wait');
+    // Parser schedules inherited init at 50ms. Let that real callback finish
+    // before teardown deletes its JS source; do not disable/cancel the event.
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    expect(JsEngine().runCode('ComicSource.sources.$key.bridgeInitDone'), isTrue,
+        reason: '$tag key=$key real parser init must finish before deletion');
+    if (tag != null) stage(tag, 'init:done');
+    return source;
   }
 
   String loaderName(bool chapter, bool options) => chapter
@@ -217,12 +235,28 @@ class CommentsBridgeFixture extends ComicSource {
         '{canLoadReplies: false}', '{canLoadReplies: true}',
         '{enabled: false, canLoadReplies: true}']) {
         for (final legacy in [false, true]) {
+          final tag = '${chapter ? "chapter" : "work"} '
+              'declaration=$declaration legacy=$legacy';
           final source = await parse('''
             ${declaration == null ? '' : '${capabilityName(chapter)}: $declaration,'}
             ${legacy ? 'async ${loaderName(chapter, false)}() { return {comments: []}; },' : ''}
             async ${loaderName(chapter, true)}() { return {comments: []}; }
-          ''');
+          ''', tag: tag);
+          stage(tag, 'capability:read');
           final cap = chapter ? source.chapterCommentCapabilities : source.commentCapabilities;
+          // Declarations are immutable in this matrix. Read the real JS getter
+          // once, then exercise the unchanged production method for EVERY
+          // combination with the actual parsed loaders and capability value.
+          // Other bridge tests still exercise live JS-backed source objects.
+          final matrixSource = commentsSource(
+            legacy: source.commentsLoader,
+            chapterLegacy: source.chapterCommentsLoader,
+            options: source.commentsOptionsLoader,
+            chapterOptions: source.chapterCommentsOptionsLoader,
+            capabilities: chapter ? null : cap,
+            chapterCapabilities: chapter ? cap : null,
+          );
+          stage(tag, 'capability:done');
           if (declaration == null) {
             expect(cap, isNull);
           } else if (!declaration.contains('canLoadReplies: true') &&
@@ -230,29 +264,50 @@ class CommentsBridgeFixture extends ComicSource {
             expect(cap!.canLoadReplies, isNull, reason: declaration);
           }
           final enabled = declaration != null && !declaration.contains('enabled: false');
+          final repliesDisabled = declaration?.contains('canLoadReplies: false') == true;
+          final repliesEnabled = declaration?.contains('canLoadReplies: true') == true;
+          final scopeEnabled = declaration?.contains('enabled: false') != true;
+          stage(tag, 'availability:read');
           expect(chapter ? source.hasChapterComments : source.hasComments,
               declaration?.contains('enabled: false') == true ? false : legacy || enabled);
+          stage(tag, 'availability:done');
+          var checked = 0;
           for (final id in [null, '', '  ', 'null', 'parent']) {
+            stage(tag, 'matrix:id=${id == null ? "<null>" : '"$id"'} '
+                'counts=[null,-1,0,2] previews=[false,true]');
             for (final count in [null, -1, 0, 2]) {
               for (final preview in [false, true]) {
                 final comment = Comment.fromJson({
                   'id': id, 'replyCount': count,
                   if (preview) 'replyPreview': {'id': 'child', 'content': 'real preview'},
                 });
-                final readable = id == 'parent' && cap?.enabled != false &&
-                    cap?.canLoadReplies != false &&
-                    (cap?.canLoadReplies == true ||
-                      (legacy && comment.replyCount != null));
-                expect(source.canReadReplies(comment, chapter: chapter), readable,
-                    reason: '$declaration legacy=$legacy id=$id count=$count preview=$preview');
+                final readable = id == 'parent' && scopeEnabled &&
+                    !repliesDisabled &&
+                    (repliesEnabled || (legacy && comment.replyCount != null));
+                expect(matrixSource.canReadReplies(comment, chapter: chapter), readable,
+                    reason: '$tag id=$id count=$count preview=$preview');
+                checked++;
               }
             }
           }
+          expect(checked, 40, reason: '$tag all id/count/preview combinations');
+          stage(tag, 'matrix:done checked=$checked guard:start');
           if (cap?.canLoadReplies == false || cap?.enabled == false) {
             // Even a direct attempted navigation cannot invoke either JS hook.
             final installed = JsEngine().runCode('''
+              ComicSource.sources.${source.key}.bridgeHookCalls = 0;
               ComicSource.sources.${source.key}.comic.${loaderName(chapter, true)} =
-                function() { throw new Error("disabled hook invoked"); };
+                function() {
+                  ComicSource.sources.${source.key}.bridgeHookCalls++;
+                  throw new Error("disabled hook invoked");
+                };
+              ${legacy ? '''
+              ComicSource.sources.${source.key}.comic.${loaderName(chapter, false)} =
+                function() {
+                  ComicSource.sources.${source.key}.bridgeHookCalls++;
+                  throw new Error("disabled legacy hook invoked");
+                };
+              ''' : ''}
               // Assignment evaluates to the function. Do not export a QuickJS
               // function handle to Dart when the fixture only installs a hook.
               void 0;
@@ -260,12 +315,19 @@ class CommentsBridgeFixture extends ComicSource {
             expect(installed, isNull);
             final res = await source.loadCommentPage('b', 'ep', 1, 'parent', chapter: chapter);
             expect(res.error, isTrue);
-            expect(res.errorMessage, 'Comments capability unavailable');
+            expect(res.errorMessage, endsWith(scopeEnabled
+                ? '（replies-unsupported）' : '（comments-disabled）'), reason: tag);
+            expect(res.dataOrNull, isNull, reason: tag);
+            expect(JsEngine().runCode(
+                'ComicSource.sources.${source.key}.bridgeHookCalls'), 0,
+                reason: '$tag neither options nor legacy hook may run');
           }
           if (declaration == null && !legacy) {
             final res = await source.loadCommentPage('b', 'ep', 1, 'parent', chapter: chapter);
+            expect(res.error, isTrue, reason: tag);
             expect(res.errorMessage, 'Comments loader unavailable');
           }
+          stage(tag, 'guard:done fixture:done');
         }
       }
     });

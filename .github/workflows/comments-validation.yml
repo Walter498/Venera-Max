@@ -95,6 +95,19 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         timeout-minutes: 8
         run: bash tool/comments_ci_run.sh native-tests
+      - name: Real Qingman capability getter and settings bridge probe
+        id: capability
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 3
+        run: python3 tool/comments_capability_probe.py capability
+      - name: Upload focused capability result before full regression
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: comments-ios-capability-probe
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+          retention-days: 14
       - name: Original author 13 and 28-file regression plus new comments tests
         id: tests
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
@@ -107,7 +120,7 @@ jobs:
         run: bash tool/comments_ci_run.sh render
       - name: Build unsigned iPhoneOS Release and validate IPA
         id: ios
-        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.capability.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
         timeout-minutes: 20
         run: bash tool/comments_ci_run.sh ios
       - name: Record every gate outcome

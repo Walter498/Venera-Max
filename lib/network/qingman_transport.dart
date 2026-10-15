@@ -36,7 +36,9 @@ class QingmanProtocol {
   static dynamic bridgeJson(dynamic value, [String? field]) {
     if (value is int && (value > 9007199254740991 ||
         value < -9007199254740991 || field == 'id' ||
-        (field?.endsWith('Id') ?? false))) return value.toString();
+        (field?.endsWith('Id') ?? false))) {
+      return value.toString();
+    }
     if (value is Map) {
       return value.map((key, item) => MapEntry(key.toString(),
         bridgeJson(item, key.toString())));
@@ -259,11 +261,15 @@ class QingmanTransport {
     final decoded = jsonDecode(utf8.decode(QingmanProtocol.unseal(
       outer['data'] as String, profile.responseKey, timestamp, nonce)));
     if (decoded is! Map || decoded['apiDomain'] is! String ||
-        decoded['appAccessToken'] is! String) throw const QingmanException('service');
+        decoded['appAccessToken'] is! String) {
+      throw const QingmanException('service');
+    }
     final origin = QingmanProtocol.apiOrigin(decoded['apiDomain'] as String);
     final token = decoded['appAccessToken'] as String;
     if (token.isEmpty || token.length > 8192 ||
-        RegExp(r'[\x00-\x20\x7f]').hasMatch(token)) throw const QingmanException('service');
+        RegExp(r'[\x00-\x20\x7f]').hasMatch(token)) {
+      throw const QingmanException('service');
+    }
     // No verified server TTL field: bounded five-minute memory lease, plus one 401 refresh.
     return _Session(origin, token, DateTime.now().add(const Duration(minutes: 5)));
   }

@@ -41,8 +41,10 @@ class _CommentProviderSelectorState extends State<CommentProviderSelector> {
         try {
           await widget.source.setCommentProvider(selected);
         } catch (_) {
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('评论接口设置保存失败，请重试')));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('评论接口设置保存失败，请重试')));
+          }
         }
       },
       itemBuilder: (_) => [
