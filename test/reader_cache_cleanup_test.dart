@@ -55,6 +55,16 @@ void main() {
     try {
       final manager = CacheManager();
       await manager.ready;
+      // SQLite may legitimately scan a one-row table. Supply representative
+      // metadata cardinality before testing the cleanup query plan, without
+      // forcing INDEXED BY or weakening the required expiry-index assertion.
+      f.db.execute('BEGIN');
+      for (var i = 0; i < 1000; i++) {
+        f.db.execute('INSERT INTO cache VALUES (?, ?, ?, ?, ?)',
+            ['plan-$i', '2', 'plan-$i', expires + 100000 + i, 'image']);
+      }
+      f.db.execute('COMMIT');
+      f.db.execute('ANALYZE cache');
       for (final query in [
         'SELECT * FROM cache WHERE expires < ?',
         'SELECT * FROM cache ORDER BY expires ASC LIMIT 10',
@@ -65,6 +75,7 @@ void main() {
         expect(details, contains('USING INDEX cache_expires'));
         expect(details, isNot(contains('USE TEMP B-TREE')));
       }
+      f.db.execute("DELETE FROM cache WHERE key LIKE 'plan-%'");
       expect(f.keys, ['live']);
       expect(live.readAsBytesSync(), [7, 7, 7]);
       expect(f.db.select('SELECT expires, type FROM cache').single['expires'], expires);
