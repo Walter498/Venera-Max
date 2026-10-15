@@ -135,12 +135,15 @@ void main() {
         data: MediaQueryData(textScaler: TextScaler.linear(scale)),
         child: Scaffold(body: CommentSortSelector(sorts: const ['new', 'hot'],
           value: 'hot', onSelected: (value) { selected = value; })))));
-      expect(find.text('最热 ▾'), findsOneWidget);
+      expect(find.descendant(of: find.byType(CommentSortSelector),
+        matching: find.text('最热')), findsOneWidget);
+      expect(find.descendant(of: find.byType(CommentSortSelector),
+        matching: find.byIcon(Icons.arrow_drop_down)), findsOneWidget);
       expect(find.text('精彩'), findsNothing);
       await tester.tap(find.byType(CommentSortSelector));
       await tester.pumpAndSettle();
       expect(find.text('最新'), findsOneWidget);
-      expect(find.text('最热'), findsOneWidget);
+      expect(find.widgetWithText(CheckedPopupMenuItem<String>, '最热'), findsOneWidget);
       expect(find.text('精彩'), findsNothing);
       await tester.tap(find.text('最新'));
       await tester.pumpAndSettle();
@@ -163,7 +166,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byType(CommentSortSelector));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('最热'));
+      await tester.tap(find.widgetWithText(CheckedPopupMenuItem<String>, '最热'));
       await tester.pumpAndSettle();
       expect(calls, productionCallback ? ['new'] : ['new', 'hot']);
       expect(selected, productionCallback ? ['hot'] : isEmpty);
@@ -178,23 +181,60 @@ void main() {
       calls.add(options['sort'] as String?);
       return Res([commentFixture('result', preview: false)]);
     });
-    final feeds = ReaderChapterCommentsFeeds();
-    Widget host() => MaterialApp(home: Scaffold(body: SingleChildScrollView(child:
-      ChapterCommentsPreview(comicId: 'work', epId: 'ep', source: source,
-        comicTitle: 'Work', chapterTitle: 'Chapter',
-        sharedFeed: feeds.chapterLoading(source, 'work', 'ep')))));
+    CommentsController? replacement;
+    final feeds = ReaderChapterCommentsFeeds(onChanged: (_, __, feed) {
+      if (feed.sort == 'hot') replacement = feed;
+    });
+    late CommentsController readerFeed;
+    Widget host() {
+      readerFeed = feeds.chapterLoading(source, 'work', 'ep');
+      return MaterialApp(home: Scaffold(body: SingleChildScrollView(child:
+        ChapterCommentsPreview(comicId: 'work', epId: 'ep', source: source,
+          comicTitle: 'Work', chapterTitle: 'Chapter', sharedFeed: readerFeed))));
+    }
+    void stage(String name) {
+      final preview = tester.state<ChapterCommentsPreviewState>(
+        find.byType(ChapterCommentsPreview));
+      debugPrint('sort-stage=$name '
+        'controllerIdentical=${identical(preview.feed, readerFeed)} '
+        'replacementIdentical=${identical(preview.feed, replacement)} '
+        'sourceSort=${source.preferredCommentSort(chapter: true)} '
+        'feedSort=${preview.feed.sort} commentsLength=${preview.feed.comments.length} '
+        'sorts=${source.availableCommentSorts(chapter: true)} '
+        'hasSelector=${source.commentProviderOptions.isNotEmpty} '
+        'unavailable=${preview.feed.unavailable} empty=${preview.feed.confirmedEmpty} '
+        'findText=${find.descendant(of: find.byType(CommentSortSelector), matching: find.text('最热')).evaluate().length}');
+    }
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
+    stage('initial');
     await tester.tap(find.byType(CommentSortSelector));
     await tester.pumpAndSettle();
-    await tester.runAsync(() async {
-      await tester.tap(find.text('最热'));
-      await source.saveData();
-    });
+    await tester.tap(find.widgetWithText(CheckedPopupMenuItem<String>, '最热'));
+    // CheckedPopupMenuItem completes its check animation before invoking the
+    // selection callback. Settle that route BEFORE constructing host(), or it
+    // captures the old shared feed and the later hot event retires it again.
+    await tester.pumpAndSettle();
+    stage('selected-before-reader-build');
+    expect(source.preferredCommentSort(chapter: true), 'hot');
+    expect(replacement, isNotNull);
+    expect(replacement!.sort, 'hot');
+    // Drain the selection's real file IO only after the callback has run.
+    await tester.runAsync(() => source.saveData());
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
+    stage('reader-rebuilt');
+    final preview = tester.state<ChapterCommentsPreviewState>(
+      find.byType(ChapterCommentsPreview));
+    expect(identical(preview.feed, readerFeed), isTrue);
+    expect(identical(preview.feed, replacement), isTrue);
+    expect(preview.feed.sort, 'hot');
+    expect(preview.feed.comments.single.id, 'result');
     expect(calls, ['new', 'hot']);
-    expect(find.text('最热 ▾'), findsOneWidget);
+    expect(find.descendant(of: find.byType(CommentSortSelector),
+        matching: find.text('最热')), findsOneWidget);
+    expect(find.descendant(of: find.byType(CommentSortSelector),
+        matching: find.byIcon(Icons.arrow_drop_down)), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.runAsync(() async {
       final restarted = sortSource();
@@ -240,7 +280,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(calls, ['new', 'hot']);
     expect(current.comments.single.id, 'hot-result');
-    expect(find.text('最热 ▾'), findsOneWidget);
+    expect(find.descendant(of: find.byType(CommentSortSelector),
+        matching: find.text('最热')), findsOneWidget);
+    expect(find.descendant(of: find.byType(CommentSortSelector),
+        matching: find.byIcon(Icons.arrow_drop_down)), findsOneWidget);
     expect(tester.takeException(), isNull);
     // The framework really detached: disposal is asserted, not just lack of
     // visible errors (which would also pass if retired feeds leaked forever).

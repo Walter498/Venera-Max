@@ -48,17 +48,21 @@ void main() {
         if (thread) {
           expect(find.text('评论详情'),findsOneWidget);
         } else {
-          expect(find.text('最新 ▾'),findsOneWidget);
+          expect(find.descendant(of:find.byType(CommentSortSelector),
+            matching:find.text('最新')),findsOneWidget);
+          expect(find.byIcon(Icons.arrow_drop_down),findsOneWidget);
           expect(find.text('最热'),findsNothing);
           expect(find.text('精彩'),findsNothing);
           await tester.tap(find.byType(CommentSortSelector));
           await tester.pumpAndSettle();
-          expect(find.text('最新'),findsOneWidget);
-          expect(find.text('最热'),findsOneWidget);
-          expect(find.text('精彩'),findsOneWidget);
+          expect(find.widgetWithText(CheckedPopupMenuItem<String>,'最新'),findsOneWidget);
+          expect(find.widgetWithText(CheckedPopupMenuItem<String>,'最热'),findsOneWidget);
+          expect(find.widgetWithText(CheckedPopupMenuItem<String>,'精彩'),findsOneWidget);
           Navigator.of(tester.element(find.text('精彩'))).pop();
           await tester.pumpAndSettle();
-          expect(find.text('最新 ▾'),findsOneWidget);
+          expect(find.descendant(of:find.byType(CommentSortSelector),
+            matching:find.text('最新')),findsOneWidget);
+          expect(find.byIcon(Icons.arrow_drop_down),findsOneWidget);
           expect(find.text('查看回复详情'),findsOneWidget);
         }
         expect(tester.getSize(find.byKey(boundary)),const Size(390,844));

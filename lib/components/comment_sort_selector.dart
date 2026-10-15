@@ -24,7 +24,10 @@ class CommentSortSelector extends StatelessWidget {
         CheckedPopupMenuItem<String>(value: sort, checked: sort == current,
           child: Text(label(sort)))],
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Text('${label(current)} ▾')),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(label(current)),
+          const Icon(Icons.arrow_drop_down, size: 18),
+        ])),
     );
   }
 }

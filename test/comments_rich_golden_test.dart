@@ -64,7 +64,8 @@ void main() {
           expect(find.text('Lv45'), findsOneWidget);
           expect(find.byTooltip('浏览量 1197000'), findsOneWidget);
           expect(find.text('收藏83.3万'), findsOneWidget);
-          expect(find.text('本章获赞1.9万'), findsOneWidget);
+          expect(find.text('本章获赞2万'), findsOneWidget);
+          expect(find.byTooltip('本章获赞 19537'), findsOneWidget);
           expect(find.text('查看回复详情'), findsNWidgets(2));
           expect(find.byType(SelectableText), findsNothing);
           expect(find.byType(Scrollable), findsOneWidget); // Outer only.
