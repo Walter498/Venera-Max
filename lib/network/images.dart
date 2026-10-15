@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/image_translation/rate_limiter.dart';
@@ -154,7 +155,7 @@ abstract class ImageDownloader {
 
   /// Cancel all loading images.
   static void cancelAllLoadingImages() {
-    for (var wrapper in _loadingImages.values) {
+    for (var wrapper in _loadingImages.values.toList()) {
       wrapper.cancel();
     }
     _loadingImages.clear();
@@ -172,19 +173,50 @@ abstract class ImageDownloader {
     // AVIF 曾解碼失敗 → 自動改用 WebP
     imageKey = AvifFallbackRegistry.instance.applyFallback(imageKey);
     final cacheKey = imageCacheKey(imageKey, sourceKey, cid, eid);
-    if (_loadingImages.containsKey(cacheKey)) {
-      return _loadingImages[cacheKey]!.stream;
-    }
-    final stream = _StreamWrapper<ImageDownloadProgress>(
-      _loadComicImage(imageKey, sourceKey, cid, eid, false, onRateLimited),
-      (wrapper) {
-        _loadingImages.remove(cacheKey);
+    return _shareComicImage(
+      cacheKey,
+      () => _loadComicImage(
+        imageKey, sourceKey, cid, eid, false, onRateLimited,
+      ),
+    );
+  }
+
+  // Eager by contract: even a discarded stream prefetches into the disk cache.
+  // Only actual listeners receive/buffer events; losing the last listener does
+  // not abort work another reader may join. Explicit cancelAll is the stop API.
+  static Stream<ImageDownloadProgress> _shareComicImage(
+    String cacheKey,
+    Stream<ImageDownloadProgress> Function() create,
+  ) {
+    final existing = _loadingImages[cacheKey];
+    if (existing != null) return existing.stream;
+    final wrapper = _StreamWrapper<ImageDownloadProgress>(
+      create(),
+      (closed) {
+        if (identical(_loadingImages[cacheKey], closed)) {
+          _loadingImages.remove(cacheKey);
+        }
       },
       isReplayable: (progress) => progress.imageBytes != null,
     );
-    _loadingImages[cacheKey] = stream;
-    return stream.stream;
+    _loadingImages[cacheKey] = wrapper;
+    return wrapper.stream;
   }
+
+  /// Exercises the production singleflight + wrapper without network or JS.
+  @visibleForTesting
+  static Stream<ImageDownloadProgress> debugShareComicImage(
+    String cacheKey,
+    Stream<ImageDownloadProgress> Function() create,
+  ) => _shareComicImage(cacheKey, create);
+
+  @visibleForTesting
+  static int get debugLoadingImageCount => _loadingImages.length;
+
+  @visibleForTesting
+  static int get debugImageListenerCount => _loadingImages.values.fold(
+    0, (count, wrapper) => count + wrapper.controllers.length,
+  );
 
   static Stream<ImageDownloadProgress> loadComicImageUnwrapped(
     String imageKey,
@@ -216,10 +248,11 @@ abstract class ImageDownloader {
         totalBytes: data.length,
         imageBytes: data,
       );
-      // A download reuses an already-cached image instead of re-fetching it,
-      // and never re-caches (avoids double-writing the bytes to disk and
-      // evicting the reader's prefetch cache) — see #4 / #17.
-      if (forDownload) return;
+      // Page cache keys identify immutable source/chapter/page bytes. A cache
+      // hit completes both reader and download requests; otherwise the eager
+      // shared upstream would refresh after the decoder cancels at this yield.
+      // Corrupt bytes are explicitly evicted by the image provider before retry.
+      return;
     }
 
     Future<Map<String, dynamic>?> Function()? onLoadFailed;
@@ -419,78 +452,90 @@ abstract class ImageDownloader {
 /// allows multiple listeners to listen to the same stream.
 class _StreamWrapper<T> {
   final Stream<T> _stream;
-
-  final List<StreamController> controllers = [];
-
+  final List<StreamController<T>> controllers = [];
   final void Function(_StreamWrapper<T> wrapper) onClosed;
-
   final bool Function(T data)? isReplayable;
 
+  StreamSubscription<T>? _subscription;
   bool isClosed = false;
-
   bool _hasReplayableData = false;
-
   late T _replayableData;
+  Object? _terminalError;
+  StackTrace? _terminalStack;
 
   _StreamWrapper(this._stream, this.onClosed, {this.isReplayable}) {
-    _listen();
+    // Register in the singleflight map before even a synchronous source ends.
+    // Still eager: discarding the returned stream starts disk prefetch.
+    scheduleMicrotask(_listen);
   }
 
-  void _listen() async {
-    try {
-      await for (var data in _stream) {
-        if (isClosed) {
-          break;
-        }
+  void _listen() {
+    if (isClosed) return;
+    _subscription = _stream.listen(
+      (data) {
+        if (isClosed) return;
         if (isReplayable?.call(data) ?? false) {
           _replayableData = data;
           _hasReplayableData = true;
         }
-        for (var controller in controllers) {
-          if (!controller.isClosed) {
-            controller.add(data);
-          }
+        for (final controller in controllers) {
+          controller.add(data);
         }
-      }
-    } catch (e) {
-      for (var controller in controllers) {
-        if (!controller.isClosed) {
-          controller.addError(e);
+      },
+      onError: (Object error, StackTrace stack) {
+        if (isClosed) return;
+        // One terminal error, never an unbounded progress/error history.
+        _terminalError = error;
+        _terminalStack = stack;
+        for (final controller in controllers) {
+          controller.addError(error, stack);
         }
-      }
-    } finally {
-      for (var controller in controllers) {
-        if (!controller.isClosed) {
-          controller.close();
-        }
-      }
+        _finish();
+      },
+      onDone: _finish,
+      cancelOnError: true,
+    );
+  }
+
+  void _finish() {
+    if (isClosed) return;
+    isClosed = true;
+    _subscription = null;
+    for (final controller in controllers) {
+      unawaited(controller.close());
     }
     controllers.clear();
-    isClosed = true;
     onClosed(this);
   }
 
   Stream<T> get stream {
-    if (isClosed) {
-      throw Exception('Stream is closed');
-    }
-    var controller = StreamController<T>();
-    controllers.add(controller);
-    controller.onCancel = () {
-      controllers.remove(controller);
-    };
-    if (_hasReplayableData) {
-      controller.add(_replayableData);
-    }
+    late final StreamController<T> controller;
+    controller = StreamController<T>(
+      onListen: () {
+        // A getter call is NOT a consumer. In particular, prefetch must never
+        // create a permanently unlistened controller buffering every chunk.
+        if (!isClosed) controllers.add(controller);
+        if (_hasReplayableData) controller.add(_replayableData);
+        if (isClosed) {
+          if (_terminalError != null) {
+            controller.addError(_terminalError!, _terminalStack);
+          }
+          unawaited(controller.close());
+        }
+      },
+      onCancel: () {
+        controllers.remove(controller);
+        // Intentionally keep the eager upstream alive to finish disk prefetch.
+      },
+    );
     return controller.stream;
   }
 
   void cancel() {
-    for (var controller in controllers) {
-      controller.close();
-    }
-    controllers.clear();
-    isClosed = true;
+    if (isClosed) return;
+    final subscription = _subscription;
+    _finish();
+    if (subscription != null) unawaited(subscription.cancel());
   }
 }
 

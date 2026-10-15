@@ -83,6 +83,21 @@ void main() {
     expect(progress.imageBytes, [1, 2, 3]);
   });
 
+  test('cache hit completes without entering the delayed source config', () async {
+    const imageKey = 'cached-no-refresh';
+    await CacheManager().writeCache('$imageKey@$sourceKey@cid@eid', [4, 5, 6]);
+
+    // The source config above never resolves within this timeout. Completion
+    // therefore proves a cache hit does not start an unnecessary refresh.
+    final events = await ImageDownloader.loadComicImage(
+      imageKey, sourceKey, 'cid', 'eid',
+    ).toList().timeout(const Duration(seconds: 1));
+
+    expect(events, hasLength(1));
+    expect(events.single.imageBytes, [4, 5, 6]);
+    expect(ImageDownloader.debugLoadingImageCount, 0);
+  });
+
   test('late subscriber receives the cached image event', () async {
     const imageKey = 'prefetched-image';
     await CacheManager().writeCache('$imageKey@$sourceKey@cid@eid', [9, 8, 7]);

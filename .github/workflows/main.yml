@@ -31,7 +31,7 @@ concurrency:
 jobs:
   Build_MacOS:
     runs-on: macos-15
-    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'macos') }}
+    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && github.ref != 'refs/heads/fix/reader-long-session-256' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'macos') }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
@@ -89,7 +89,7 @@ jobs:
           path: result/
   Build_IOS:
     runs-on: macos-15
-    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'ios') }}
+    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && github.ref != 'refs/heads/fix/reader-long-session-256' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'ios') }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
@@ -116,7 +116,7 @@ jobs:
           path: result/
   Build_Android:
     runs-on: ubuntu-22.04
-    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'android') }}
+    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && github.ref != 'refs/heads/fix/reader-long-session-256' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'android') }}
     steps:
       - uses: actions/checkout@v7
       - run: rm -rf /opt/hostedtoolcache
@@ -258,7 +258,7 @@ jobs:
           path: build/app/outputs/apk/release
   Build_Windows:
     runs-on: windows-latest
-    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'windows') }}
+    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && github.ref != 'refs/heads/fix/reader-long-session-256' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'windows') }}
     steps:
       - uses: actions/checkout@v7
       - name: install dependencies
@@ -282,7 +282,7 @@ jobs:
           path: build/windows/VeneraX-*
   Build_Linux:
     runs-on: ubuntu-22.04
-    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux') }}
+    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && github.ref != 'refs/heads/fix/reader-long-session-256' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux') }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
@@ -328,7 +328,7 @@ jobs:
           path: build/linux/arch/
   Build_Linux_ARM64:
     runs-on: ubuntu-22.04-arm
-    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux') }}
+    if: ${{ github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015' && github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && github.ref != 'refs/heads/fix/reader-long-session-256' && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux') }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2

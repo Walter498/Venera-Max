@@ -1,18 +1,38 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:venera/foundation/image_enhance_shader.dart';
 
-/// Displays a [ui.Image] with the render-time enhancement shader applied.
-///
-/// The shader is run exactly once per (image, strength) into an offscreen
-/// [ui.Image] which is then handed to a normal [RawImage]. This keeps all of
-/// the reader's existing fit / alignment / zoom (PhotoView) behaviour intact
-/// and correct, while costing nothing per frame after the one-time GPU pass.
-///
-/// If the shader is unavailable or disabled, the original image is drawn
-/// unchanged — the reader never breaks because of this optional effect.
+typedef ReaderEnhanceParameters = (double, double, double, double);
+typedef _EnhanceSignature = (ui.Image, ReaderEnhanceParameters);
+
+/// Applies enhancement once per successful image/parameter signature.
+/// In-flight requests are singleflight per State and globally bounded; newer
+/// requests replace pending ones. RawImage fit/alignment/zoom stay unchanged.
+/// The original remains drawable whenever enhancement is pending/unavailable.
 class EnhancedComicImage extends StatefulWidget {
+  // Test seams replace only the GPU boundary/settings, never scheduling.
+  @visibleForTesting
+  static Future<ui.Image?> Function(ui.Image)? debugRunShader;
+  @visibleForTesting
+  static bool Function()? debugEnabled;
+  @visibleForTesting
+  static ReaderEnhanceParameters Function()? debugParameters;
+  @visibleForTesting
+  static int get debugRunningCount => _EnhancedComicImageState._running;
+  @visibleForTesting
+  static int get debugQueuedCount => _EnhancedComicImageState._queue.length;
+
+  static bool get _enabled =>
+      debugEnabled?.call() ?? ImageEnhanceShader.instance.isEnabled;
+
+  static ReaderEnhanceParameters get _parameters {
+    final manager = ImageEnhanceShader.instance;
+    return debugParameters?.call() ??
+        (manager.strength, manager.clarity, manager.contrast, manager.vibrance);
+  }
+
   const EnhancedComicImage({
     super.key,
     required this.image,
@@ -58,19 +78,20 @@ class _EnhancedComicImageState extends State<EnhancedComicImage> {
   /// The processed image to display, or null until ready / when disabled.
   ui.Image? _enhanced;
 
-  /// Token guarding against stale async results when inputs change rapidly.
-  int _token = 0;
+  // Queue entries hold States only. Clone the source only after a slot is
+  // granted, while it is still owned by the mounted widget's ImageInfo.
+  static const _maxRunning = 2;
+  static const _maxQueued = 32;
+  static int _running = 0;
+  static final _queue = <_EnhancedComicImageState>[];
+  bool _queued = false;
+  bool _active = false;
+  int _generation = 0;
+  _EnhanceSignature? _wanted;
+  _EnhanceSignature? _builtSignature;
 
-  /// The (image, strength) signature the current [_enhanced] was built for.
-  Object? _builtSignature;
-
-  Object _signature() => Object.hash(
-        identityHashCode(widget.image),
-        ImageEnhanceShader.instance.strength,
-        ImageEnhanceShader.instance.clarity,
-        ImageEnhanceShader.instance.contrast,
-        ImageEnhanceShader.instance.vibrance,
-      );
+  _EnhanceSignature _signature() =>
+      (widget.image, EnhancedComicImage._parameters);
 
   @override
   void initState() {
@@ -81,44 +102,109 @@ class _EnhancedComicImageState extends State<EnhancedComicImage> {
   @override
   void didUpdateWidget(EnhancedComicImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.image, widget.image) ||
-        _builtSignature != _signature()) {
-      _maybeEnhance();
-    }
+    _maybeEnhance();
+  }
+
+  void _unqueue() {
+    if (_queued) _queue.remove(this);
+    _queued = false;
   }
 
   void _maybeEnhance() {
-    final shaderManager = ImageEnhanceShader.instance;
-    if (!shaderManager.isEnabled) {
+    if (!EnhancedComicImage._enabled) {
+      ++_generation;
+      _wanted = null;
+      _unqueue();
       _disposeEnhanced();
       return;
     }
     final signature = _signature();
-    if (_builtSignature == signature && _enhanced != null) {
-      return;
+    if (_wanted != signature) {
+      ++_generation;
+      _wanted = signature;
+      // Do not show a previous page/parameter result while waiting.
+      _disposeEnhanced();
     }
-    final myToken = ++_token;
-    _runShader(widget.image, shaderManager).then((result) {
-      if (!mounted || myToken != _token) {
-        result?.dispose();
-        return;
+    if (_builtSignature == signature || _active || _queued) return;
+    _enqueue();
+  }
+
+  void _enqueue() {
+    if (!mounted || _wanted == null || _active || _queued) return;
+    if (_queue.length == _maxQueued) {
+      // Under extreme churn, keep the newest visible requests. An evicted
+      // State displays its original and may retry on its next widget update.
+      _queue.removeAt(0)._queued = false;
+    }
+    _queued = true;
+    _queue.add(this);
+    _drain();
+  }
+
+  static void _drain() {
+    while (_running < _maxRunning && _queue.isNotEmpty) {
+      final state = _queue.removeAt(0);
+      state._queued = false;
+      if (!state.mounted || state._wanted == null) continue;
+      if (!EnhancedComicImage._enabled ||
+          state._wanted != state._signature()) {
+        state._maybeEnhance();
+        continue;
       }
-      setState(() {
-        _disposeEnhanced();
-        _enhanced = result;
-        _builtSignature = signature;
-      });
-    });
+      ++_running;
+      state._active = true;
+      state._produce();
+    }
+  }
+
+  Future<void> _produce() async {
+    final signature = _wanted!;
+    final generation = _generation;
+    ui.Image? source;
+    ui.Image? result;
+    try {
+      source = widget.image.clone();
+      final runner = EnhancedComicImage.debugRunShader;
+      result = await (runner != null
+          ? runner(source)
+          : _runShader(source, ImageEnhanceShader.instance));
+      if (mounted && generation == _generation &&
+          EnhancedComicImage._enabled && _signature() == signature) {
+        setState(() {
+          _disposeEnhanced();
+          _enhanced = result;
+          _builtSignature = result == null ? null : signature;
+          result = null; // Ownership transferred to this State.
+        });
+      }
+    } catch (_) {
+      // Optional enhancement failure must leave the original drawable and
+      // permit a later rebuild to retry, without an automatic failure loop.
+    } finally {
+      result?.dispose();
+      source?.dispose();
+      _active = false;
+      --_running;
+      if (mounted) {
+        if (generation != _generation) {
+          _enqueue(); // Only the latest coalesced request survives.
+        } else if (_builtSignature == null) {
+          _wanted = null; // Failed/null result can retry on next update.
+        }
+      }
+      _drain();
+    }
   }
 
   Future<ui.Image?> _runShader(
     ui.Image source,
     ImageEnhanceShader shaderManager,
   ) async {
-    final shader = shaderManager.shaderFor(source);
-    if (shader == null) return null;
+    ui.FragmentShader? shader;
     ui.Picture? picture;
     try {
+      shader = shaderManager.shaderFor(source);
+      if (shader == null) return null;
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
       // Draw at native origin/size: FlutterFragCoord() then matches the
@@ -136,7 +222,7 @@ class _EnhancedComicImageState extends State<EnhancedComicImage> {
       // Both must be released even if toImage() throws, to avoid leaking
       // native resources.
       picture?.dispose();
-      shader.dispose();
+      shader?.dispose();
     }
   }
 
@@ -148,6 +234,9 @@ class _EnhancedComicImageState extends State<EnhancedComicImage> {
 
   @override
   void dispose() {
+    ++_generation;
+    _wanted = null;
+    _unqueue();
     _disposeEnhanced();
     super.dispose();
   }

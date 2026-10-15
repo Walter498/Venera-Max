@@ -1,7 +1,7 @@
-name: Reader progressive jank validation
+name: Reader long-session 256 validation
 on:
   push:
-    branches: [fix/reader-progressive-jank-20261015]
+    branches: [fix/reader-long-session-256]
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   candidate:
-    if: github.ref == 'refs/heads/fix/reader-progressive-jank-20261015'
+    if: github.ref == 'refs/heads/fix/reader-long-session-256'
     runs-on: macos-15
     timeout-minutes: 40
     steps:
@@ -42,9 +42,9 @@ jobs:
           path: ${{ runner.temp }}/venera-comments-evidence/
           if-no-files-found: error
   verify:
-    if: github.ref == 'refs/heads/fix/reader-progressive-jank-20261015'
+    if: github.ref == 'refs/heads/fix/reader-long-session-256'
     runs-on: macos-15
-    timeout-minutes: 55
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,6 +74,46 @@ jobs:
         id: native
         if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         timeout-minutes: 8
+      - name: History queue and bounded chapter feeds
+        run: bash tool/reader_perf_ci.sh history
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-history
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+      - name: Unsubscribed image streams and terminal replay
+        run: bash tool/reader_perf_ci.sh stream
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-stream
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+      - name: Image metadata and enhancement task lifetime
+        run: bash tool/reader_perf_ci.sh lifetime
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-lifetime
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+      - name: Long-session index and prefetch window
+        run: bash tool/reader_perf_ci.sh window
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-window
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
       - name: Production reader work-count and navigation regressions
         run: bash tool/reader_perf_ci.sh focused
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}

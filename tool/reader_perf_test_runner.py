@@ -11,9 +11,17 @@ files=['test/continuous_reader_geometry_work_test.dart',
        'test/continuous_page_turn_coordinator_test.dart',
        'test/reader_local_page_read_test.dart',
        'test/reader_loading_initial_group_test.dart',
-       'test/cached_image_loading_test.dart',
-       'test/comments_reader_integration_test.dart',
-       'test/comments_reader_footer_test.dart',
-       'test/comments_sort_preference_test.dart']
-assert all(Path(p).is_file() for p in files),'Missing required reader test'
-raise SystemExit(0 if execute('reader-perf-focused',files,root,minimum=10) else 1)
+       'test/cached_image_loading_test.dart']
+# Full comments discovery remains mandatory in the separate regression step.
+import sys
+mode = sys.argv[1] if len(sys.argv) > 1 else 'focused'
+groups = {
+    'focused': (files, 10),
+    'lifetime': (['test/reader_image_lifetime_test.dart'], 8),
+    'history': (['test/history_reader_queue_test.dart', 'test/reader_comment_cache_test.dart'], 10),
+    'window': (['test/reader_long_session_window_test.dart'], 1),
+    'stream': (['test/reader_image_prefetch_stream_test.dart', 'test/image_downloader_stream_test.dart'], 2),
+}
+files, minimum = groups[mode]
+assert all(Path(p).is_file() for p in files), 'Missing required reader test'
+raise SystemExit(0 if execute('reader-perf-' + mode, files, root, minimum=minimum) else 1)

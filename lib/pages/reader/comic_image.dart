@@ -68,6 +68,20 @@ class ComicImage extends StatefulWidget {
 
   static void clear() => _ComicImageState.clear();
 
+  @visibleForTesting
+  static void debugRememberSize(ImageProvider provider, Size size) =>
+      _ComicImageState._rememberSize(provider, size);
+
+  @visibleForTesting
+  static Size? debugCachedSize(ImageProvider provider) =>
+      _ComicImageState._cachedSize(provider);
+
+  @visibleForTesting
+  static int get debugSizeCacheLength => _ComicImageState._cache.length;
+
+  @visibleForTesting
+  static int get debugSizeCacheCapacity => _ComicImageState._cacheCapacity;
+
   @override
   State<ComicImage> createState() => _ComicImageState();
 }
@@ -100,7 +114,22 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
     });
   }
 
-  static final Map<int, Size> _cache = {};
+  // Enough metadata for long chapters / distant jumps, without retaining
+  // every provider ever visited. Use full provider equality, not hash alone.
+  static const _cacheCapacity = 2048;
+  static final Map<ImageProvider, Size> _cache = {};
+
+  static Size? _cachedSize(ImageProvider provider) {
+    final size = _cache.remove(provider);
+    if (size != null) _cache[provider] = size;
+    return size;
+  }
+
+  static void _rememberSize(ImageProvider provider, Size size) {
+    _cache.remove(provider);
+    _cache[provider] = size;
+    if (_cache.length > _cacheCapacity) _cache.remove(_cache.keys.first);
+  }
 
   static clear() => _cache.clear();
 
@@ -359,13 +388,15 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
       var width = widget.width;
       var height = widget.height;
 
+      Size? cacheSize;
       if (_imageInfo != null) {
-        // Record the height and the width of the image
-        _cache[widget.image.hashCode] = Size(_imageInfo!.image.width.toDouble(),
+        // Live pixels always take precedence, even if metadata was evicted.
+        cacheSize = Size(_imageInfo!.image.width.toDouble(),
             _imageInfo!.image.height.toDouble());
+        _rememberSize(widget.image, cacheSize);
+      } else {
+        cacheSize = _cachedSize(widget.image);
       }
-
-      Size? cacheSize = _cache[widget.image.hashCode];
       if (cacheSize != null) {
         if (width == double.infinity) {
           width = constrains.maxWidth;

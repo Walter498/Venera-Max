@@ -588,22 +588,48 @@ class HistoryManager with ChangeNotifier {
     cachedHistories.clear();
   }
 
-  bool _haveAsyncTask = false;
+  Future<void> _historyWriteTail = Future<void>.value();
 
-  /// Create a isolate to add history to prevent blocking the UI thread.
-  Future<void> addHistoryAsync(History newItem) async {
-    _recordPreviousPosition(newItem); // 閱讀器走的是異步路徑
-    if (!isInitialized) return;
-    while (_haveAsyncTask) {
-      await Future.delayed(Duration(milliseconds: 20));
-    }
+  /// Fault/gate injection only; tests still run the production queue and SQL.
+  @visibleForTesting
+  Future<void> Function()? beforeAsyncHistoryWrite;
 
-    _haveAsyncTask = true;
-    await _addHistoryAsync(_dbPath, newItem);
-    _mirrorToDomain(newItem);
-    _haveAsyncTask = false;
-    _cacheAddedHistory(newItem);
-    notifyListeners();
+  /// Serialize reader saves without per-caller polling timers. Each returned
+  /// future keeps its own error; only the private tail recovers for the next
+  /// save. No saves are coalesced, including the final reader position.
+  Future<void> addHistoryAsync(History newItem) {
+    if (!isInitialized) return Future<void>.value();
+    // The reader may mutate/reuse its History while this save is waiting.
+    final snapshot = History.fromMap({
+      'id': newItem.id,
+      'type': newItem.type.value,
+      'title': newItem.title,
+      'subtitle': newItem.subtitle,
+      'cover': newItem.cover,
+      'time': newItem.time.millisecondsSinceEpoch,
+      'ep': newItem.ep,
+      'page': newItem.page,
+      'chapter_group': newItem.group,
+      'max_page': newItem.maxPage,
+      'readEpisode': newItem.readEpisode,
+    });
+    final save = _historyWriteTail.then((_) async {
+      await beforeAsyncHistoryWrite?.call();
+      // Read persisted state at execution time, not enqueue time or from the
+      // mutable recent-history cache. The previous queued save is now visible.
+      _recordPreviousPosition(snapshot);
+      await _addHistoryAsync(_dbPath, snapshot);
+      // mirrorComic re-reads history from the store; keep it after the write
+      // and before releasing the next queued save, as with cache + listeners.
+      _mirrorToDomain(snapshot);
+      _cacheAddedHistory(snapshot);
+      notifyListeners();
+    });
+    _historyWriteTail = save.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
+    return save;
   }
 
   /// 保存 [newItem] 但【不改變】它是否顯示在歷史列表裡。
@@ -630,15 +656,22 @@ class HistoryManager with ChangeNotifier {
   /// 存在 appdata.implicitData['prevReadPos']，key = 'typeValue:id'。
   void _recordPreviousPosition(History newItem) {
     try {
+      if (!isInitialized || _isCorrupted) return;
       final key = '${newItem.type.value}:${newItem.id}';
-      final old = getAll().where(
-        (h) => h.id == newItem.id && h.type == newItem.type,
+      // Match getAll's visibility semantics, but use the composite primary
+      // key instead of materializing/sorting the entire history table. Do not
+      // use find(): its cached History may already contain the new position.
+      final old = _db.select(
+        '''select ep, page, chapter_group, time from history
+           where id == ? and type == ? and ifnull(hidden, 0) == 0
+           limit 1;''',
+        [newItem.id, newItem.type.value],
       );
       if (old.isEmpty) return;
       final prev = old.first;
       // 同一話內翻頁不覆蓋「上上次」——只有【換話】才算新的一次閱讀
       //（否則上上次會變成「上一頁」，沒有意義）
-      if (prev.ep == newItem.ep) return;
+      if (prev['ep'] == newItem.ep) return;
       final store = appdata.implicitData['prevReadPos'];
       final map = store is Map ? Map<String, dynamic>.from(store) : <String, dynamic>{};
       // 舊格式（單筆 Map）兼容 → 統一成 List（最近在前，最多 3 筆）
@@ -647,10 +680,12 @@ class HistoryManager with ChangeNotifier {
           ? List<dynamic>.from(existing)
           : (existing is Map ? [Map<String, dynamic>.from(existing)] : <dynamic>[]);
       final entry = {
-        'ep': prev.ep,
-        'page': prev.page,
-        'group': prev.group,
-        'time': prev.time.toIso8601String(),
+        'ep': prev['ep'],
+        'page': prev['page'],
+        'group': prev['chapter_group'],
+        'time': DateTime.fromMillisecondsSinceEpoch(
+          prev['time'] as int,
+        ).toIso8601String(),
       };
       // 去重：同話同頁不重複記
       final dup = list.any((e) =>

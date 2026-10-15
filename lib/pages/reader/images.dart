@@ -928,6 +928,29 @@ class ReaderContinuousGeometryWork {
 @visibleForTesting
 ValueChanged<ReaderContinuousGeometryWork>? debugReaderContinuousGeometryWork;
 
+/// Counts retained metadata and actual lookup work on the mounted Reader.
+/// Chapters/entries are intentionally not claimed to be a bounded window.
+@visibleForTesting
+class ReaderContinuousSessionWork {
+  const ReaderContinuousSessionWork({required this.chapters,
+    required this.entries, required this.indexedChapters,
+    required this.prefetchKeys, required this.singleChapterPrefetchKeys,
+    required this.prefetchLimit});
+  final int chapters;
+  final int entries;
+  final int indexedChapters;
+  final int prefetchKeys;
+  final int singleChapterPrefetchKeys;
+  final int prefetchLimit;
+}
+
+@visibleForTesting
+ValueChanged<ReaderContinuousSessionWork>? debugReaderContinuousSessionWork;
+
+/// Number of map probes for an actual page lookup (not historical entries).
+@visibleForTesting
+ValueChanged<int>? debugReaderContinuousIndexProbes;
+
 /// Tracks the image's layout shell rather than ComicImage's async image state.
 /// Deactivated global-key children must not participate until reactivated.
 class _ContinuousImageGeometry extends StatefulWidget {
@@ -1033,13 +1056,40 @@ class _ContinuousModeState extends State<_ContinuousMode>
 
   var imageStates = <State<ComicImage>>{};
 
-  // ----- Sliding window of loaded chapters -----
-  // Only a handful of chapters are ever held in memory at once. Images,
-  // in-flight loads and errors are tracked per chapter.
+  // Loaded chapter metadata. Do NOT evict this without preserving the
+  // center-keyed slivers' visual offset (including RTL and comment footers).
+  // Only prefetch bookkeeping below is a bounded moving window.
   final _continuousChapterImages = <int, List<String>>{};
   final _continuousChapterLoads = <int, Future<void>>{};
   final _continuousChapterErrors = <int, String>{};
   final _continuousCachedImages = <String>{};
+
+  // This is bookkeeping, not the disk/image cache. A small recent-key FIFO
+  // prevents session-long retention of URLs. In-flight requests are separately
+  // coalesced by ImageDownloader's cache-key map even after FIFO eviction.
+  int get _prefetchDedupLimit => math.max(32, preCacheCount * 4);
+
+  bool _rememberPrefetch<T>(Set<T> keys, T key) {
+    final limit = _prefetchDedupLimit;
+    while (keys.length > limit) {
+      keys.remove(keys.first);
+    }
+    if (keys.contains(key)) return false;
+    if (keys.length == limit) keys.remove(keys.first);
+    keys.add(key);
+    return true;
+  }
+
+  void _reportSessionWork() {
+    debugReaderContinuousSessionWork?.call(ReaderContinuousSessionWork(
+      chapters: _continuousChapterImages.length,
+      entries: _entries.length,
+      indexedChapters: _chapterEntryRanges.length,
+      prefetchKeys: _continuousCachedImages.length,
+      singleChapterPrefetchKeys: _cachedPages.length,
+      prefetchLimit: _prefetchDedupLimit,
+    ));
+  }
   late final ContinuousPageTurnCoordinator<_ContinuousReaderEntry>
   _pageTurnCoordinator;
   int _turnInteractionGeneration = 0;
@@ -1061,6 +1111,11 @@ class _ContinuousModeState extends State<_ContinuousMode>
   /// Flat, natural-order list of entries across all currently-loaded chapters,
   /// rebuilt only when the set of loaded chapters / their images change.
   List<_ContinuousReaderEntry> _entries = const [];
+
+  // Image entries of one chapter are contiguous. Rebuilt atomically with
+  // _entries, never maintained from reader.chapter (which changes on scroll).
+  final _chapterEntryRanges = <int, ({int start, int length})>{};
+  final _chapterSeparatorIndices = <int, int>{};
 
   /// Index into [_entries] of the pivot entry (the one carrying [_centerKey]).
   int _anchorIndex = 0;
@@ -1151,14 +1206,24 @@ class _ContinuousModeState extends State<_ContinuousMode>
           ),
       ];
     }
+    _chapterEntryRanges.clear();
+    _chapterSeparatorIndices.clear();
     _firstImageEntry = null;
-    for (final entry in _entries) {
+    for (var i = 0; i < _entries.length; i++) {
+      final entry = _entries[i];
       if (entry.isImage) {
-        _firstImageEntry = entry;
-        break;
+        _firstImageEntry ??= entry;
+        final range = _chapterEntryRanges[entry.chapter];
+        _chapterEntryRanges[entry.chapter] = (
+          start: range?.start ?? i,
+          length: (range?.length ?? 0) + 1,
+        );
+      } else {
+        _chapterSeparatorIndices[entry.chapter] = i;
       }
     }
     _anchorIndex = _indexOfEntry(_anchorChapter, _anchorPage);
+    _reportSessionWork();
     _lastCacheAroundChapter = -1;
     _lastCacheAroundPage = -1;
   }
@@ -1340,20 +1405,12 @@ class _ContinuousModeState extends State<_ContinuousMode>
   /// Index into [_entries] of the image entry at (chapter, page), or the
   /// nearest valid index if not found.
   int _indexOfEntry(int chapter, int page) {
-    for (var i = 0; i < _entries.length; i++) {
-      final entry = _entries[i];
-      if (entry.isImage && entry.chapter == chapter && entry.page == page) {
-        return i;
-      }
-    }
-    // Fall back to the first image of the requested chapter, else 0.
-    for (var i = 0; i < _entries.length; i++) {
-      final entry = _entries[i];
-      if (entry.isImage && entry.chapter == chapter) {
-        return i;
-      }
-    }
-    return _entries.isEmpty ? 0 : 0;
+    final range = _chapterEntryRanges[chapter];
+    debugReaderContinuousIndexProbes?.call(1);
+    if (range == null) return 0;
+    // Preserve the old exact-page / first-image-of-chapter fallback, including
+    // page 0 and pages past the end. Separators never count as images.
+    return range.start + (page >= 1 && page <= range.length ? page - 1 : 0);
   }
 
   Future<void> _ensureContinuousChapterLoaded(int chapter) {
@@ -1711,7 +1768,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       if (!entry.isImage) continue;
       remaining--;
       final cacheKey = '${entry.chapter}:${entry.page}:${entry.imageKey}';
-      if (_continuousCachedImages.add(cacheKey)) {
+      if (_rememberPrefetch(_continuousCachedImages, cacheKey)) {
         _preDownloadImageEntry(entry, context);
       }
     }
@@ -1721,19 +1778,21 @@ class _ContinuousModeState extends State<_ContinuousMode>
       if (!entry.isImage) continue;
       remaining--;
       final cacheKey = '${entry.chapter}:${entry.page}:${entry.imageKey}';
-      if (_continuousCachedImages.add(cacheKey)) {
+      if (_rememberPrefetch(_continuousCachedImages, cacheKey)) {
         _preDownloadImageEntry(entry, context);
       }
     }
+    _reportSessionWork();
   }
 
   /// Pre-download around [current] page in non-seamless (single-chapter) mode.
   void cacheImages(int current) {
     for (int i = current + 1; i <= current + preCacheCount; i++) {
-      if (i >= 1 && i <= reader.maxPage && _cachedPages.add(i)) {
+      if (i >= 1 && i <= reader.maxPage && _rememberPrefetch(_cachedPages, i)) {
         _preDownloadImage(i, context);
       }
     }
+    _reportSessionWork();
   }
 
   void _updateSwipeChangeChapter() {
@@ -2032,9 +2091,10 @@ class _ContinuousModeState extends State<_ContinuousMode>
     // current first page is unresolved (or awaiting retry). The separator and
     // its real footer remain reachable; no fabricated empty result is used.
     if (!reader.chapterCommentsSettled(reader.chapter)) {
-      final boundary = _entries.indexWhere((entry) =>
-          entry.isSeparator && entry.chapter == reader.chapter);
-      if (boundary >= _anchorIndex) afterCount = boundary - _anchorIndex + 1;
+      final boundary = _chapterSeparatorIndices[reader.chapter];
+      if (boundary != null && boundary >= _anchorIndex) {
+        afterCount = boundary - _anchorIndex + 1;
+      }
     }
     // 连续滚动模式的卡顿主因：cacheExtent 决定 SliverList 在视口外提前多远
     // 构建并解码 item。原值仅 1.5 个视口，而漫画竖图常达 1~3 屏高，往往连下一
@@ -2627,14 +2687,9 @@ class _ContinuousModeState extends State<_ContinuousMode>
             final images = _continuousChapterImages[chapter];
             if (images == null || images.isEmpty) return;
             final targetPage = forward ? 1 : images.length;
-            final targets = _entries.where(
-              (entry) =>
-                  entry.isImage &&
-                  entry.chapter == chapter &&
-                  entry.page == targetPage,
-            );
-            if (targets.isEmpty) return;
-            final target = targets.first;
+            final range = _chapterEntryRanges[chapter];
+            if (range == null || targetPage > range.length) return;
+            final target = _entries[_indexOfEntry(chapter, targetPage)];
             unawaited(_pageTurnCoordinator.request(target));
           })
           .whenComplete(() {

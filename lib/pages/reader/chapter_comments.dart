@@ -450,8 +450,12 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
 // A declared provider always retains a recovery footer, even for an explicit
 // unavailable/empty result. Payload and metadata remain unmodified.
 class _ProviderChapterFeed extends CommentsController {
-  _ProviderChapterFeed({required this.source, required super.loader, super.sort, super.block});
+  _ProviderChapterFeed({required this.source, required super.loader,
+    required this.onBorrowersChanged, super.sort, super.block});
   final ComicSource source;
+  final VoidCallback onBorrowersChanged;
+  final List<VoidCallback> _borrowers = [];
+  bool get hasBorrowers => _borrowers.isNotEmpty;
   VoidCallback? _ownerListener;
   bool _retired = false;
   bool _released = false;
@@ -460,12 +464,21 @@ class _ProviderChapterFeed extends CommentsController {
   void attachOwner(VoidCallback listener) {
     assert(_ownerListener == null && !_retired);
     _ownerListener = listener;
-    addListener(listener);
+    super.addListener(listener);
+  }
+
+  @override
+  void addListener(VoidCallback listener) {
+    super.addListener(listener);
+    _borrowers.add(listener);
   }
 
   @override
   void removeListener(VoidCallback listener) {
     super.removeListener(listener);
+    _borrowers.remove(listener);
+    // The manager prunes after the synchronous detach/reattach transaction.
+    onBorrowersChanged();
     _finishDisposal();
   }
 
@@ -494,7 +507,7 @@ class _ProviderChapterFeed extends CommentsController {
     invalidate();
     final listener = _ownerListener;
     _ownerListener = null;
-    if (listener != null) removeListener(listener);
+    if (listener != null) super.removeListener(listener);
     _finishDisposal();
   }
 
@@ -508,36 +521,95 @@ class ReaderChapterCommentsFeeds {
   ReaderChapterCommentsFeeds({this.onChanged}) {
     ComicSource.settingsChanges.addListener(_settingsChanged);
   }
+
+  /// Recent current/prefetch lookups form a conservative reader window. Real
+  /// consumers are protected in addition to this many unborrowed chapters.
+  static const int retainedIdleChapters = 8;
   final Map<String, (ComicSource, String, String)> _requests = {};
   final Map<String, String> _revisions = {};
-  void _settingsChanged() {
-    final changed = _requests.entries.where((entry) =>
-      _revisions[entry.key] != entry.value.$1.commentScopeRevision).toList();
-    final sources = changed.map((entry) => entry.value.$1.key).toSet();
-    for (final cached in _feeds.entries.toList()) {
-      if (sources.any((key) => cached.key.startsWith('$key:'))) {
-        // Retirement invalidates immediately, but disposal waits for the last
-        // preview's AnimatedBuilder to detach (the reader rebuilds post-frame).
-        cached.value.retire();
-        _feeds.remove(cached.key);
-      }
+  final Map<String, _ProviderChapterFeed> _feeds = {};
+  // A settings replacement may not acquire its AnimatedBuilder until the next
+  // frame. Keep its key protected while any previous generation is borrowed.
+  final Map<String, List<_ProviderChapterFeed>> _retiringBorrowers = {};
+  bool _disposed = false;
+  bool _pruneScheduled = false;
+  bool _reloading = false;
+  final void Function(String epId, String revision, CommentsController feed)? onChanged;
+
+  bool _isBorrowed(String key) => _feeds[key]?.hasBorrowers == true ||
+      (_retiringBorrowers[key]?.any((feed) => feed.hasBorrowers) ?? false);
+
+  void _schedulePrune() {
+    if (_disposed || _pruneScheduled) return;
+    _pruneScheduled = true;
+    scheduleMicrotask(() {
+      _pruneScheduled = false;
+      if (!_disposed) _prune();
+    });
+  }
+
+  void _prune() {
+    if (_reloading) return;
+    for (final key in _retiringBorrowers.keys.toList()) {
+      _retiringBorrowers[key]!.removeWhere((feed) => !feed.hasBorrowers);
+      if (_retiringBorrowers[key]!.isEmpty) _retiringBorrowers.remove(key);
     }
-    for (final entry in changed) {
-      final (source, comicId, epId) = entry.value;
-      final feed = chapterLoading(source, comicId, epId);
-      onChanged?.call(epId, source.commentScopeRevision, feed);
+    final idle = _requests.keys.where((key) => !_isBorrowed(key)).toList();
+    for (final key in idle.take(idle.length > retainedIdleChapters
+        ? idle.length - retainedIdleChapters : 0)) {
+      _requests.remove(key);
+      _revisions.remove(key);
+      _feeds.remove(key)?.retire();
     }
   }
-  final void Function(String epId, String revision, CommentsController feed)? onChanged;
-  final Map<String, _ProviderChapterFeed> _feeds = {};
+
+  void _settingsChanged() {
+    if (_disposed) return;
+    _prune();
+    final changed = _requests.entries.where((entry) =>
+      _revisions[entry.key] != entry.value.$1.commentScopeRevision).toList();
+    _reloading = true;
+    try {
+      for (final entry in changed) {
+        final old = _feeds.remove(entry.key);
+        if (old != null) {
+          if (old.hasBorrowers) {
+            (_retiringBorrowers[entry.key] ??= []).add(old);
+          }
+          // Cancel immediately; actual disposal still waits for borrowers.
+          old.retire();
+        }
+        final (source, comicId, epId) = entry.value;
+        final feed = chapterLoading(source, comicId, epId);
+        onChanged?.call(epId, source.commentScopeRevision, feed);
+      }
+    } finally {
+      _reloading = false;
+      _prune();
+    }
+  }
+
   CommentsController chapterLoading(ComicSource source,String comicId,String epId) {
-    final requestKey = '${source.key}:$comicId:$epId';
-    _requests[requestKey] = (source, comicId, epId);
-    _revisions[requestKey] = source.commentScopeRevision;
+    assert(!_disposed);
+    final key = '${source.key}:$comicId:$epId';
+    // Remove/reinsert makes Map insertion order the lookup LRU, not completion
+    // order: late requests must never make old chapters recent again.
+    _requests.remove(key);
+    _requests[key] = (source, comicId, epId);
     final revision = source.commentScopeRevision;
-    final key = '${source.key}:$revision:$comicId:$epId';
-    return _feeds.putIfAbsent(key, () {
+    if (_revisions[key] != revision) {
+      final old = _feeds.remove(key);
+      if (old != null) {
+        if (old.hasBorrowers) {
+          (_retiringBorrowers[key] ??= []).add(old);
+        }
+        old.retire();
+      }
+    }
+    _revisions[key] = revision;
+    final feed = _feeds.putIfAbsent(key, () {
       final feed = _ProviderChapterFeed(source: source,
+        onBorrowersChanged: _schedulePrune,
         sort: source.preferredCommentSort(chapter: true),
         block:_shouldBlockComment,
         loader:(page,sort) async {
@@ -549,12 +621,19 @@ class ReaderChapterCommentsFeeds {
       unawaited(feed.refresh());
       return feed;
     });
+    _prune();
+    return feed;
   }
+
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     ComicSource.settingsChanges.removeListener(_settingsChanged);
     _requests.clear(); _revisions.clear();
     for(final feed in _feeds.values) { feed.retire(); }
     _feeds.clear();
+    // These generations were already retired and release themselves on detach.
+    _retiringBorrowers.clear();
   }
 }
 
