@@ -190,6 +190,15 @@ class QingmanTransport {
       if (params.isNotEmpty) throw const QingmanException('path');
       return {};
     }
+    if (path == '/api/comic/history/fu893u94/search') {
+      final keyword = params['keyword'];
+      if (params.length != 1 || keyword is! String ||
+          keyword.trim().isEmpty || utf8.encode(keyword).length > 200 ||
+          RegExp(r'[\x00-\x1f\x7f-\x9f]').hasMatch(keyword)) {
+        throw const QingmanException('path');
+      }
+      return {'keyword': keyword};
+    }
     if (path == '/api/comic/comics/ie84hfh8/detail') {
       final id = params['comicId'];
       if (params.length != 1 || (id is! String && id is! int) ||
