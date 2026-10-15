@@ -914,6 +914,80 @@ class _ContinuousReaderEntry {
   bool get isSeparator => !isImage;
 }
 
+/// Actual resolver work, including candidates rejected before reading geometry.
+/// The callback is unset in production; tests observe the mounted Reader path.
+@visibleForTesting
+class ReaderContinuousGeometryWork {
+  const ReaderContinuousGeometryWork(this.entries, this.mountedImages,
+      this.visitedImages);
+  final int entries;
+  final int mountedImages;
+  final int visitedImages;
+}
+
+@visibleForTesting
+ValueChanged<ReaderContinuousGeometryWork>? debugReaderContinuousGeometryWork;
+
+/// Tracks the image's layout shell rather than ComicImage's async image state.
+/// Deactivated global-key children must not participate until reactivated.
+class _ContinuousImageGeometry extends StatefulWidget {
+  const _ContinuousImageGeometry({required super.key, required this.owner,
+    required this.entry, required this.child});
+  final _ContinuousModeState owner;
+  final _ContinuousReaderEntry entry;
+  final Widget child;
+
+  @override
+  State<_ContinuousImageGeometry> createState() => _ContinuousImageGeometryState();
+}
+
+class _ContinuousImageGeometryState extends State<_ContinuousImageGeometry> {
+  @override
+  void initState() {
+    super.initState();
+    widget.owner._registerGeometry(this);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ContinuousImageGeometry oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Entry objects are rebuilt on chapter loads; keep the live value/order.
+    oldWidget.owner._unregisterGeometry(this);
+    widget.owner._registerGeometry(this);
+  }
+
+  @override
+  void deactivate() {
+    widget.owner._unregisterGeometry(this);
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    widget.owner._registerGeometry(this);
+  }
+
+  @override
+  void dispose() {
+    widget.owner._unregisterGeometry(this);
+    final owner = widget.owner;
+    final id = '${widget.entry.chapter}:${widget.entry.page}';
+    final key = widget.key as GlobalKey;
+    // A same-frame repivot may reuse the key. Only retire it after the entire
+    // frame if no replacement has acquired it; never remove a live target.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (key.currentContext == null && identical(owner._itemKeys[id], key)) {
+        owner._itemKeys.remove(id);
+      }
+    });
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 class _ContinuousModeState extends State<_ContinuousMode>
     with SingleTickerProviderStateMixin
     implements _ImageViewController {
@@ -1018,6 +1092,48 @@ class _ContinuousModeState extends State<_ContinuousMode>
   GlobalKey _itemKeyFor(int chapter, int page) =>
       _itemKeys.putIfAbsent('$chapter:$page', () => GlobalKey());
 
+  // Reading-order index of ACTIVE layout shells only. Maintenance happens on
+  // lifecycle changes, never by sorting/scanning historical entries per frame.
+  final _mountedGeometry = <_ContinuousImageGeometryState>[];
+  _ContinuousReaderEntry? _firstImageEntry;
+  int _geometryVisits = 0;
+
+  void _registerGeometry(_ContinuousImageGeometryState node) {
+    _mountedGeometry.remove(node);
+    final entry = node.widget.entry;
+    var low = 0;
+    var high = _mountedGeometry.length;
+    while (low < high) {
+      final mid = (low + high) ~/ 2;
+      final other = _mountedGeometry[mid].widget.entry;
+      if (other.chapter < entry.chapter ||
+          (other.chapter == entry.chapter && other.page < entry.page)) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    _mountedGeometry.insert(low, node);
+  }
+
+  void _unregisterGeometry(_ContinuousImageGeometryState node) {
+    // Remove by State identity, not chapter:page: an old lifecycle must never
+    // unregister a replacement for the same entry.
+    _mountedGeometry.remove(node);
+  }
+
+  Iterable<(_ContinuousReaderEntry, RenderBox)> _laidOutImages(
+      {bool reverse = false}) sync* {
+    final nodes = reverse ? _mountedGeometry.reversed : _mountedGeometry;
+    for (final node in nodes) {
+      _geometryVisits++;
+      final box = node.context.findRenderObject();
+      if (box is RenderBox && box.attached && box.hasSize) {
+        yield (node.widget.entry, box);
+      }
+    }
+  }
+
   void _rebuildEntries() {
     if (seamlessChapterReading) {
       _entries = _continuousEntries();
@@ -1034,6 +1150,13 @@ class _ContinuousModeState extends State<_ContinuousMode>
             imageKey: imgs[i],
           ),
       ];
+    }
+    _firstImageEntry = null;
+    for (final entry in _entries) {
+      if (entry.isImage) {
+        _firstImageEntry = entry;
+        break;
+      }
     }
     _anchorIndex = _indexOfEntry(_anchorChapter, _anchorPage);
     _lastCacheAroundChapter = -1;
@@ -1359,6 +1482,17 @@ class _ContinuousModeState extends State<_ContinuousMode>
   /// ScrollablePositionedList's itemPositions listener). Drives the scaffold
   /// page indicator for both modes, and chapter-window loading for seamless.
   void _onScrollPositionSettled() {
+    final visitsBefore = _geometryVisits;
+    final mountedImages = _mountedGeometry.length;
+    try {
+      _resolveScrollPosition();
+    } finally {
+      debugReaderContinuousGeometryWork?.call(ReaderContinuousGeometryWork(
+        _entries.length, mountedImages, _geometryVisits - visitsBefore));
+    }
+  }
+
+  void _resolveScrollPosition() {
     if (!_scrollController.hasClients) return;
     final box = context.findRenderObject();
     if (box is! RenderBox) return;
@@ -1393,13 +1527,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
     // mark can appear (issue #115, seamless case).
     _ContinuousReaderEntry? lastAbove;
     // Find the image entry whose box straddles the viewport's leading edge.
-    for (final entry in _entries) {
-      if (!entry.isImage) continue;
-      final key = _itemKeys['${entry.chapter}:${entry.page}'];
-      final ctx = key?.currentContext;
-      if (ctx == null) continue;
-      final itemBox = ctx.findRenderObject();
-      if (itemBox is! RenderBox || !itemBox.attached) continue;
+    for (final (entry, itemBox) in _laidOutImages()) {
       final topLeft = itemBox.localToGlobal(Offset.zero);
       final extent = vertical ? itemBox.size.height : itemBox.size.width;
       // Logical distance from the reading-leading edge: right edge for RTL.
@@ -1436,12 +1564,8 @@ class _ContinuousModeState extends State<_ContinuousMode>
         pos.pixels >= pos.maxScrollExtent - 1) {
       current = _lastLaidOutImageEntry() ?? current;
     }
-    current ??= _entries.firstWhere(
-      (e) => e.isImage,
-      orElse: () => _entries.isEmpty
-          ? const _ContinuousReaderEntry.separator(chapter: 0, hasNext: false)
-          : _entries.first,
-    );
+    current ??= _firstImageEntry;
+    if (current == null) return;
     if (!current.isImage) return;
     // A seamless window can already contain the next chapter's images. Do
     // not let a drag/ticker resolve into them across an unresolved footer.
@@ -1760,8 +1884,10 @@ class _ContinuousModeState extends State<_ContinuousMode>
       entry.page,
       chapter: entry.chapter,
     );
-    return KeyedSubtree(
+    return _ContinuousImageGeometry(
       key: _itemKeyFor(entry.chapter, entry.page),
+      owner: this,
+      entry: entry,
       child: ColoredBox(
         color: reader.readerBackgroundColor,
         child: ComicImage(
@@ -2549,26 +2675,16 @@ class _ContinuousModeState extends State<_ContinuousMode>
 
   /// The first image entry that currently has an attached render box.
   _ContinuousReaderEntry? _firstLaidOutEntry() {
-    for (final entry in _entries) {
-      if (!entry.isImage) continue;
-      final ctx = _itemKeys['${entry.chapter}:${entry.page}']?.currentContext;
-      final box = ctx?.findRenderObject();
-      if (box is RenderBox && box.attached) return entry;
+    for (final (entry, _) in _laidOutImages()) {
+      return entry;
     }
     return null;
   }
 
-  /// The last image entry that currently has an attached render box — the
-  /// trailing edge of laid-out content. Used to resolve the reading position
-  /// when scrolled to the very bottom, where a short final image sits below the
-  /// viewport's leading edge and the straddle search misses it (issue #115).
+  /// Trailing laid-out image in logical reading order, including RTL.
   _ContinuousReaderEntry? _lastLaidOutImageEntry() {
-    for (var i = _entries.length - 1; i >= 0; i--) {
-      final entry = _entries[i];
-      if (!entry.isImage) continue;
-      final ctx = _itemKeys['${entry.chapter}:${entry.page}']?.currentContext;
-      final box = ctx?.findRenderObject();
-      if (box is RenderBox && box.attached) return entry;
+    for (final (entry, _) in _laidOutImages(reverse: true)) {
+      return entry;
     }
     return null;
   }

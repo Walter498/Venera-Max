@@ -1,0 +1,97 @@
+name: Reader progressive jank validation
+on:
+  push:
+    branches: [fix/reader-progressive-jank-20261015]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: reader-perf-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
+jobs:
+  candidate:
+    if: github.ref == 'refs/heads/fix/reader-progressive-jank-20261015'
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - run: bash tool/reader_perf_ci.sh init
+      - run: bash tool/reader_perf_ci.sh dependencies-ios
+        timeout-minutes: 12
+      - name: Build unsigned performance candidate
+        run: bash tool/reader_perf_ci.sh ios
+        timeout-minutes: 25
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reader-perf-candidate-device
+          path: build/comments-artifacts/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reader-perf-candidate-evidence
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+  verify:
+    if: github.ref == 'refs/heads/fix/reader-progressive-jank-20261015'
+    runs-on: macos-15
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - run: bash tool/reader_perf_ci.sh init
+      - run: bash tool/reader_perf_ci.sh dependencies-ios
+        id: deps
+        timeout-minutes: 12
+      - name: Strict same SDK analyzer
+        run: bash tool/reader_perf_ci.sh analyze
+        id: analyze
+        timeout-minutes: 8
+      - name: Upload early strict diagnostics
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.analyze.outcome == 'failure' }}
+        with:
+          name: reader-perf-analyzer-early
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+      - run: bash tool/reader_perf_ci.sh native-tests
+        id: native
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        timeout-minutes: 8
+      - name: Production reader work-count and navigation regressions
+        run: bash tool/reader_perf_ci.sh focused
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 8
+      - name: Upload focused results before full regression
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-focused
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+      - name: Original author and upstream plus comments regression
+        run: bash tool/reader_perf_ci.sh regression
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 20
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reader-perf-verification
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error

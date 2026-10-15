@@ -2,13 +2,13 @@ name: venerax-ios
 on:
   workflow_dispatch:
   push:
-    branches-ignore: [feat/comments-ui-replies-20261014, fix/comments-preview-four-20261014, feat/lizi-qingman-provider-20261015, feat/comments-rich-254-20261015]
+    branches-ignore: [fix/reader-progressive-jank-20261015, feat/comments-ui-replies-20261014, fix/comments-preview-four-20261014, feat/lizi-qingman-provider-20261015, feat/comments-rich-254-20261015]
     tags: ['**']
 permissions:
   contents: write
 jobs:
   Build_IOS:
-    if: github.ref != 'refs/heads/fix/author-search-236249-20261013' && github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015'
+    if: github.ref != 'refs/heads/fix/reader-progressive-jank-20261015' && github.ref != 'refs/heads/fix/author-search-236249-20261013' && github.ref != 'refs/heads/feat/comments-ui-replies-20261014' && github.ref != 'refs/heads/fix/comments-preview-four-20261014' && github.ref != 'refs/heads/feat/lizi-qingman-provider-20261015' && github.ref != 'refs/heads/feat/comments-rich-254-20261015'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
