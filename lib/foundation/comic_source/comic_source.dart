@@ -542,9 +542,63 @@ class ComicSource {
   final CommentCapabilities? Function(bool chapter)? resolveCommentCapabilities;
   CommentCapabilities? get commentCapabilities => resolveCommentCapabilities?.call(false) ?? _initialCommentCapabilities.work;
   CommentCapabilities? get chapterCommentCapabilities => resolveCommentCapabilities?.call(true) ?? _initialCommentCapabilities.chapter;
-  /// Only source settings, never account/JWT, participate in comment scope.
+  /// Read-only resolution: never writes defaults during construction/build.
+  List<String> availableCommentSorts({bool chapter = false}) {
+    final capability = chapter ? chapterCommentCapabilities : commentCapabilities;
+    final loader = chapter ? chapterCommentsOptionsLoader : commentsOptionsLoader;
+    if (loader == null || capability?.enabled == false) return const [];
+    return capability?.sorts ?? const [];
+  }
+
+  String get _commentSortProvider => commentProviderValue ?? key;
+
+  String? preferredCommentSort({bool chapter = false}) {
+    final sorts = availableCommentSorts(chapter: chapter);
+    if (sorts.isEmpty) return null;
+    final preferences = data['commentSortPreferences'];
+    final provider = preferences is Map ? preferences[_commentSortProvider] : null;
+    final value = provider is Map ? provider[chapter ? 'chapter' : 'work'] : null;
+    if (value is String && sorts.contains(value)) return value;
+    final capability = chapter ? chapterCommentCapabilities : commentCapabilities;
+    return sorts.contains(capability?.defaultSort) ? capability!.defaultSort : sorts.first;
+  }
+
+  /// Explicit user selection only. saveData emits the existing scope event;
+  /// callers must not also refresh the old controller (one network generation).
+  Future<void> setPreferredCommentSort(String value, {bool chapter = false}) async {
+    if (!availableCommentSorts(chapter: chapter).contains(value)) return;
+    final providerKey = _commentSortProvider;
+    final scope = chapter ? 'chapter' : 'work';
+    final raw = data['commentSortPreferences'];
+    final preferences = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    final previous = preferences[providerKey];
+    final provider = previous is Map ? Map<String, dynamic>.from(previous) : <String, dynamic>{};
+    final hadValue = provider.containsKey(scope);
+    final oldValue = provider[scope];
+    if (oldValue == value) return;
+    provider[scope] = value;
+    preferences[providerKey] = provider;
+    data['commentSortPreferences'] = preferences;
+    try {
+      await saveData();
+    } catch (_) {
+      if (identical(data['commentSortPreferences'], preferences) && provider[scope] == value) {
+        if (hadValue) { provider[scope] = oldValue; }
+        else { provider.remove(scope); }
+        _lastSavedCommentRevision = commentScopeRevision;
+        settingsChanges.changed();
+      }
+      rethrow;
+    }
+  }
+
+  /// Source settings and sort preferences, never account/JWT, scope comments.
   int _commentConnectionRevision = 0;
-  String get commentScopeRevision => '$version:${_commentConnectionRevision == 0 ? '' : '$_commentConnectionRevision:'}${jsonEncode(data['settings'] ?? const {})}';
+  String get commentScopeRevision {
+    final base = '$version:${_commentConnectionRevision == 0 ? '' : '$_commentConnectionRevision:'}${jsonEncode(data['settings'] ?? const {})}';
+    final preferences = data['commentSortPreferences'];
+    return preferences is Map && preferences.isNotEmpty ? '$base:${jsonEncode(preferences)}' : base;
+  }
   /// Profile import can change transport without changing the selected provider.
   void refreshCommentProvider() {
     ++_commentConnectionRevision;

@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:venera/foundation/comments_controller.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
+import 'comment_sort_selector.dart';
+export 'comment_sort_selector.dart';
+export 'comment_context_stats.dart';
 
 class CommentsFeed extends StatelessWidget {
   const CommentsFeed({super.key, required this.controller, required this.itemBuilder,
-    this.parent, this.sorts = const [], this.totalLabel = '评论'});
+    this.parent, this.sorts = const [], this.totalLabel = '评论', this.onSortSelected});
   final CommentsController controller;
   final Widget Function(Comment) itemBuilder;
   final Widget? parent;
   final List<String> sorts;
   final String totalLabel;
+  final ValueChanged<String>? onSortSelected;
   @override
   Widget build(BuildContext context) => AnimatedBuilder(animation: controller,
     builder: (context, _) => Column(children: [
       if (sorts.length > 1 && parent == null) Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Wrap(spacing: 8, children: [for (final sort in sorts)
-          TextButton(onPressed: () => controller.refresh(nextSort: sort),
-            style: TextButton.styleFrom(minimumSize: const Size(44,44),
-              foregroundColor: controller.sort == sort ? Theme.of(context).colorScheme.primary :
-                Theme.of(context).colorScheme.onSurfaceVariant),
-            child: Text(const {'new':'最新', 'hot':'最热', 'wonderful':'精彩'}[sort] ?? sort))])),
+        child: Align(alignment: Alignment.centerLeft, child: CommentSortSelector(
+          sorts: sorts, value: controller.sort,
+          onSelected: onSortSelected ?? (sort) { controller.refresh(nextSort: sort); }))),
       if (controller.total != null) Align(alignment: Alignment.centerLeft,
         child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text('$totalLabel ${controller.total}'))),

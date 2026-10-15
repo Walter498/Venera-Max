@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:venera/foundation/app.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -48,6 +50,10 @@ void main() {
     }
   });
   testWidgets('actual chapter sort selection invokes the page options hook', (tester) async {
+    final oldPath = App.dataPath;
+    final temp = await tester.runAsync(() => Directory.systemTemp.createTemp('sort-widget-'));
+    App.dataPath = temp!.path;
+    addTearDown(() async { App.dataPath = oldPath; await temp.delete(recursive: true); });
     final requested=<String?>[];
     final source=commentsSource(chapterCapabilities:const CommentCapabilities(
       sorts:['new','hot','wonderful'],defaultSort:'new',canLoadReplies:false),
@@ -57,8 +63,16 @@ void main() {
       });
     await tester.pumpWidget(MaterialApp(home:ChapterCommentsPage(
       comicId:'work',epId:'ep',source:source,comicTitle:'Work',chapterTitle:'Chapter')));
-    await tester.pumpAndSettle();await tester.tap(find.text('最热'));await tester.pumpAndSettle();
-    await tester.tap(find.text('精彩'));await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+    for (final label in ['最热', '精彩']) {
+      await tester.tap(find.byType(CommentSortSelector));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.text(label).last);
+        await source.saveData();
+      });
+      await tester.pumpAndSettle();
+    }
     expect(requested,['new','hot','wonderful']);
     expect(find.text('查看回复详情'),findsNothing);expect(tester.takeException(),isNull);
   });

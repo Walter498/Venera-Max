@@ -1681,7 +1681,12 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     final source = comicSource;
     if (source == null || _hideCommentsEntry) return;
     showSideBar(App.rootContext, CommentsPage(data: comic, source: source,
-      sharedSession: _commentsSession));
+      sharedSession: _commentsSession,
+      resolveSharedSession: () {
+        if (!mounted) return null;
+        _preloadComments(source, comic.id, comic.subId);
+        return _commentsSession;
+      }));
   }
 
   void _onCollectionChanged() {
@@ -1901,6 +1906,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
     return _CommentsPart(comments: _commentsSession!.controller.comments,
+      feed: _commentsSession!.controller,
       showMore: showComments, source: source!, data: comic);
   }
 

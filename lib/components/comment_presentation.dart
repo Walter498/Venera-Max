@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/image_provider/cached_image.dart';
 import 'package:venera/components/rich_comment_content.dart';
+import 'package:venera/components/comment_context_stats.dart';
 
 /// Always reserves a real avatar or explicit generic placeholder, including errors.
 class CommentAvatar extends StatelessWidget {
@@ -40,6 +41,7 @@ class CommentPresentation extends StatelessWidget {
         borderRadius: BorderRadius.circular(8)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(reply.userName, style: TextStyle(fontSize: fontSize - 1, fontWeight: FontWeight.w600)),
+        CommentMetadata(comment: reply, fontSize: fontSize - 2),
         if (reply.time != null) Text(reply.time!, style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
         const SizedBox(height: 4),
         CommentContent(text: reply.content, fontSize: fontSize, selectable: selectable),
@@ -52,15 +54,48 @@ class CommentPresentation extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(comment.userName, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600)),
+          CommentMetadata(comment: comment, fontSize: fontSize - 2),
           if (comment.time != null) Text(comment.time!,
             style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
           const SizedBox(height: 6),
           // Unknown protocol emoji stays intact. The rich renderer handles only known formats.
           CommentContent(text: comment.content, fontSize: fontSize, selectable: selectable),
-          if (comment.replyPreview != null) preview(comment.replyPreview!),
+          for (final reply in comment.effectiveReplyPreviews) preview(reply),
           if (actions != null) actions! else CommentReadOnlyStats(comment: comment, onReply: onReply),
         ])),
       ]));
+  }
+}
+
+/// Metadata stays outside [CommentPresentation.actions] so custom vote/reply
+/// actions never suppress it or duplicate their own counts.
+class CommentMetadata extends StatelessWidget {
+  const CommentMetadata({super.key, required this.comment, this.fontSize = 13});
+  final Comment comment;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    if (comment.userLevel == null && comment.viewCount == null &&
+        comment.badges.isEmpty) return const SizedBox.shrink();
+    final colors = Theme.of(context).colorScheme;
+    return Wrap(spacing: 8, runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center, children: [
+        if (comment.userLevel != null)
+          Text('Lv${comment.userLevel}', style: TextStyle(
+            fontSize: fontSize, color: colors.primary)),
+        for (final badge in comment.badges)
+          Text(badge, style: TextStyle(fontSize: fontSize, color: colors.primary)),
+        if (comment.viewCount != null) Tooltip(
+          message: '浏览量 ${comment.viewCount}',
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.visibility_outlined, size: fontSize + 2,
+              color: colors.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text('${formatCommentCount(comment.viewCount!)} 浏览', style:
+              TextStyle(fontSize: fontSize, color: colors.onSurfaceVariant)),
+          ])),
+      ]);
   }
 }
 

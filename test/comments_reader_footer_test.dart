@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:venera/foundation/app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -190,6 +192,10 @@ void main() {
   });
 
   testWidgets('real sort replacement still has four tiles and no more-page requests', (tester) async {
+    final oldPath = App.dataPath;
+    final temp = await tester.runAsync(() => Directory.systemTemp.createTemp('sort-footer-'));
+    App.dataPath = temp!.path;
+    addTearDown(() async { App.dataPath = oldPath; await temp.delete(recursive: true); });
     final calls=<String>[];
     final source=commentsSource(chapterCapabilities:const CommentCapabilities(
       sorts:['new','hot'],defaultSort:'new'),chapterOptions:(id,ep,page,reply,options) async {
@@ -198,7 +204,14 @@ void main() {
       });
     await tester.pumpWidget(MaterialApp(home:Scaffold(body:SingleChildScrollView(
       child:ChapterCommentsPreview(comicId:'work',epId:'ep',source:source,comicTitle:'Work',chapterTitle:'Chapter')))));
-    await tester.pumpAndSettle();await tester.tap(find.text('最热'));await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CommentSortSelector));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.text('最热').last);
+      await source.saveData();
+    });
+    await tester.pumpAndSettle();
     expect(calls,['new:1','hot:1']);expect(find.byType(CommentPresentation),findsNWidgets(4));
     expect(tester.widget<CommentPresentation>(find.byType(CommentPresentation).first).comment.id,'hot-0');
     expect(tester.takeException(),isNull);

@@ -7,7 +7,14 @@ class Comment {
   final String? time;
   final int? replyCount;
   final String? id;
-  final Comment? replyPreview;
+  /// Bounded, deduplicated and non-recursive previews, including legacy input.
+  final List<Comment> replyPreviews;
+  List<Comment> get effectiveReplyPreviews => replyPreviews;
+  /// Legacy readers still see the first real preview.
+  Comment? get replyPreview => replyPreviews.firstOrNull;
+  final int? userLevel;
+  final int? viewCount;
+  final List<String> badges;
   int? score;
   final bool? isLiked;
   int? voteStatus;
@@ -26,6 +33,38 @@ class Comment {
     }
     return value is String ? optionalText(value) : null;
   }
+  static List<String> parseBadges(dynamic value) => List<String>.unmodifiable(
+      value is List ? value.whereType<String>().where((s) => s.trim().isNotEmpty) : <String>[]);
+
+  static List<Comment> _parseReplyPreviews(Map<String, dynamic> json) {
+    final result = <Comment>[];
+    final ids = <String>{};
+    final bodies = <String>{};
+    final candidates = <dynamic>[
+      if (json['replyPreviews'] is List) ...(json['replyPreviews'] as List),
+      if (json['replyPreview'] is Map) json['replyPreview'],
+    ];
+    for (final value in candidates) {
+      if (value is! Map) continue;
+      // Copy only string keys and strip both preview protocols before parsing.
+      // This also handles cyclic/malformed input without recursive expansion.
+      final map = <String, dynamic>{
+        for (final entry in value.entries)
+          if (entry.key is String && entry.key != 'replyPreview' &&
+              entry.key != 'replyPreviews') (entry.key as String): entry.value,
+      };
+      final reply = Comment.fromJson(map);
+      if (reply.id == null && reply.userName.trim().isEmpty &&
+          reply.content.trim().isEmpty) continue;
+      if (reply.id != null && reply.id == optionalText(json['id'])) continue;
+      final body = jsonEncode([reply.userName, reply.content, reply.time, reply.avatar]);
+      if (reply.id != null ? !ids.add(reply.id!) : !bodies.add(body)) continue;
+      result.add(reply);
+      if (result.length == 2) break;
+    }
+    return List<Comment>.unmodifiable(result);
+  }
+
   Comment.fromJson(Map<String, dynamic> json)
       : userName = json['userName']?.toString() ?? '',
         avatar = json['avatar'] is String ? optionalText(json['avatar']) : null,
@@ -33,8 +72,10 @@ class Comment {
         time = parseTime(json['time']),
         replyCount = nonNegativeInt(json['replyCount']),
         id = optionalText(json['id']),
-        replyPreview = json['replyPreview'] is Map ?
-          Comment.fromJson({...Map<String,dynamic>.from(json['replyPreview'] as Map), 'replyPreview': null}) : null,
+        replyPreviews = _parseReplyPreviews(json),
+        userLevel = nonNegativeInt(json['userLevel']),
+        viewCount = nonNegativeInt(json['viewCount']),
+        badges = parseBadges(json['badges']),
         score = nonNegativeInt(json['score']),
         isLiked = json['isLiked'] is bool ? json['isLiked'] : null,
         voteStatus = json['voteStatus'] is int ? json['voteStatus'] : null;

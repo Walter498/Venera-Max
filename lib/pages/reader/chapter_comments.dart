@@ -48,7 +48,7 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
       if (revision != widget.source.commentScopeRevision) return const Res.error("Source settings changed; refresh comments");
       return result;
     },
-      sort: widget.source.chapterCommentsOptionsLoader == null ? null : widget.source.chapterCommentCapabilities?.defaultSort,
+      sort: widget.source.preferredCommentSort(chapter: true),
       block: _shouldBlockComment);
     if (widget.replyComment == null || !_replyScopeExpired) feed.refresh();
   }
@@ -99,9 +99,14 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
       if (widget.chapterTitle.isNotEmpty) Align(alignment: Alignment.centerLeft,
         child: Padding(padding: const EdgeInsets.symmetric(horizontal:16,vertical:8),
           child: Text(widget.chapterTitle,style: ts.s12))),
+      CommentContextStats(context: feed.commentContext),
       Expanded(child: CommentsFeed(
       controller: feed,
-      sorts: widget.source.chapterCommentsOptionsLoader == null ? const [] : widget.source.chapterCommentCapabilities?.sorts ?? const [],
+      onSortSelected: (sort) async {
+        try { await widget.source.setPreferredCommentSort(sort, chapter: true); }
+        catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
+      },
+      sorts: widget.source.availableCommentSorts(chapter: true),
       totalLabel: widget.replyComment == null ? '评论' : '回复',
       parent: widget.replyComment == null ? null : Column(
         crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -487,7 +492,7 @@ class ReaderChapterCommentsFeeds {
     final key = '${source.key}:$revision:$comicId:$epId';
     return _feeds.putIfAbsent(key, () {
       final feed = _ProviderChapterFeed(source: source,
-        sort: source.chapterCommentsOptionsLoader == null ? null : source.chapterCommentCapabilities?.defaultSort,
+        sort: source.preferredCommentSort(chapter: true),
         block:_shouldBlockComment,
         loader:(page,sort) async {
           final result = await source.loadCommentPage(comicId,epId,page,null,chapter:true,sort:sort);
@@ -526,6 +531,10 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
   bool _ignoreShared = false;
   void _settingsChanged() {
     if (_scopeRevision == widget.source.commentScopeRevision) return;
+    // ReaderChapterCommentsFeeds owns invalidation/replacement for a borrowed
+    // feed. The reader's next build passes that replacement; do not also issue
+    // an independent preview request in this notification.
+    if (!_ownsFeed && widget.sharedFeed != null) return;
     feed.invalidate();
     _ignoreShared = true;
     scheduleMicrotask(() {
@@ -551,8 +560,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
       if (revision != widget.source.commentScopeRevision) return const Res.error("Source settings changed; refresh comments");
       return result;
     },
-      sort: widget.source.chapterCommentsOptionsLoader == null ? null :
-        widget.source.chapterCommentCapabilities?.defaultSort, block: _shouldBlockComment);
+      sort: widget.source.preferredCommentSort(chapter: true), block: _shouldBlockComment);
     feed.refresh();
   }
   @override
@@ -585,9 +593,14 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
     return AnimatedBuilder(animation: Listenable.merge([feed, appdata.settings]),
       builder: (context, _) {
         if ((feed.unavailable || feed.confirmedEmpty) && !hasSelector) return const SizedBox.shrink();
-        final sorts = widget.source.chapterCommentsOptionsLoader == null
-            ? const <String>[] : widget.source.chapterCommentCapabilities?.sorts ?? const <String>[];
+        final sorts = widget.source.availableCommentSorts(chapter: true);
+        final sortSelector = CommentSortSelector(sorts: sorts, value: feed.sort,
+          onSelected: (sort) async {
+            try { await widget.source.setPreferredCommentSort(sort, chapter: true); }
+            catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
+          });
         if (widget.horizontal) {
+          return LayoutBuilder(builder: (context, constraints) {
           final width = MediaQuery.sizeOf(context).width;
           // Each semantic section occupies a chapter-scroll panel. No nested
           // scrollable: at large text/short heights the reply action gets its
@@ -605,6 +618,35 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
               return Text(text, maxLines: lines.clamp(1, maxLines), overflow: TextOverflow.ellipsis,
                 style: (style ?? const TextStyle()).copyWith(height: 1.5));
             }));
+          // Unlike the old ellipsized body, every measured line gets a panel.
+          // This keeps a finite horizontal chapter viewport free of inner scroll.
+          List<Widget> textPanels(String text, {double? fontSize}) {
+            final style = TextStyle(fontSize: fontSize ?? commentsFontSize, height: 1.5);
+            final available = math.max(1.0, constraints.maxHeight - 32);
+            final painter = TextPainter(text: TextSpan(text: text, style: style),
+              textDirection: Directionality.of(context),
+              textScaler: MediaQuery.textScalerOf(context))..layout(maxWidth: math.max(1.0, width - 32));
+            final result = <Widget>[];
+            var start = 0;
+            while (start < text.length) {
+              var end = start;
+              final startY = painter.getOffsetForCaret(TextPosition(offset: start), Rect.zero).dy;
+              for (final line in painter.computeLineMetrics()) {
+                if (line.baseline - line.ascent < startY - 0.1) continue;
+                if (line.baseline + line.descent - startY > available && end > start) break;
+                final position = painter.getPositionForOffset(Offset(0, line.baseline));
+                final boundary = painter.getLineBoundary(position);
+                end = math.max(end, boundary.end);
+                if (end < text.length && text.codeUnitAt(end) == 10) end++;
+                if (line.baseline + line.descent - startY > available) break;
+              }
+              if (end <= start) end = text.length;
+              result.add(panel([Text(text.substring(start, end), style: style)]));
+              start = end;
+            }
+            painter.dispose();
+            return result;
+          }
           return Material(color:context.colorScheme.surface,child:Row(
             textDirection:widget.reverse ? TextDirection.rtl : TextDirection.ltr,
             key:const ValueKey('chapter-comments-region'),
@@ -614,9 +656,9 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
               preview(widget.chapterTitle),
               TextButton(onPressed:_openAll,child:Text('View all comments'.tl)),
             ]),
-            if(sorts.length>1) for(final sort in sorts) panel([
-              TextButton(onPressed:()=>feed.refresh(nextSort:sort),
-                child:Text(const {'new':'最新','hot':'最热','wonderful':'精彩'}[sort] ?? sort)),
+            if (sorts.length > 1 || feed.commentContext != null) panel([
+              if (sorts.length > 1) sortSelector,
+              CommentContextStats(context: feed.commentContext),
             ]),
             if(feed.loading) panel([const Center(child:CircularProgressIndicator())]),
             if(feed.error!=null) panel([
@@ -625,21 +667,23 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             ]),
             if(!feed.loading && feed.error==null)
               for(final comment in feed.comments.take(previewLimit)) ...[
-                panel([
-                  CommentAvatar(url:comment.avatar,sourceKey:widget.source.key),
-                  preview(comment.userName),
-                  if(comment.time!=null) preview(comment.time!,style:ts.s12),
-                ]),
-                panel([preview(comment.content,style:TextStyle(fontSize:commentsFontSize),maxLines:3)]),
-                panel([
-                  if(comment.replyPreview!=null) preview(comment.replyPreview!.content)
-                  else const Spacer(),
-                  CommentReadOnlyStats(comment:comment,onReply:
-                    widget.source.canReadReplies(comment,chapter:true) ? ()=>_openReply(comment) : null),
-                ]),
+                panel([CommentAvatar(url:comment.avatar,sourceKey:widget.source.key),
+                  preview(comment.userName)]),
+                panel([CommentMetadata(comment: comment),
+                  if (comment.time != null) preview(comment.time!, style: ts.s12)]),
+                panel([CommentReadOnlyStats(comment:comment,onReply:
+                  widget.source.canReadReplies(comment,chapter:true) ? ()=>_openReply(comment) : null)]),
+                ...textPanels(comment.content),
+                for (final reply in comment.effectiveReplyPreviews) ...[
+                  ...textPanels(reply.userName, fontSize: 14),
+                  panel([CommentMetadata(comment: reply),
+                    if (reply.time != null) preview(reply.time!, style: ts.s12)]),
+                  ...textPanels(reply.content),
+                ],
               ],
             panel([OutlinedButton(onPressed:_openAll,child:Text('View all comments'.tl))]),
           ]));
+          });
         }
         return Material(color: context.colorScheme.surface,
           child: Column(key: const ValueKey('chapter-comments-region'),
@@ -651,10 +695,9 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
                 TextButton(onPressed: _openAll, child: Text('View all comments'.tl))])),
             if (widget.chapterTitle.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal:16),
               child: Text(widget.chapterTitle,style: ts.s12)),
-            if (sorts.length > 1) Padding(padding: const EdgeInsets.symmetric(horizontal:12),
-              child: Wrap(spacing:8,children:[for (final sort in sorts)
-                TextButton(onPressed: () => feed.refresh(nextSort: sort),
-                  child: Text(const {'new':'最新','hot':'最热','wonderful':'精彩'}[sort] ?? sort))])),
+            if (sorts.length > 1) Align(alignment: Alignment.centerLeft,
+              child: sortSelector),
+            CommentContextStats(context: feed.commentContext),
             if (feed.loading) const Padding(padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()))
             else if (feed.error != null) Padding(padding: const EdgeInsets.all(16),

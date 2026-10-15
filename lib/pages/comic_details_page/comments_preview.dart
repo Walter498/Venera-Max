@@ -1,7 +1,9 @@
 part of 'comic_page.dart';
 
 class _CommentsPart extends StatefulWidget {
-  const _CommentsPart({required this.comments, required this.showMore, required this.source, required this.data});
+  const _CommentsPart({required this.comments, required this.showMore, required this.source, required this.data, required this.feed});
+
+  final CommentsController feed;
 
   final ComicSource source;
   final ComicDetails data;
@@ -14,8 +16,6 @@ class _CommentsPart extends StatefulWidget {
 }
 
 class _CommentsPartState extends State<_CommentsPart> {
-  final scrollController = ScrollController();
-
   late List<Comment> comments;
 
   @override
@@ -25,28 +25,9 @@ class _CommentsPartState extends State<_CommentsPart> {
   }
 
   @override
-  void dispose() {
-    scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
   void didUpdateWidget(covariant _CommentsPart oldWidget) {
     super.didUpdateWidget(oldWidget);
     comments = widget.comments.where((c) => !_shouldBlockComment(c)).toList();
-  }
-
-  void _scrollBy(double delta) {
-    if (!scrollController.hasClients) return;
-    final target = (scrollController.position.pixels + delta).clamp(
-      0.0,
-      scrollController.position.maxScrollExtent,
-    );
-    scrollController.animateTo(
-      target,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-    );
   }
 
   @override
@@ -54,60 +35,33 @@ class _CommentsPartState extends State<_CommentsPart> {
     if (comments.isEmpty) {
       return const SliverPadding(padding: EdgeInsets.zero);
     }
-    final cardWidth = math.min(324.0, math.max(240.0, context.width - 56));
     return MultiSliver(
       children: [
         SliverLazyToBoxAdapter(
           child: _ComicSectionHeader(
             icon: Icons.forum_outlined,
             title: "Comments".tl,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CommentProviderSelector(source: widget.source),
-                if (context.width >= 600) ...[
-                  IconButton(
-                    tooltip: "Previous".tl,
-                    icon: const Icon(Icons.chevron_left_rounded),
-                    onPressed: () => _scrollBy(-cardWidth - 8),
-                  ),
-                  IconButton(
-                    tooltip: "Next".tl,
-                    icon: const Icon(Icons.chevron_right_rounded),
-                    onPressed: () => _scrollBy(cardWidth + 8),
-                  ),
-                ],
-                TextButton(
-                  onPressed: widget.showMore,
-                  child: Text("View more".tl),
-                ),
-              ],
-            ),
+            trailing: TextButton(
+              onPressed: widget.showMore, child: Text("View more".tl)),
           ),
         ),
         SliverToBoxAdapter(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                height: 188,
-                child: MediaQuery.removePadding(
-                  removeTop: true,
-                  context: context,
-                  child: ListView.builder(
-                    controller: scrollController,
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    itemCount: comments.length,
-                    itemBuilder: (context, index) {
-                      return _CommentWidget(
-                        comment: comments[index],
-                        width: cardWidth, source: widget.source, data: widget.data,
-                      );
-                    },
-                  ),
-                ),
-              ),
+              Align(alignment: Alignment.centerLeft, child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  CommentProviderSelector(source: widget.source),
+                  CommentSortSelector(sorts: widget.source.availableCommentSorts(),
+                    value: widget.feed.sort, onSelected: (sort) async {
+                      try { await widget.source.setPreferredCommentSort(sort); }
+                      catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
+                    }),
+                ])),
+              CommentContextStats(context: widget.feed.commentContext),
+              for (final comment in comments.take(4))
+                _CommentWidget(comment: comment,
+                  width: double.infinity, source: widget.source, data: widget.data),
               const SizedBox(height: 12),
             ],
           ),
@@ -128,8 +82,8 @@ class _CommentWidget extends StatelessWidget {
     width: width, margin: const EdgeInsets.all(4),
     decoration: BoxDecoration(color: context.colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(12)),
-    child: SingleChildScrollView(child: CommentPresentation(comment: comment,
+    child: CommentPresentation(comment: comment,
       sourceKey: source.key, fontSize: commentsFontSize,
       onReply: source.canReadReplies(comment) ? () => showSideBar(context,
-        CommentsPage(data: data, source: source, replyComment: comment), showBarrier: false) : null)));
+        CommentsPage(data: data, source: source, replyComment: comment), showBarrier: false) : null));
 }

@@ -1239,6 +1239,7 @@ class ComicSourceParser {
         }
         return Res((res['comments'] as List).map((e) => Comment.fromJson(e)).toList(),
           subData: res['maxPage'], total: Comment.nonNegativeInt(res['total']),
+          commentContext: Res.parseCommentContext(res['commentContext']),
           available: res['available'] is bool ? res['available'] as bool : null);
       } catch (e, s) { Log.error('Network', '$e\n$s'); return Res.error(e.toString()); }
     };
@@ -1260,6 +1261,7 @@ class ComicSourceParser {
           subData: res["maxPage"],
           total: Comment.nonNegativeInt(res["total"]),
           available: res["available"] is bool ? res["available"] as bool : null,
+          commentContext: Res.parseCommentContext(res['commentContext']),
         );
       } catch (e, s) {
         Log.error("Network", "$e\n$s");
@@ -1313,6 +1315,7 @@ class ComicSourceParser {
           subData: res["maxPage"],
           total: Comment.nonNegativeInt(res["total"]),
           available: res["available"] is bool ? res["available"] as bool : null,
+          commentContext: Res.parseCommentContext(res['commentContext']),
         );
       } catch (e, s) {
         Log.error("Network", "$e\n$s");

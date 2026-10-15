@@ -77,7 +77,8 @@ def png_metadata(path):
     fixed_names = {f'{scenario}_{theme}_{scale}.png'
                    for scenario in ('thread', 'chapter_sort')
                    for theme in ('light', 'dark') for scale in ('100', '200')}
-    whole_footer_names = {f'footer_{theme}_{scale}.png'
+    whole_footer_names = {f'{scenario}_{theme}_{scale}.png'
+                          for scenario in ('footer', 'rich')
                           for theme in ('light', 'dark') for scale in ('100', '200')}
     if path.name in fixed_names:
         if (width, height) != (390, 844):
@@ -182,7 +183,7 @@ def render(evidence):
                 except ValueError as exc:
                     validation.append(str(exc))
             required_names = {f'{scenario}_{theme}_{scale}.png'
-                              for scenario in ('thread', 'chapter_sort', 'footer')
+                              for scenario in ('thread', 'chapter_sort', 'footer', 'rich')
                               for theme in ('light', 'dark') for scale in ('100', '200')}
             actual_names = {p.name for p in generated}
             if actual_names != required_names:

@@ -176,6 +176,16 @@ class _RichCommentContentState extends State<RichCommentContent> {
     super.didChangeDependencies();
   }
 
+  @override
+  void didUpdateWidget(covariant RichCommentContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      textSpan.clear();
+      images.clear();
+      render();
+    }
+  }
+
   bool isValidUrlChar(String char) {
     return RegExp(r'[a-zA-Z0-9%:/.@\-_?&=#*!+;]').hasMatch(char);
   }
@@ -239,8 +249,10 @@ class _RichCommentContentState extends State<RichCommentContent> {
                     break;
                   }
                 }
-                if (url != null) {
-                  images.add(_CommentImage(url, link));
+                final uri = url == null ? null : Uri.tryParse(url);
+                if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http') &&
+                    uri.host.isNotEmpty) {
+                  images.add(_CommentImage(url!, link));
                 }
               } else if (tagName == 'br') {
                 buffer.write('\n');

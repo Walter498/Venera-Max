@@ -20,6 +20,7 @@ class CommentsPage extends StatefulWidget {
     required this.source,
     this.replyComment,
     this.sharedSession,
+    this.resolveSharedSession,
   });
 
   final ComicDetails data;
@@ -30,6 +31,7 @@ class CommentsPage extends StatefulWidget {
 
   /// Detail owns this session. Reply pages always have their own dataset.
   final DetailsCommentsSession? sharedSession;
+  final DetailsCommentsSession? Function()? resolveSharedSession;
 
   @override
   State<CommentsPage> createState() => _CommentsPageState();
@@ -49,7 +51,8 @@ class _CommentsPageState extends State<CommentsPage> {
 
   void _createFeed() {
     _scopeRevision = widget.source.commentScopeRevision;
-    final session = _providerChanged ? null : widget.sharedSession;
+    final session = widget.resolveSharedSession?.call() ??
+        (_providerChanged ? null : widget.sharedSession);
     if (widget.replyComment == null && session != null &&
         session.matches(widget.source, widget.data.comicId, widget.data.subId) &&
         session.borrow()) {
@@ -68,7 +71,7 @@ class _CommentsPageState extends State<CommentsPage> {
       if (revision != widget.source.commentScopeRevision) return const Res.error("Source settings changed; refresh comments");
       return result;
     },
-      sort: widget.source.commentsOptionsLoader == null ? null : widget.source.commentCapabilities?.defaultSort,
+      sort: widget.source.preferredCommentSort(),
       block: _shouldBlockComment);
     if (_scopeCurrent && !(_providerChanged && widget.replyComment != null)) unawaited(feed.refresh());
   }
@@ -158,9 +161,15 @@ class _CommentsPageState extends State<CommentsPage> {
       key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
       comment: comment, source: widget.source, comic: widget.data,
       showAvatar: true, showActions: actions);
-    return Column(children: [Expanded(child: CommentsFeed(
+    return Column(children: [
+      CommentContextStats(context: feed.commentContext),
+      Expanded(child: CommentsFeed(
       controller: feed,
-      sorts: widget.source.commentsOptionsLoader == null ? const [] : widget.source.commentCapabilities?.sorts ?? const [],
+      onSortSelected: (sort) async {
+        try { await widget.source.setPreferredCommentSort(sort); }
+        catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
+      },
+      sorts: widget.source.availableCommentSorts(),
       totalLabel: widget.replyComment == null ? '评论' : '回复',
       parent: widget.replyComment == null ? null : Column(
         crossAxisAlignment: CrossAxisAlignment.stretch, children: [

@@ -15,6 +15,16 @@ class CommentsController extends ChangeNotifier {
   String? error, pageError;
   int page = 0;
   int? maxPage, total;
+  Map<String, dynamic>? commentContext;
+
+  void _mergeCommentContext(Map<String, dynamic>? value) {
+    final incoming = Res.parseCommentContext(value);
+    if (incoming == null) return; // Omitted later-page metadata is not a reset.
+    commentContext = Map<String, dynamic>.unmodifiable({
+      if (commentContext?['provider'] == incoming['provider']) ...?commentContext,
+      ...incoming,
+    });
+  }
   bool? available;
   bool get unavailable => loaded && error == null && available == false;
   int _generation = 0;
@@ -39,6 +49,8 @@ class CommentsController extends ChangeNotifier {
     if (nextSort != null) sort = nextSort;
     final generation = ++_generation;
     comments = []; page = 0; maxPage = null; total = null; available = null;
+    commentContext = null;
+    _rawEmpty = false;
     error = null; pageError = null; loaded = false;
     loading = true; loadingMore = false; notifyListeners();
     await _request(1, generation);
@@ -57,11 +69,13 @@ class CommentsController extends ChangeNotifier {
       if (result.error) throw StateError(result.errorMessage ?? 'Comments unavailable');
       available = result.available ?? available;
       if (available == false) {
+        commentContext = null;
         comments = []; page = requestedPage; maxPage = 0; total = 0;
         _rawEmpty = true; loaded = true; error = null; pageError = null;
         return;
       }
       final raw = result.data;
+      _mergeCommentContext(result.commentContext);
       if (requestedPage == 1) _rawEmpty = raw.isEmpty;
       final ids = comments.map((c) => c.id).whereType<String>().toSet();
       for (final comment in raw) {
@@ -98,6 +112,7 @@ class CommentsController extends ChangeNotifier {
     page = 0;
     maxPage = null;
     total = null;
+    commentContext = null;
     available = null;
     error = null;
     pageError = null;
@@ -115,6 +130,7 @@ class CommentsController extends ChangeNotifier {
     if (_disposed) return;
     _disposed = true;
     ++_generation;
+    commentContext = null;
     super.dispose();
   }
 }
@@ -131,8 +147,7 @@ class DetailsCommentsSession implements Listenable {
     required this.subId, bool Function(Comment)? block})
       : revision = source.commentScopeRevision {
     controller = CommentsController(
-      sort: source.commentsOptionsLoader == null
-          ? null : source.commentCapabilities?.defaultSort,
+      sort: source.preferredCommentSort(),
       block: block,
       loader: (page, sort) async {
         final result = await source.loadCommentPage(cid, subId, page, null, sort: sort);

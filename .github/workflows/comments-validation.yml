@@ -1,7 +1,7 @@
 name: Comments UI validation
 on:
   push:
-    branches: [feat/lizi-qingman-provider-20261015]
+    branches: [feat/comments-rich-254-20261015]
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency:
 jobs:
   candidate_ipa:
     name: Build candidate IPA independently of test gates
-    if: github.ref == 'refs/heads/feat/lizi-qingman-provider-20261015'
+    if: github.ref == 'refs/heads/feat/comments-rich-254-20261015'
     runs-on: macos-15
     timeout-minutes: 40
     defaults:
@@ -55,7 +55,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   ios:
-    if: github.ref == 'refs/heads/feat/lizi-qingman-provider-20261015' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/feat/comments-rich-254-20261015' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: macos-15
     timeout-minutes: 60
     defaults:
@@ -115,6 +115,11 @@ jobs:
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
         timeout-minutes: 4
         run: python3 tool/comments_capability_probe.py recovery
+      - name: Rich comment metadata and persistent sort menus
+        id: rich
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 5
+        run: python3 tool/comments_capability_probe.py rich
       - name: Upload focused capability result before full regression
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
         uses: actions/upload-artifact@v4
@@ -135,7 +140,7 @@ jobs:
         run: bash tool/comments_ci_run.sh render
       - name: Build unsigned iPhoneOS Release and validate IPA
         id: ios
-        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.capability.outcome == 'success' && steps.auto.outcome == 'success' && steps.shipped.outcome == 'success' && steps.recovery.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.capability.outcome == 'success' && steps.auto.outcome == 'success' && steps.shipped.outcome == 'success' && steps.recovery.outcome == 'success' && steps.rich.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
         timeout-minutes: 20
         run: bash tool/comments_ci_run.sh ios
       - name: Record every gate outcome
