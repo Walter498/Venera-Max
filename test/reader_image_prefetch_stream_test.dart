@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/network/images.dart';
 
-ImageDownloadProgress progress(int n) => ImageDownloadProgress(currentBytes: n);
+ImageDownloadProgress progress(int n) => ImageDownloadProgress(currentBytes: n, totalBytes: null);
 ImageDownloadProgress image(int n) => ImageDownloadProgress(
   currentBytes: 1,
   totalBytes: 1,

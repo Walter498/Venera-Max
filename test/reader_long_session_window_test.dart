@@ -253,8 +253,19 @@ class ReaderCommentsFixture extends ComicSource {
                 expect(state.chapter, chapter);
                 expect(state.page, page);
                 if (chapter != 1 || page != 1) {
+                  final targetChapter = page > 1 ? chapter : chapter - 1;
+                  final targetPage = page > 1 ? page - 1 : pageCount;
                   expect(state.toPrevPage(), isTrue);
-                  await frames(tester, 2);
+                  // Preparation/navigation futures may outlive two frames,
+                  // especially horizontal short images. Await the exact real
+                  // location, retaining all per-page and boundary assertions.
+                  for (var wait = 0; wait < 40; wait++) {
+                    await frames(tester, 1);
+                    if (state.chapter == targetChapter &&
+                        state.page == targetPage) break;
+                  }
+                  expect(state.chapter, targetChapter);
+                  expect(state.page, targetPage);
                 }
               }
             }

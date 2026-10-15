@@ -80,7 +80,8 @@ void main() {
     expect(jobs, hasLength(1));
     expect(identical(sources.single, original), isFalse);
     jobs.single.complete(result);
-    await tester.pump();
+    await tester.pump(); // Complete the GPU future and schedule setState.
+    await tester.pump(); // Build the scheduled current result.
     expect(tester.widget<RawImage>(find.byType(RawImage)).image, same(result));
     expect(sources.single.debugDisposed, isTrue);
     await tester.pumpWidget(view(original));
@@ -109,6 +110,7 @@ void main() {
     expect(producedStrengths, [1.0, 3.0]);
     jobs[1].complete(latest);
     await tester.pump();
+    await tester.pump(); // Apply the rebuild scheduled by the future.
     expect(tester.widget<RawImage>(find.byType(RawImage)).image, same(latest));
     await tester.pumpWidget(const SizedBox());
     original.dispose();
@@ -132,7 +134,8 @@ void main() {
     expect(jobs, hasLength(2));
     expect(sources[1].isCloneOf(replacement), isTrue);
     jobs[1].complete(result);
-    await tester.pump();
+    await tester.pump(); // Complete the GPU future and schedule setState.
+    await tester.pump(); // Build the scheduled current result.
     expect(tester.widget<RawImage>(find.byType(RawImage)).image, same(result));
     await tester.pumpWidget(const SizedBox());
     replacement.dispose();
@@ -166,6 +169,7 @@ void main() {
     expect(jobs, hasLength(2));
     jobs[1].complete(recovered);
     await tester.pump();
+    await tester.pump(); // Apply the rebuild scheduled by recovery.
     expect(tester.widget<RawImage>(find.byType(RawImage)).image, same(recovered));
     await tester.pumpWidget(const SizedBox());
     original.dispose();
