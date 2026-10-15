@@ -83,12 +83,12 @@ void _expectFullText(WidgetTester tester, String text) {
 Future<void> _hostStage(String name, FutureOr<void> Function() action) async {
   final elapsed = Stopwatch()..start();
   // Do not let debugPrint's throttle hide the last synchronous native close.
-  debugPrintSynchronously('COMMENTS_DETAILS_HOST start $name');
+  stdout.writeln('COMMENTS_DETAILS_HOST start $name');
   try {
     await Future<void>.sync(action).timeout(const Duration(seconds: 30));
-    debugPrintSynchronously('COMMENTS_DETAILS_HOST done $name ${elapsed.elapsedMilliseconds}ms');
+    stdout.writeln('COMMENTS_DETAILS_HOST done $name ${elapsed.elapsedMilliseconds}ms');
   } catch (error) {
-    debugPrintSynchronously('COMMENTS_DETAILS_HOST failed $name '
+    stdout.writeln('COMMENTS_DETAILS_HOST failed $name '
         '${elapsed.elapsedMilliseconds}ms: $error');
     rethrow;
   }
@@ -267,7 +267,7 @@ void main() {
     pathsChanged = true;
     try {
       // The shared host already awaited real translations and FontLoader.load.
-      debugPrintSynchronously('COMMENTS_DETAILS_HOST translations/fonts ready');
+      stdout.writeln('COMMENTS_DETAILS_HOST translations/fonts ready');
       // LocalFavoritesManager.init awaits appdata.ensureInit(). That is a
       // readiness barrier, NOT an initializer. Complete the real Init contract
       // in this isolated directory before awaiting the dependent store.

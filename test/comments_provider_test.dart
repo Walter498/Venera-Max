@@ -107,7 +107,7 @@ void main() {
     for (final unavailable in [false, true]) {
     testWidgets('footer recovery error/unavailable=$unavailable at scale $scale', (tester) async {
       final tag = 'recovery unavailable=$unavailable scale=$scale';
-      void stage(String name) => debugPrintSynchronously('[$tag] $name');
+      void stage(String name) => stdout.writeln('[$tag] $name');
       var calls = 0, events = 0;
       late ComicSource source;
       source = providerSource(loader: (_, __, ___, ____) async {
