@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:yaml/yaml.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/js_engine.dart';
@@ -104,6 +106,8 @@ const Qingman = Object.freeze({
     registered = source;
     expect(ComicSourceManager().add(source), isTrue);
     expect(source.version, '2.33.20-comments.7');
+    expect(JsEngine().runCode('$_root.minAppVersion'), '1.2.2');
+    expect(App.version, '2.3.6');
     expect(JsEngine().runCode('$_root.init === null'), isTrue);
     // Store functions inside JS; never export whole source/closures into Dart.
     JsEngine().runCode('void ($_state.originalLoadInfo = $_root.comic.loadInfo);');
@@ -146,6 +150,22 @@ const Qingman = Object.freeze({
 
   setUpAll(() async {
     checkHash();
+    // Mock only the platform metadata boundary; use the production loader.
+    final manifest = loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+    final packageVersion = (manifest['version'] as String).split('+');
+    final wasInitialized = App.isInitialized;
+    PackageInfo.setMockInitialValues(
+      appName: manifest['name'] as String,
+      packageName: 'io.github.kyosee.venera',
+      version: packageVersion.first,
+      buildNumber: packageVersion.length > 1 ? packageVersion[1] : '',
+      buildSignature: '',
+    );
+    await App.initPackageVersion();
+    expect(App.version, packageVersion.first);
+    expect(App.version, '2.3.6');
+    expect(App.isInitialized, wasInitialized,
+        reason: 'Package metadata must not mark the full App ready');
     oldPath = App.dataPath;
     temp = Directory.systemTemp.createTempSync('qingman_auto_source_');
     App.dataPath = temp.path;
@@ -172,6 +192,27 @@ const Qingman = Object.freeze({
       temp.deleteSync(recursive: true);
       checkHash();
     }
+  });
+
+  test('real parser rejects a higher minAppVersion before registration', () async {
+    checkHash();
+    expect(ComicSource.find('lizimh'), isNull);
+    ownsJs = true;
+    // Negative control only: preserve fixture bytes and the normal parse path.
+    // The subclass changes only the instance minimum, not parser/comparison code.
+    final script = '${fixture.readAsStringSync()}\n'
+        'Lizimh = class extends Lizimh { minAppVersion = "999.0.0"; };\n';
+    await expectLater(
+      ComicSourceParser()
+          .parse(script, '${temp.path}/version_gate_probe.js')
+          .timeout(const Duration(seconds: 15)),
+      throwsA(isA<ComicSourceParseException>().having(
+        (error) => error.message, 'version gate', contains('999.0.0'))),
+    );
+    expect(ComicSource.find('lizimh'), isNull);
+    expect(JsEngine().runCode('$_root === undefined'), isTrue);
+    expect(App.version, '2.3.6');
+    checkHash();
   });
 
   for (final sort in ['new', 'hot']) {

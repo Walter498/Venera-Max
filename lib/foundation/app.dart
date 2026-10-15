@@ -111,11 +111,17 @@ class _App {
     if (isAndroid) {
       externalStoragePath = (await getExternalStorageDirectory())!.path;
     }
+    await initPackageVersion();
+    isInitialized = true;
+  }
+
+  /// Load package metadata without initializing storage or marking App ready.
+  /// Keep the existing version if package metadata is unavailable.
+  Future<void> initPackageVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();
       _version = info.version;
     } catch (_) {}
-    isInitialized = true;
   }
 
   Future<void> initComponents() async {
