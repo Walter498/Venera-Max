@@ -80,6 +80,10 @@ class _SourceFunction implements JSAutoFreeFunction {
 class ComicSourceParser {
   static final _sourceFunctions = <String, Map<JSInvokable, _SourceFunction>>{};
 
+  @visibleForTesting
+  static int debugOwnedFunctionCount(String key) =>
+      _sourceFunctions[key]?.length ?? 0;
+
   /// Call before removing a parsed source (also on reload and engine shutdown).
   /// Repeated removal is safe; other sources' live functions are untouched.
   static void releaseSourceFunctions(String key) {

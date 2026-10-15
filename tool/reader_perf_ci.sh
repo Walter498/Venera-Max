@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 phase=${1:?phase required}
-test "${GITHUB_REF:?}" = refs/heads/fix/reader-long-session-256
+test "${GITHUB_REF:?}" = refs/heads/fix/reader-settings-regression-257
 evidence="${RUNNER_TEMP:?}/venera-comments-evidence"
 mkdir -p "$evidence"
 case "$phase" in
@@ -18,7 +18,7 @@ case "$phase" in
   bash tool/comments_ci_run.sh native-tests
   python3 tool/reader_perf_prepare_png.py
   ;;
- focused|lifetime|history|window|stream|cache|hooks|script)
+ metadata|focused|lifetime|history|window|stream|cache|hooks|script)
   python3 tool/reader_perf_test_runner.py "$phase"
   ;;
  regression)

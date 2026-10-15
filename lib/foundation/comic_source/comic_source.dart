@@ -616,7 +616,7 @@ class ComicSource {
   Map<String, String> get commentProviderOptions {
     final key = commentProviderSetting;
     if (key == null) return const {};
-    final definition = (getSettingsDynamic() ?? settings)?[key];
+    final definition = _commentProviderDefinition(key);
     if (definition == null || definition['type'] != 'select' || definition['options'] is! List) return const {};
     return {for (final option in definition['options'] as List)
       if (option is Map && option['value'] is String)
@@ -625,8 +625,44 @@ class ComicSource {
   String? get commentProviderValue {
     final key = commentProviderSetting;
     if (key == null) return null;
-    return (data['settings']?[key] ?? (getSettingsDynamic() ?? settings)?[key]?['default'])?.toString();
+    return (data['settings']?[key] ?? _commentProviderDefinition(key)?['default'])?.toString();
   }
+
+  /// Reader availability is queried while scrolling. Export only the select
+  /// setting's scalar metadata, never the whole settings graph: that graph
+  /// contains unrelated callbacks whose native handles live until source removal.
+  /// Evaluate each time so source-defined dynamic defaults/options remain live.
+  Map<String, dynamic>? _commentProviderDefinition(String settingKey) {
+    try {
+      final value = JsEngine().runCode('''
+(() => {
+  const source = ComicSource.sources[${jsonEncode(key)}];
+  const settings = source && source.settings;
+  if (!settings) return false;
+  const definition = settings[${jsonEncode(settingKey)}];
+  if (!definition) return null;
+  const scalar = value => value === null ||
+      ['string', 'number', 'boolean'].includes(typeof value);
+  return {
+    type: typeof definition.type === 'string' ? definition.type : null,
+    default: scalar(definition.default) ? definition.default : null,
+    options: Array.isArray(definition.options) ? definition.options
+      .filter(option => option && typeof option.value === 'string')
+      .map(option => ({value: option.value,
+        text: scalar(option.text) ? option.text : option.value})) : null
+  };
+})()
+''');
+      if (value is Map) {
+        return Map<String, dynamic>.from(value);
+      }
+      return value == false ? settings?[settingKey] : null;
+    } catch (error) {
+      Log.error('ComicSource', 'Failed to read comment provider metadata: $error');
+    }
+    return settings?[settingKey];
+  }
+
   Future<void> setCommentProvider(String value) async {
     final key = commentProviderSetting;
     if (key == null || !commentProviderOptions.containsKey(value) || commentProviderValue == value) return;

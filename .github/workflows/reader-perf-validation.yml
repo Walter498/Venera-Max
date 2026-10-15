@@ -1,7 +1,7 @@
-name: Reader long-session 256 validation
+name: Reader 253 regression 257 validation
 on:
   push:
-    branches: [fix/reader-long-session-256]
+    branches: [fix/reader-settings-regression-257]
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   candidate:
-    if: github.ref == 'refs/heads/fix/reader-long-session-256'
+    if: github.ref == 'refs/heads/fix/reader-settings-regression-257'
     runs-on: macos-15
     timeout-minutes: 40
     steps:
@@ -42,7 +42,7 @@ jobs:
           path: ${{ runner.temp }}/venera-comments-evidence/
           if-no-files-found: error
   verify:
-    if: github.ref == 'refs/heads/fix/reader-long-session-256'
+    if: github.ref == 'refs/heads/fix/reader-settings-regression-257'
     runs-on: macos-15
     timeout-minutes: 70
     steps:
@@ -74,6 +74,16 @@ jobs:
         id: native
         if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         timeout-minutes: 8
+      - name: Provider metadata native retention and real scrolling regression
+        run: bash tool/reader_perf_ci.sh metadata
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 8
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-metadata
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
       - name: Indexed cache eviction and cleanup failure recovery
         run: bash tool/reader_perf_ci.sh cache
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
