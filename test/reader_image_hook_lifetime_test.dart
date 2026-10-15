@@ -113,6 +113,8 @@ void main() {
     for (final code in [
       '() => { throw new Error("sync failure"); }',
       'async () => { throw new Error("async failure"); }',
+      '() => { throw {callback: () => 1}; }',
+      'async () => { throw {nested: [() => 1]}; }',
       '() => "not bytes"',
       '() => ({ignored: () => 7})',
     ]) {
@@ -171,6 +173,8 @@ void main() {
   for (final code in [
     '() => { throw new Error("recovery throw"); }',
     'async () => { throw new Error("recovery rejection"); }',
+    '() => { throw {callback: () => 1}; }',
+    'async () => { throw {nested: [() => 1]}; }',
     '() => [() => 4, {ignored: () => 5}]',
   ]) {
     test('recovery exception/invalid result releases all exports: $code', () async {

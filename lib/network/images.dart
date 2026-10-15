@@ -215,6 +215,11 @@ abstract class ImageDownloader {
         totalBytes: buffer.length,
         imageBytes: Uint8List.fromList(buffer),
       );
+    } catch (error) {
+      // JavaScript can throw an object containing exported native callbacks.
+      // Such exception graphs have the same ownership as returned configs.
+      owner.retain(error);
+      rethrow;
     } finally {
       owner.dispose();
     }
@@ -468,6 +473,9 @@ abstract class ImageDownloader {
           );
           return;
         } catch (e) {
+          // Retain exports from every failed attempt, including intermediate
+          // sync throws and Promise rejections that a retry would otherwise lose.
+          owner.retain(e);
           // The source's own recovery hook takes priority over the generic
           // net-retry below: onLoadFailed is how a source re-signs / refreshes an
           // expired image URL, which typically surfaces as a 403/401 (a
@@ -541,6 +549,11 @@ abstract class ImageDownloader {
           rethrow;
         }
       }
+    } catch (error) {
+      // JavaScript can throw an object containing exported native callbacks.
+      // Such exception graphs have the same ownership as returned configs.
+      owner.retain(error);
+      rethrow;
     } finally {
       owner.dispose();
     }

@@ -81,6 +81,8 @@ void main() {
       for (final script in [
         'function modifyImage(image) { Image.empty(2, 1); throw new Error("fixture"); }',
         'function modifyImage(image) { throw new Error("fixture"); } modifyImage;',
+        'function modifyImage(image) { throw {callback: () => 1}; }',
+        'function modifyImage(image) { throw () => 1; }',
         'function modifyImage( {',
       ]) {
         final events = <String>[];

@@ -252,9 +252,19 @@ class JsEngine {
   }
 
   dynamic runCode(String js, [String? name]) {
-    final result = _engine.evaluate(js, name: name);
-    // A script's completion value can export functions, including nested ones.
-    // Keep them alive until the task ends, then destroy before strict close.
+    try {
+      final result = _engine.evaluate(js, name: name);
+      _ownExportedValue(result);
+      return result;
+    } catch (error) {
+      // A thrown JS value may itself export callbacks or nested JS objects.
+      _ownExportedValue(error);
+      rethrow;
+    }
+  }
+
+  void _ownExportedValue(dynamic result) {
+    // Keep completion AND exception exports until strict close.
     final seen = HashSet<Object>.identity();
     void own(dynamic value) {
       if (value == null || !seen.add(value)) return;
@@ -268,7 +278,6 @@ class JsEngine {
       }
     }
     own(result);
-    return result;
   }
 
   void _close() {
