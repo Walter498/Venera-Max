@@ -656,7 +656,10 @@ class ComicSource {
       if (value is Map) {
         return Map<String, dynamic>.from(value);
       }
-      return value == false ? settings?[settingKey] : null;
+      if (value == false) {
+        return settings?[settingKey];
+      }
+      return null;
     } catch (error) {
       Log.error('ComicSource', 'Failed to read comment provider metadata: $error');
     }
