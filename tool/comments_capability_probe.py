@@ -7,6 +7,8 @@ root.mkdir(exist_ok=True)
 mode = sys.argv[1]
 if mode == 'capability':
     ok = execute('qingman-capability-probe', ['test/comments_qingman_capability_test.dart'], root, minimum=6)
+elif mode == 'shipped':
+    ok = execute('qingman-shipped-source-probe', ['test/comments_qingman_shipped_source_test.dart'], root, minimum=7)
 elif mode == 'matrix':
     ok = execute('comments-bridge-matrix-probe', ['test/comments_bridge_test.dart', '--plain-name', 'nullable capabilities and legacy reply matrix'], root, minimum=2)
 else:

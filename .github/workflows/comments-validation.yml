@@ -100,6 +100,11 @@ jobs:
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
         timeout-minutes: 3
         run: python3 tool/comments_capability_probe.py capability
+      - name: Complete shipped source capability and provider probe
+        id: shipped
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 3
+        run: python3 tool/comments_capability_probe.py shipped
       - name: Upload focused capability result before full regression
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
         uses: actions/upload-artifact@v4
@@ -120,7 +125,7 @@ jobs:
         run: bash tool/comments_ci_run.sh render
       - name: Build unsigned iPhoneOS Release and validate IPA
         id: ios
-        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.capability.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.capability.outcome == 'success' && steps.shipped.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}
         timeout-minutes: 20
         run: bash tool/comments_ci_run.sh ios
       - name: Record every gate outcome
