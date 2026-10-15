@@ -138,6 +138,56 @@ void main() {
     checkHash();
   });
 
+  test('removing one full source preserves another source callback', () async {
+    final source = await parse();
+    JsEngine().runCode('''
+void ($root.runDiagnosticTest = async function() { return 'first-live'; });
+''');
+    ComicSource? peer;
+    try {
+      peer = await ComicSourceParser().parse(
+        '${fixture.readAsStringSync()}\n'
+        '''
+Object.defineProperty(Lizimh.prototype, 'init', {value:null});
+Lizimh.prototype.runDiagnosticTest = async function() { return 'peer-live'; };
+Lizimh = class extends Lizimh { key = 'lifecyclepeer'; };
+''', '${temp.path}/peer.js');
+      expect(ComicSourceManager().add(peer), isTrue);
+      final first = source.settings!['speedTest']!['callback'] as JSAutoFreeFunction;
+      final second = peer.settings!['speedTest']!['callback'] as JSAutoFreeFunction;
+      expect(await first([]), 'first-live');
+      expect(await second([]), 'peer-live');
+      ComicSourceManager().remove('lizimh');
+      expect(() => first([]), throwsStateError);
+      expect(await second([]), 'peer-live');
+      ComicSourceManager().remove('lizimh');
+      expect(await second([]), 'peer-live');
+      ComicSourceManager().remove('lifecyclepeer');
+      expect(() => second([]), throwsStateError);
+    } finally {
+      if (peer != null) ComicSourceManager().remove('lifecyclepeer');
+      JsEngine().runCode('void (delete ComicSource.sources.lifecyclepeer);');
+    }
+  });
+
+  test('failed full-source parse frees exports and permits same-key retry',
+      () async {
+    ownsJs = true;
+    await expectLater(ComicSourceParser().parse(
+      '${fixture.readAsStringSync()}\n'
+      '''
+Object.defineProperty(Lizimh.prototype, 'init', {value:null});
+Lizimh = class extends Lizimh {
+  constructor() { super(); this.comic.idMatch = '['; }
+};
+''', '${temp.path}/failed.js'), throwsA(isA<FormatException>()));
+    expect(ComicSource.find('lizimh'), isNull);
+    expect(JsEngine().runCode('$root === undefined'), isTrue);
+    await parse();
+    ComicSourceManager().remove('lizimh');
+    ComicSourceParser.releaseSourceFunctions('lizimh');
+  });
+
   test('full release default Tencent, then live Qingman per-property capabilities',
       () async {
     final source = await parse();

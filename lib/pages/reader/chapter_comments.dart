@@ -452,6 +452,51 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
 class _ProviderChapterFeed extends CommentsController {
   _ProviderChapterFeed({required this.source, required super.loader, super.sort, super.block});
   final ComicSource source;
+  VoidCallback? _ownerListener;
+  bool _retired = false;
+  bool _released = false;
+  bool _releaseScheduled = false;
+
+  void attachOwner(VoidCallback listener) {
+    assert(_ownerListener == null && !_retired);
+    _ownerListener = listener;
+    addListener(listener);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    super.removeListener(listener);
+    _finishDisposal();
+  }
+
+  // AnimatedBuilder owns the actual borrow: it can detach and reattach its
+  // merged Listenable during one synchronous update, even after the reader
+  // retires this generation. Never dispose between those two operations.
+  void _finishDisposal() {
+    // hasListeners may still include a removed listener while ChangeNotifier
+    // is notifying. Check it only after that notification has unwound.
+    if (!_retired || _released || _releaseScheduled) return;
+    _releaseScheduled = true;
+    scheduleMicrotask(() {
+      _releaseScheduled = false;
+      if (_released || hasListeners) return;
+      _released = true;
+      super.dispose();
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_retired) return;
+    _retired = true;
+    // Cancel generations now, not when the last footer eventually detaches.
+    invalidate();
+    final listener = _ownerListener;
+    _ownerListener = null;
+    if (listener != null) removeListener(listener);
+    _finishDisposal();
+  }
+
   @override
   bool get unavailable => source.commentProviderOptions.isEmpty && super.unavailable;
   @override
@@ -470,9 +515,9 @@ class ReaderChapterCommentsFeeds {
     final sources = changed.map((entry) => entry.value.$1.key).toSet();
     for (final cached in _feeds.entries.toList()) {
       if (sources.any((key) => cached.key.startsWith('$key:'))) {
-        cached.value.invalidate();
-        // Existing preview widgets may still be attached until next frame.
-        scheduleMicrotask(cached.value.dispose);
+        // Retirement invalidates immediately, but disposal waits for the last
+        // preview's AnimatedBuilder to detach (the reader rebuilds post-frame).
+        cached.value.dispose();
         _feeds.remove(cached.key);
       }
     }
@@ -499,7 +544,7 @@ class ReaderChapterCommentsFeeds {
           if(revision!=source.commentScopeRevision) return const Res.error('Source settings changed; refresh comments');
           return result;
         });
-      feed.addListener(() => onChanged?.call(epId,revision,feed));
+      feed.attachOwner(() => onChanged?.call(epId,revision,feed));
       unawaited(feed.refresh());
       return feed;
     });

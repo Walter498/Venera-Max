@@ -55,7 +55,9 @@ class Comment {
       };
       final reply = Comment.fromJson(map);
       if (reply.id == null && reply.userName.trim().isEmpty &&
-          reply.content.trim().isEmpty) continue;
+          reply.content.trim().isEmpty) {
+        continue;
+      }
       if (reply.id != null && reply.id == optionalText(json['id'])) continue;
       final body = jsonEncode([reply.userName, reply.content, reply.time, reply.avatar]);
       if (reply.id != null ? !ids.add(reply.id!) : !bodies.add(body)) continue;

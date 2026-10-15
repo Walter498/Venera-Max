@@ -128,16 +128,24 @@ jobs:
           path: ${{ runner.temp }}/venera-comments-evidence/
           if-no-files-found: error
           retention-days: 14
-      - name: Original author 13 and 28-file regression plus new comments tests
-        id: tests
-        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
-        timeout-minutes: 20
-        run: bash tool/comments_ci_run.sh tests
       - name: Real Flutter widget golden comparison and fresh PNG capture
         id: render
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
         timeout-minutes: 12
         run: bash tool/comments_ci_run.sh render
+      - name: Upload early real images before full regression
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: comments-ios-render-early
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Original author 13 and 28-file regression plus new comments tests
+        id: tests
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 20
+        run: bash tool/comments_ci_run.sh tests
       - name: Build unsigned iPhoneOS Release and validate IPA
         id: ios
         if: ${{ !cancelled() && steps.analyze.outcome == 'success' && steps.capability.outcome == 'success' && steps.auto.outcome == 'success' && steps.shipped.outcome == 'success' && steps.recovery.outcome == 'success' && steps.rich.outcome == 'success' && steps.tests.outcome == 'success' && steps.render.outcome == 'success' }}

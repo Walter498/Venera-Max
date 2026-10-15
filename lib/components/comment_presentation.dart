@@ -77,7 +77,9 @@ class CommentMetadata extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (comment.userLevel == null && comment.viewCount == null &&
-        comment.badges.isEmpty) return const SizedBox.shrink();
+        comment.badges.isEmpty) {
+      return const SizedBox.shrink();
+    }
     final colors = Theme.of(context).colorScheme;
     return Wrap(spacing: 8, runSpacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center, children: [

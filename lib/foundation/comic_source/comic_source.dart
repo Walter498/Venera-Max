@@ -268,6 +268,10 @@ class ComicSourceManager with ChangeNotifier, Init {
   }
 
   Future reload() async {
+    // Drop native function references before replacing their JS source objects.
+    for (final source in _sources) {
+      ComicSourceParser.releaseSourceFunctions(source.key);
+    }
     _sources.clear();
     _recoverableParseWarnings.clear();
     _webdavLibrarySourceKeys.clear();
@@ -380,6 +384,7 @@ class ComicSourceManager with ChangeNotifier, Init {
   }
 
   void remove(String key) {
+    ComicSourceParser.releaseSourceFunctions(key);
     _sources.removeWhere((element) => element.key == key);
     _webdavLibrarySourceKeys.remove(key);
     // Drop cached update state so a reinstalled source with the same key does
@@ -799,7 +804,9 @@ class ComicSource {
   /// This allows sources to use getters for dynamic settings that can change at runtime.
   Map<String, Map<String, dynamic>>? getSettingsDynamic() {
     try {
-      var value = JsEngine().runCode("ComicSource.sources.$key.settings");
+      final value = ComicSourceParser.ownSourceValue(
+        key, JsEngine().runCode("ComicSource.sources.$key.settings"),
+      );
       if (value is Map) {
         var newMap = <String, Map<String, dynamic>>{};
         for (var e in value.entries) {
@@ -811,11 +818,7 @@ class ComicSource {
             if (e2.key is! String) {
               continue;
             }
-            var v2 = e2.value;
-            if (v2 is JSInvokable) {
-              v2 = JSAutoFreeFunction(v2);
-            }
-            v[e2.key] = v2;
+            v[e2.key] = e2.value;
           }
           newMap[e.key] = v;
         }

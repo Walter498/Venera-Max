@@ -52,7 +52,102 @@ class ComicSourceParseException implements Exception {
   }
 }
 
+/// A parser export belongs to its source, not to the Dart garbage collector.
+/// Implements the existing callable interface without installing its GC-only
+/// finalizer; source removal explicitly ends this handle's lifetime.
+class _SourceFunction implements JSAutoFreeFunction {
+  @override
+  final JSInvokable func;
+  bool _released = false;
+
+  _SourceFunction(this.func);
+
+  @override
+  dynamic call(List<dynamic> args) {
+    if (_released) {
+      throw StateError('Comic source function has been released');
+    }
+    return func(args);
+  }
+
+  void release() {
+    if (_released) return;
+    _released = true;
+    func.destroy();
+  }
+}
+
 class ComicSourceParser {
+  static final _sourceFunctions = <String, Map<JSInvokable, _SourceFunction>>{};
+
+  /// Call before removing a parsed source (also on reload and engine shutdown).
+  /// Repeated removal is safe; other sources' live functions are untouched.
+  static void releaseSourceFunctions(String key) {
+    final functions = _sourceFunctions.remove(key);
+    if (functions == null) return;
+    for (final function in functions.values) {
+      function.release();
+    }
+  }
+
+  static void releaseAllSourceFunctions() {
+    for (final key in _sourceFunctions.keys.toList()) {
+      releaseSourceFunctions(key);
+    }
+  }
+
+  static _SourceFunction _ownSourceFunction(String key, JSInvokable function) {
+    final functions = _sourceFunctions.putIfAbsent(
+      key, () => Map<JSInvokable, _SourceFunction>.identity(),
+    );
+    return functions.putIfAbsent(function, () => _SourceFunction(function));
+  }
+
+  _SourceFunction _ownFunction(JSInvokable function) =>
+      _ownSourceFunction(_key!, function);
+
+  /// Adopt an exported settings graph, including nested callbacks. Also used
+  /// when a source refreshes dynamic settings without reparsing its script.
+  static dynamic ownSourceValue(String key, dynamic value) {
+    final copies = Map<Object, dynamic>.identity();
+    dynamic wrap(dynamic item) {
+      if (item is JSInvokable) return _ownSourceFunction(key, item);
+      if (item is! Map && item is! List) return item;
+      if (copies.containsKey(item)) return copies[item];
+      if (item is List) {
+        final result = <dynamic>[];
+        copies[item] = result;
+        for (final child in item) {
+          result.add(wrap(child));
+        }
+        return result;
+      }
+      final result = <dynamic, dynamic>{};
+      copies[item] = result;
+      for (final entry in (item as Map).entries) {
+        result[entry.key] = wrap(entry.value);
+      }
+      return result;
+    }
+    return wrap(value);
+  }
+
+  // Even unconsumed/nested fields of an exported JS object own native handles.
+  void _trackFunctions(dynamic value, [Set<Object>? visited]) {
+    if (value is JSInvokable) {
+      _ownFunction(value);
+    } else if (value is Map || value is List) {
+      visited ??= Set<Object>.identity();
+      if (!visited.add(value as Object)) return;
+      final values = value is Map ? value.values : value as List;
+      for (final child in values) {
+        _trackFunctions(child, visited);
+      }
+    }
+  }
+
+  dynamic _wrapSettingFunctions(dynamic value) => ownSourceValue(_key!, value);
+
   /// comic source key
   String? _key;
 
@@ -182,6 +277,19 @@ class ComicSourceParser {
       })();
     """);
 
+    try {
+      return await _parseRegisteredSource(filePath, key, url, version);
+    } catch (_) {
+      releaseSourceFunctions(key);
+      JsEngine().runCode('void (delete ComicSource.sources.$key);'
+          'void (delete globalThis.temp);');
+      rethrow;
+    }
+  }
+
+  Future<ComicSource> _parseRegisteredSource(
+    String filePath, String key, dynamic url, dynamic version,
+  ) async {
     var source = ComicSource(
       _name!,
       key,
@@ -228,7 +336,7 @@ class ComicSourceParser {
     // own request path for hosts that reject the app's client.
     var apiFetch = _getValue("apiFetch");
     if (apiFetch is JSInvokable) {
-      final call = JSAutoFreeFunction(apiFetch);
+      final call = _ownFunction(apiFetch);
       source.apiFetch = (path, [body]) async {
         try {
           final result = await call([path, body]);
@@ -277,7 +385,9 @@ class ComicSourceParser {
   }
 
   dynamic _getValue(String index) {
-    return JsEngine().runCode("ComicSource.sources.$_key.$index");
+    final value = JsEngine().runCode("ComicSource.sources.$_key.$index");
+    _trackFunctions(value);
+    return value;
   }
 
   AccountConfig? _loadAccountConfig() {
@@ -555,7 +665,7 @@ class ComicSourceParser {
             throw "DynamicCategoryPart loader must be a function";
           }
           categoryParts.add(
-            DynamicCategoryPart(name, JSAutoFreeFunction(loader), _key!),
+            DynamicCategoryPart(name, _ownFunction(loader), _key!),
           );
         }
       } else {
@@ -1470,11 +1580,7 @@ class ComicSourceParser {
           if (e2.key is! String) {
             continue;
           }
-          var v2 = e2.value;
-          if (v2 is JSInvokable) {
-            v2 = JSAutoFreeFunction(v2);
-          }
-          v[e2.key] = v2;
+          v[e2.key] = _wrapSettingFunctions(e2.value);
         }
         newMap[e.key] = v;
       }

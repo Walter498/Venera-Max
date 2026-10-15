@@ -295,7 +295,12 @@ class JsEngine with _JSEngineApi, JsUiApi, Init {
   }
 
   void dispose() {
-    _cache = null;
+    // Only the current singleton owns the parser's source-function registry.
+    // Disposing an older instance must not release a newer engine's callbacks.
+    if (identical(_cache, this)) {
+      ComicSourceParser.releaseAllSourceFunctions();
+      _cache = null;
+    }
     _closed = true;
     _engine?.close();
     _engine?.port.close();

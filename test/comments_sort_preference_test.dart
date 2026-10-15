@@ -196,9 +196,114 @@ void main() {
     expect(calls, ['new', 'hot']);
     expect(find.text('最热 ▾'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await tester.runAsync(() async {
+      final restarted = sortSource();
+      await restarted.loadData();
+      expect(restarted.preferredCommentSort(chapter: true), 'hot');
+    });
     await tester.pumpWidget(const SizedBox.shrink());
     feeds.dispose();
     await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('borrowed old footer survives pending replacement and late result', (tester) async {
+    final pending = Completer<Res<List<Comment>>>();
+    final calls = <String?>[];
+    final source = sortSource(loader: (_, __, ___, ____, options) async {
+      calls.add(options['sort'] as String?);
+      if (options['sort'] == 'new') return pending.future;
+      return Res([commentFixture('hot-result', preview: false)]);
+    });
+    final feeds = ReaderChapterCommentsFeeds();
+    final old = feeds.chapterLoading(source, 'work', 'ep');
+    Widget host(CommentsController feed) => MaterialApp(home: Scaffold(
+      body: SingleChildScrollView(child: ChapterCommentsPreview(
+        comicId: 'work', epId: 'ep', source: source, comicTitle: 'Work',
+        chapterTitle: 'Chapter', sharedFeed: feed))));
+    await tester.pumpWidget(host(old));
+    // Persist outside fake async; the owner retires old before the reader's
+    // replacement build. Pump the STILL borrowed widget across that gap.
+    await tester.runAsync(() => source.setPreferredCommentSort('hot', chapter: true));
+    await tester.pump();
+    expect(ChangeNotifier.debugAssertNotDisposed(old), isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(host(old));
+    expect(ChangeNotifier.debugAssertNotDisposed(old), isTrue);
+    expect(tester.takeException(), isNull);
+    pending.complete(Res([commentFixture('late-new', preview: false)]));
+    await tester.pump();
+    expect(old.comments, isEmpty);
+    expect(find.textContaining('late-new'), findsNothing);
+    final current = feeds.chapterLoading(source, 'work', 'ep');
+    await tester.pumpWidget(host(current));
+    await tester.pumpAndSettle();
+    expect(calls, ['new', 'hot']);
+    expect(current.comments.single.id, 'hot-result');
+    expect(find.text('最热 ▾'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    // The framework really detached: disposal is asserted, not just lack of
+    // visible errors (which would also pass if retired feeds leaked forever).
+    expect(() => ChangeNotifier.debugAssertNotDisposed(old), throwsFlutterError);
+    await tester.pumpWidget(const SizedBox.shrink());
+    feeds.dispose();
+    await tester.pump();
+    expect(() => ChangeNotifier.debugAssertNotDisposed(current), throwsFlutterError);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('retired feed waits for all borrowers; owner disposal cancels late result', () async {
+    final pending = Completer<Res<List<Comment>>>();
+    final source = sortSource(loader: (_, __, ___, ____, _____) => pending.future);
+    final feeds = ReaderChapterCommentsFeeds();
+    final feed = feeds.chapterLoading(source, 'work', 'ep');
+    void first() {}
+    void second() {}
+    feed.addListener(first);
+    feed.addListener(second);
+    feeds.dispose();
+    await Future<void>.delayed(Duration.zero);
+    expect(ChangeNotifier.debugAssertNotDisposed(feed), isTrue);
+    feed.removeListener(first);
+    await Future<void>.delayed(Duration.zero);
+    expect(ChangeNotifier.debugAssertNotDisposed(feed), isTrue);
+    // Match AnimatedBuilder's synchronous detach/reattach of a merged listenable.
+    feed.removeListener(second);
+    feed.addListener(second);
+    await Future<void>.delayed(Duration.zero);
+    expect(ChangeNotifier.debugAssertNotDisposed(feed), isTrue);
+    pending.complete(Res([commentFixture('late-owner-result')]));
+    await Future<void>.delayed(Duration.zero);
+    expect(feed.comments, isEmpty);
+    feed.removeListener(second);
+    await Future<void>.delayed(Duration.zero);
+    expect(() => ChangeNotifier.debugAssertNotDisposed(feed), throwsFlutterError);
+    feeds.dispose();
+  });
+
+  test('retiring one provider generation leaves another source feed alive', () async {
+    final calls = <String>[];
+    final source = sortSource(loader: (_, __, ___, ____, options) async {
+      calls.add('first:${options['sort']}');
+      return const Res([]);
+    });
+    final other = commentsSource(chapterLegacy: (_, __, ___, ____) async {
+      calls.add('other');
+      return Res([commentFixture('other-result')]);
+    });
+    final feeds = ReaderChapterCommentsFeeds();
+    final old = feeds.chapterLoading(source, 'work', 'ep');
+    final untouched = feeds.chapterLoading(other, 'work', 'ep');
+    await source.setPreferredCommentSort('hot', chapter: true);
+    await Future<void>.delayed(Duration.zero);
+    expect(identical(untouched, feeds.chapterLoading(other, 'work', 'ep')), isTrue);
+    expect(ChangeNotifier.debugAssertNotDisposed(untouched), isTrue);
+    expect(untouched.comments.single.id, 'other-result');
+    expect(calls, ['first:new', 'other', 'first:hot']);
+    expect(() => ChangeNotifier.debugAssertNotDisposed(old), throwsFlutterError);
+    feeds.dispose();
+    await Future<void>.delayed(Duration.zero);
+    expect(() => ChangeNotifier.debugAssertNotDisposed(untouched), throwsFlutterError);
   });
 
   testWidgets('horizontal 200% keeps two real replies and metadata without nested scroll', (tester) async {
@@ -227,5 +332,7 @@ void main() {
       matching: find.byType(Scrollable)), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 }

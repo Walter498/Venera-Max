@@ -8,13 +8,13 @@ mode = sys.argv[1]
 if mode == 'capability':
     ok = execute('qingman-capability-probe', ['test/comments_qingman_capability_test.dart'], root, minimum=6)
 elif mode == 'shipped':
-    ok = execute('qingman-shipped-source-probe', ['test/comments_qingman_shipped_source_test.dart'], root, minimum=8)
+    ok = execute('qingman-shipped-source-probe', ['test/comments_qingman_shipped_source_test.dart'], root, minimum=10)
 elif mode == 'recovery':
     ok = execute('qingman-recovery-probe', ['test/comments_provider_test.dart', 'test/comments_qingman_test.dart'], root, minimum=21)
 elif mode == 'auto':
-    ok = execute('qingman-auto-source-probe', ['test/comments_qingman_auto_source_test.dart'], root, minimum=6)
+    ok = execute('qingman-auto-source-probe', ['test/comments_qingman_auto_source_test.dart'], root, minimum=7)
 elif mode == 'rich':
-    ok = execute('comments-rich-probe', ['test/comments_rich_data_test.dart', 'test/comments_sort_preference_test.dart'], root, minimum=2)
+    ok = execute('comments-rich-probe', ['test/comments_rich_data_test.dart', 'test/comments_sort_preference_test.dart'], root, minimum=35)
 elif mode == 'matrix':
     ok = execute('comments-bridge-matrix-probe', ['test/comments_bridge_test.dart', '--plain-name', 'nullable capabilities and legacy reply matrix'], root, minimum=2)
 else:

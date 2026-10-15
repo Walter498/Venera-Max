@@ -50,7 +50,7 @@ void main() {
   List<dynamic> calls() => jsonDecode(
       JsEngine().runCode('JSON.stringify($_state.calls)') as String) as List;
 
-  Future<ComicSource> parse(String mode) async {
+  Future<ComicSource> parse(String mode, {String extraScript = ''}) async {
     checkHash();
     expect(ComicSource.find('lizimh'), isNull);
     // Parser wraps this whole script in its own function. The lexical Qingman
@@ -98,6 +98,7 @@ const Qingman = Object.freeze({
     throw new Error('Unexpected Qingman request: ' + path);
   }
 });
+$extraScript
 ''';
     ownsJs = true;
     final source = await ComicSourceParser()
@@ -213,6 +214,63 @@ const Qingman = Object.freeze({
     expect(JsEngine().runCode('$_root === undefined'), isTrue);
     expect(App.version, '2.3.6');
     checkHash();
+  });
+
+  test('full source callbacks survive refresh and release on repeated remove',
+      () async {
+    for (var cycle = 0; cycle < 3; cycle++) {
+      final source = await parse('valid', extraScript: '''
+Lizimh.prototype.runDiagnosticTest = async function(images) {
+  return images ? 'images-live' : 'api-live';
+};
+Lizimh = class extends Lizimh {
+  constructor() {
+    super();
+    this.settings.lifecycleNested = {
+      type:'callback', nested:[{callback:async () => 'nested-live'}]
+    };
+  }
+};
+''');
+      final diagnostic = source.settings!['speedTest']!['callback']
+          as JSAutoFreeFunction;
+      final imageDiagnostic = source.settings!['imageSpeedTest']!['callback']
+          as JSAutoFreeFunction;
+      expect(await diagnostic([]), 'api-live');
+      expect(await imageDiagnostic([]), 'images-live');
+      final nested = (source.settings!['lifecycleNested']!['nested'] as List)
+          .first['callback'] as JSAutoFreeFunction;
+      expect(await nested([]), 'nested-live');
+      final refreshed = <JSAutoFreeFunction>[];
+      for (var refresh = 0; refresh < 3; refresh++) {
+        final settings = source.getSettingsDynamic()!;
+        final callback = settings['speedTest']!['callback'] as JSAutoFreeFunction;
+        final child = (settings['lifecycleNested']!['nested'] as List)
+            .first['callback'] as JSAutoFreeFunction;
+        refreshed.addAll([callback, child]);
+        expect(await callback([]), 'api-live');
+        expect(await child([]), 'nested-live');
+        expect(identical(ComicSourceParser.ownSourceValue('lizimh', callback),
+            callback), isTrue);
+      }
+      final api = await source.apiFetch!('/app/api/v2/detail/5');
+      expect(api.error, isFalse);
+      ComicSourceManager().remove('lizimh');
+      ComicSourceManager().remove('lizimh');
+      ComicSourceParser.releaseSourceFunctions('lizimh');
+      for (final callback in [diagnostic, imageDiagnostic, nested, ...refreshed]) {
+        expect(() => callback([]), throwsStateError);
+        expect(callback.func.toString(), contains('released'));
+      }
+      expect((await source.apiFetch!('/app/api/v2/detail/5')).error, isTrue);
+      registered = null;
+      JsEngine().runCode('void (delete $_root); void (delete globalThis.temp);'
+          'void (delete $_state);');
+      ownsJs = false;
+      // Strict native close on every cycle, not a GC/reset-based cleanup.
+      JsEngine().dispose();
+      await JsEngine().init();
+    }
   });
 
   for (final sort in ['new', 'hot']) {
