@@ -485,8 +485,9 @@ class _ProviderChapterFeed extends CommentsController {
     });
   }
 
-  @override
-  void dispose() {
+  // Ownership ends now; actual ChangeNotifier disposal waits for borrowers.
+  // Do not override dispose with a deferred super call (@mustCallSuper).
+  void retire() {
     if (_retired) return;
     _retired = true;
     // Cancel generations now, not when the last footer eventually detaches.
@@ -517,7 +518,7 @@ class ReaderChapterCommentsFeeds {
       if (sources.any((key) => cached.key.startsWith('$key:'))) {
         // Retirement invalidates immediately, but disposal waits for the last
         // preview's AnimatedBuilder to detach (the reader rebuilds post-frame).
-        cached.value.dispose();
+        cached.value.retire();
         _feeds.remove(cached.key);
       }
     }
@@ -528,7 +529,7 @@ class ReaderChapterCommentsFeeds {
     }
   }
   final void Function(String epId, String revision, CommentsController feed)? onChanged;
-  final Map<String, CommentsController> _feeds = {};
+  final Map<String, _ProviderChapterFeed> _feeds = {};
   CommentsController chapterLoading(ComicSource source,String comicId,String epId) {
     final requestKey = '${source.key}:$comicId:$epId';
     _requests[requestKey] = (source, comicId, epId);
@@ -552,7 +553,7 @@ class ReaderChapterCommentsFeeds {
   void dispose() {
     ComicSource.settingsChanges.removeListener(_settingsChanged);
     _requests.clear(); _revisions.clear();
-    for(final feed in _feeds.values) { feed.dispose(); }
+    for(final feed in _feeds.values) { feed.retire(); }
     _feeds.clear();
   }
 }
