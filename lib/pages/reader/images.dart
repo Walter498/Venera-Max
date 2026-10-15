@@ -2476,9 +2476,13 @@ class _ContinuousModeState extends State<_ContinuousMode>
     Future<void> alignLaidOutTarget() async {
       var stableFrames = 0;
       for (var attempt = 0; attempt < 8; attempt++) {
-        if (!mounted || !_scrollController.hasClients || isStale()) return;
+        if (!mounted || !_scrollController.hasClients || isStale()) {
+          return;
+        }
         final measured = _offsetDeltaToEntry(chapter, page);
-        if (measured == null) return;
+        if (measured == null) {
+          return;
+        }
         final correction = measured - _centerAdjust(chapter, page, center);
         if (correction.abs() > 0.5) {
           stableFrames = 0;
@@ -2488,7 +2492,9 @@ class _ContinuousModeState extends State<_ContinuousMode>
           stableFrames++;
         }
         await WidgetsBinding.instance.endOfFrame;
-        if (stableFrames >= 2) return;
+        if (stableFrames >= 2) {
+          return;
+        }
       }
     }
 

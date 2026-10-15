@@ -9,8 +9,12 @@ void reportUnhandledJsPromise(dynamic reason) {
   final refs = HashSet<JSRef>.identity();
   final visited = HashSet<Object>.identity();
   void collect(dynamic value) {
-    if (value == null || !visited.add(value)) return;
-    if (value is JSRef) refs.add(value);
+    if (value == null || !visited.add(value)) {
+      return;
+    }
+    if (value is JSRef) {
+      refs.add(value);
+    }
     if (value is Map) {
       for (final entry in value.entries) {
         collect(entry.key);
