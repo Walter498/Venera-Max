@@ -219,8 +219,28 @@ void main() {
     expect(source.preferredCommentSort(chapter: true), 'hot');
     expect(replacement, isNotNull);
     expect(replacement!.sort, 'hot');
-    // Drain the selection's real file IO only after the callback has run.
-    await tester.runAsync(() => source.saveData());
+    // Observe the menu callback's own save, never enqueue another saveData:
+    // its fake-async continuation cannot finish while runAsync waits for a
+    // second save behind _isSaving. Alternate bounded real IO with fake time.
+    Future<bool> selectionWasPersisted() async {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final file = File('${temp.path}/comic_source/sort_fixture.data');
+      if (!await file.exists()) return false;
+      final saved = jsonDecode(await file.readAsString());
+      final preferences = saved is Map ? saved['commentSortPreferences'] : null;
+      final provider = preferences is Map ? preferences['tencent'] : null;
+      return provider is Map && provider['chapter'] == 'hot';
+    }
+    var persisted = false;
+    for (var i = 0; i < 50 && !persisted; i++) {
+      persisted = await tester.runAsync(() => selectionWasPersisted()
+        .timeout(const Duration(seconds: 2))) ?? false;
+      // Release the original save's fake-async IO continuations/timers between
+      // checks; do not await that save from the real-async zone.
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(persisted, isTrue,
+      reason: 'Menu selection did not persist tencent.chapter=hot after 50 checks');
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
     stage('reader-rebuilt');
@@ -245,6 +265,7 @@ void main() {
     feeds.dispose();
     await tester.pump();
     expect(tester.takeException(), isNull);
+    debugPrint('sort-stage=done');
   });
 
   testWidgets('borrowed old footer survives pending replacement and late result', (tester) async {
