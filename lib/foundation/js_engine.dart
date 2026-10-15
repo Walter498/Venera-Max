@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:html/parser.dart' as html;
 import 'package:html/dom.dart' as dom;
 import 'package:flutter_qjs/flutter_qjs.dart';
+import 'package:venera/foundation/js_promise_observer.dart';
 import 'package:pointycastle/api.dart';
 import 'package:pointycastle/asn1/asn1_parser.dart';
 import 'package:pointycastle/asn1/primitives/asn1_integer.dart';
@@ -100,7 +101,7 @@ class JsEngine with _JSEngineApi, JsUiApi, Init {
         ),
       );
       _closed = false;
-      _engine = FlutterQjs();
+      _engine = FlutterQjs(hostPromiseRejectionHandler: reportUnhandledJsPromise);
       _engine!.dispatch();
       var setGlobalFunc = _engine!.evaluate(
         "(key, value) => { this[key] = value; }",

@@ -2470,17 +2470,33 @@ class _ContinuousModeState extends State<_ContinuousMode>
 
     if (!_scrollController.hasClients) return;
 
-    // Fast path: target already laid out — one precise move.
+    // A precise offset is only valid for the measured frame. Rebuilding an
+    // earlier footer/image can change its extent in the next sliver layout.
+    // Keep the coordinator's target until actual geometry has stabilized.
+    Future<void> alignLaidOutTarget() async {
+      var stableFrames = 0;
+      for (var attempt = 0; attempt < 8; attempt++) {
+        if (!mounted || !_scrollController.hasClients || isStale()) return;
+        final measured = _offsetDeltaToEntry(chapter, page);
+        if (measured == null) return;
+        final correction = measured - _centerAdjust(chapter, page, center);
+        if (correction.abs() > 0.5) {
+          stableFrames = 0;
+          await _applyScroll(_scrollController.position.pixels + correction,
+              animate: attempt == 0 && animate, duration: duration);
+        } else {
+          stableFrames++;
+        }
+        await WidgetsBinding.instance.endOfFrame;
+        if (stableFrames >= 2) return;
+      }
+    }
+
+    // Fast path: target already laid out, then verify the next layout.
     final delta = _offsetDeltaToEntry(chapter, page);
     if (delta != null) {
       trace('precise');
-      await _applyScroll(
-        _scrollController.position.pixels +
-            delta -
-            _centerAdjust(chapter, page, center),
-        animate: animate,
-        duration: duration,
-      );
+      await alignLaidOutTarget();
       return;
     }
 
@@ -2513,10 +2529,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       final refDelta = _offsetDeltaToEntry(ref.chapter, ref.page) ?? 0;
       final refIdx = _indexOfEntry(ref.chapter, ref.page);
       if (refIdx == targetIdx) {
-        await _applyScroll(
-          pos.pixels + refDelta - _centerAdjust(chapter, page, center),
-          animate: animate,
-        );
+        await alignLaidOutTarget();
         return;
       }
       // Estimate per-entry extent from the reference item's own size.
@@ -2543,12 +2556,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       // Did the target come into layout? If so, finish precisely.
       final d = _offsetDeltaToEntry(chapter, page);
       if (d != null) {
-        await _applyScroll(
-          _scrollController.position.pixels +
-              d -
-              _centerAdjust(chapter, page, center),
-          animate: animate,
-        );
+        await alignLaidOutTarget();
         return;
       }
     }

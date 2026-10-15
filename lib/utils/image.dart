@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:flutter_qjs/flutter_qjs.dart';
+import 'package:venera/foundation/js_promise_observer.dart';
 import 'package:lodepng_flutter/lodepng_flutter.dart' as lodepng;
 
 class Image {
@@ -233,7 +234,7 @@ class Color {
 
 class JsEngine {
   // Each task owns its runtime; never reuse a closed isolate-local singleton.
-  JsEngine() : _engine = FlutterQjs();
+  JsEngine() : _engine = FlutterQjs(hostPromiseRejectionHandler: reportUnhandledJsPromise);
 
   final FlutterQjs _engine;
   final _exports = HashSet<JSRef>.identity();

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_qjs/flutter_qjs.dart';
+import 'package:venera/foundation/js_promise_observer.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/network/images.dart';
 
@@ -72,7 +73,7 @@ void main() {
   );
 
   setUp(() {
-    js = FlutterQjs();
+    js = FlutterQjs(hostPromiseRejectionHandler: reportUnhandledJsPromise);
     unawaited(js.dispatch());
     tracked = [];
   });
