@@ -951,6 +951,10 @@ ValueChanged<ReaderContinuousSessionWork>? debugReaderContinuousSessionWork;
 @visibleForTesting
 ValueChanged<int>? debugReaderContinuousIndexProbes;
 
+/// Opt-in navigation evidence; no image URLs or comic/source identifiers.
+@visibleForTesting
+ValueChanged<Map<String, Object?>>? debugReaderContinuousNavigation;
+
 /// Tracks the image's layout shell rather than ComicImage's async image state.
 /// Deactivated global-key children must not participate until reactivated.
 class _ContinuousImageGeometry extends StatefulWidget {
@@ -2418,6 +2422,36 @@ class _ContinuousModeState extends State<_ContinuousMode>
     Duration? duration,
   }) async {
     bool isStale() => isCurrent != null && !isCurrent();
+    void trace(String stage, [Map<String, Object?> extra = const {}]) {
+      final report = debugReaderContinuousNavigation;
+      if (report == null) {
+        return;
+      }
+      final pos = _scrollController.hasClients ? _scrollController.position : null;
+      final intended = _pageTurnCoordinator.intendedTarget;
+      report({
+        'stage': stage, 'chapter': chapter, 'page': page,
+        'actualChapter': reader.chapter, 'actualPage': reader.page,
+        'intendedChapter': intended?.chapter, 'intendedPage': intended?.page,
+        'targetIndex': _indexOfEntry(chapter, page), 'anchor': _anchorIndex,
+        'pixels': pos?.pixels, 'min': pos?.minScrollExtent,
+        'max': pos?.maxScrollExtent, 'stale': isStale(),
+        'delta': _offsetDeltaToEntry(chapter, page),
+        'images': [for (final (entry, box) in _laidOutImages()) {
+          'chapter': entry.chapter, 'page': entry.page,
+          'width': box.size.width, 'height': box.size.height,
+          'delta': _offsetDeltaToEntry(entry.chapter, entry.page),
+        }], ...extra,
+      });
+    }
+    trace('start');
+    if (debugReaderContinuousNavigation != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          trace('nextFrame');
+        }
+      });
+    }
     if (isStale()) return;
 
     if (maxStepExtent == null) {
@@ -2439,6 +2473,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
     // Fast path: target already laid out — one precise move.
     final delta = _offsetDeltaToEntry(chapter, page);
     if (delta != null) {
+      trace('precise');
       await _applyScroll(
         _scrollController.position.pixels +
             delta -
@@ -2463,6 +2498,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       // Find any currently laid-out image entry to use as a reference point.
       final ref = _firstLaidOutEntry();
       if (ref == null) {
+        trace('noReference', {'attempt': attempt});
         // Nothing measurable yet: step toward the target so an unresolved
         // middle target cannot be mistaken for the scroll tail.
         await _applyScroll(
@@ -2495,6 +2531,11 @@ class _ContinuousModeState extends State<_ContinuousMode>
         maxScrollExtent: pos.maxScrollExtent,
         maxStepExtent: maxStepExtent,
       );
+      trace('estimate', {
+        'attempt': attempt, 'referenceChapter': ref.chapter,
+        'referencePage': ref.page, 'referenceIndex': refIdx,
+        'referenceDelta': refDelta, 'unit': unit, 'estimate': estimate,
+      });
       await _applyScroll(estimate, animate: false);
       await WidgetsBinding.instance.endOfFrame;
       if (isStale()) return;
@@ -2511,6 +2552,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
         return;
       }
     }
+    trace('exhausted', {'attempts': maxAttempts});
   }
 
   /// Makes (chapter, page) the pivot and shows it at the leading edge.
@@ -2637,10 +2679,22 @@ class _ContinuousModeState extends State<_ContinuousMode>
     bool Function() isCurrent,
   ) async {
     if (!mounted || !entry.isImage) return;
+    debugReaderContinuousNavigation?.call({
+      'stage': 'prepareStart', 'chapter': entry.chapter, 'page': entry.page,
+      'actualChapter': reader.chapter, 'actualPage': reader.page,
+    });
     try {
       await _precacheImageEntry(entry, context);
     } catch (_) {
       // Keep the normal image error UI reachable when warm-up fails.
+    } finally {
+      if (mounted) {
+        debugReaderContinuousNavigation?.call({
+          'stage': 'prepareEnd', 'chapter': entry.chapter, 'page': entry.page,
+          'actualChapter': reader.chapter, 'actualPage': reader.page,
+          'stale': !isCurrent(),
+        });
+      }
     }
   }
 

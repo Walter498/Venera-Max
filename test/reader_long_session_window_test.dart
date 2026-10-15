@@ -181,6 +181,7 @@ class ReaderCommentsFixture extends ComicSource {
       tester.view.devicePixelRatio = 1;
       final sessions = <ReaderContinuousSessionWork>[];
       final probes = <int>[];
+      final navigation = <Map<String, Object?>>[];
       try {
         await tester.runAsync(() async {
           try {
@@ -188,6 +189,12 @@ class ReaderCommentsFixture extends ComicSource {
             final dynamic state = await mount(tester, s, mode, comments: true);
             debugReaderContinuousSessionWork = sessions.add;
             debugReaderContinuousIndexProbes = probes.add;
+            debugReaderContinuousNavigation = (event) {
+              navigation.add(event);
+              if (navigation.length > 16) {
+                navigation.removeAt(0);
+              }
+            };
             ScrollController controller() => tester.widget<CustomScrollView>(
               find.descendant(of: find.byType(Reader),
                 matching: find.byType(CustomScrollView))).controller!;
@@ -262,7 +269,21 @@ class ReaderCommentsFixture extends ComicSource {
                   for (var wait = 0; wait < 40; wait++) {
                     await frames(tester, 1);
                     if (state.chapter == targetChapter &&
-                        state.page == targetPage) break;
+                        state.page == targetPage) {
+                      break;
+                    }
+                  }
+                  if (state.chapter != targetChapter || state.page != targetPage) {
+                    final pos = controller().position;
+                    debugPrint('READER_REVERSE_FAILURE ${jsonEncode({
+                      'mode': mode, 'fromChapter': chapter, 'fromPage': page,
+                      'targetChapter': targetChapter, 'targetPage': targetPage,
+                      'actualChapter': state.chapter, 'actualPage': state.page,
+                      'pixels': pos.pixels, 'min': pos.minScrollExtent,
+                      'max': pos.maxScrollExtent,
+                      'viewport': pos.viewportDimension,
+                      'navigation': navigation,
+                    })}');
                   }
                   expect(state.chapter, targetChapter);
                   expect(state.page, targetPage);
@@ -283,6 +304,7 @@ class ReaderCommentsFixture extends ComicSource {
           } finally {
             debugReaderContinuousSessionWork = null;
             debugReaderContinuousIndexProbes = null;
+            debugReaderContinuousNavigation = null;
             JsEngine().runCode('if (globalThis.resolveReaderComments) globalThis.resolveReaderComments({available:false});');
             await tester.pumpWidget(const SizedBox.shrink());
             await frames(tester, 20);
@@ -299,6 +321,7 @@ class ReaderCommentsFixture extends ComicSource {
       } finally {
         debugReaderContinuousSessionWork = null;
         debugReaderContinuousIndexProbes = null;
+        debugReaderContinuousNavigation = null;
         debugDefaultTargetPlatformOverride = previous;
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
