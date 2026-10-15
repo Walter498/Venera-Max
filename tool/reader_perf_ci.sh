@@ -11,10 +11,14 @@ case "$phase" in
   python3 tool/reader_perf_validate_artifacts.py --self-test
   printf '{"commit":"%s","kind":"reader performance candidate","release_accepted":false}\n' "$GITHUB_SHA" > "$evidence/reader-provenance.json"
   ;;
- dependencies-ios|analyze|native-tests)
+ dependencies-ios|analyze)
   bash tool/comments_ci_run.sh "$phase"
   ;;
- focused|lifetime|history|window|stream)
+ native-tests)
+  bash tool/comments_ci_run.sh native-tests
+  python3 tool/reader_perf_prepare_png.py
+  ;;
+ focused|lifetime|history|window|stream|cache|hooks|script)
   python3 tool/reader_perf_test_runner.py "$phase"
   ;;
  regression)

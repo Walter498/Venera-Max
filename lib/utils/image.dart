@@ -1,7 +1,10 @@
+import 'dart:collection';
 import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:flutter_qjs/flutter_qjs.dart';
 import 'package:lodepng_flutter/lodepng_flutter.dart' as lodepng;
@@ -24,22 +27,27 @@ class Image {
   Image.empty(this.width, this.height) : _data = Uint32List(width * height);
 
   static Future<Image> decodeImage(Uint8List data) async {
-    var codec = await ui.instantiateImageCodec(data);
-    var frame = await codec.getNextFrame();
-    codec.dispose();
-    var info = await frame.image.toByteData(
-      format: ui.ImageByteFormat.rawStraightRgba,
-    );
-    if (info == null) {
-      throw Exception('Failed to decode image');
+    final codec = await ui.instantiateImageCodec(data);
+    try {
+      final frame = await codec.getNextFrame();
+      try {
+        final info = await frame.image.toByteData(
+          format: ui.ImageByteFormat.rawStraightRgba,
+        );
+        if (info == null) {
+          throw Exception('Failed to decode image');
+        }
+        return Image(
+          info.buffer.asUint32List(),
+          frame.image.width,
+          frame.image.height,
+        );
+      } finally {
+        frame.image.dispose();
+      }
+    } finally {
+      codec.dispose();
     }
-    var image = Image(
-      info.buffer.asUint32List(),
-      frame.image.width,
-      frame.image.height,
-    );
-    frame.image.dispose();
-    return image;
   }
 
   Color getPixelAtIndex(int index) {
@@ -224,24 +232,64 @@ class Color {
 }
 
 class JsEngine {
-  static final JsEngine _instance = JsEngine._();
+  // Each task owns its runtime; never reuse a closed isolate-local singleton.
+  JsEngine() : _engine = FlutterQjs();
 
-  factory JsEngine() => _instance;
+  final FlutterQjs _engine;
+  final _exports = HashSet<JSRef>.identity();
+  void Function(String)? _onLifetimeEvent;
 
-  JsEngine._() {
-    _engine = FlutterQjs();
-    _engine!.dispatch();
-    var setGlobalFunc = _engine!.evaluate(
+  void _initChannel() {
+    _engine.dispatch();
+    final setter = _engine.evaluate(
       "(key, value) => { this[key] = value; }",
-    );
-    (setGlobalFunc as JSInvokable)(["sendMessage", _messageReceiver]);
-    setGlobalFunc.free();
+    ) as JSInvokable;
+    try {
+      setter(["sendMessage", _messageReceiver]);
+    } finally {
+      setter.destroy();
+    }
   }
 
-  FlutterQjs? _engine;
-
   dynamic runCode(String js, [String? name]) {
-    return _engine!.evaluate(js, name: name);
+    final result = _engine.evaluate(js, name: name);
+    // A script's completion value can export functions, including nested ones.
+    // Keep them alive until the task ends, then destroy before strict close.
+    final seen = HashSet<Object>.identity();
+    void own(dynamic value) {
+      if (value == null || !seen.add(value)) return;
+      if (value is JSRef && _exports.add(value)) {
+        _onLifetimeEvent?.call('ref.owned');
+      }
+      if (value is List) value.forEach(own);
+      if (value is Map) {
+        value.keys.forEach(own);
+        value.values.forEach(own);
+      }
+    }
+    own(result);
+    return result;
+  }
+
+  void _close() {
+    try {
+      for (final ref in _exports) {
+        ref.destroy();
+        _onLifetimeEvent?.call('ref.destroyed');
+      }
+    } finally {
+      _exports.clear();
+      images.clear();
+      _onLifetimeEvent?.call('images.cleared');
+      try {
+        // Do not suppress the dependency's reference-leak check.
+        _engine.close();
+        _onLifetimeEvent?.call('runtime.closed');
+      } finally {
+        _engine.port.close();
+        _onLifetimeEvent?.call('port.closed');
+      }
+    }
   }
 
   var images = <int, Image>{};
@@ -322,6 +370,55 @@ class JsEngine {
   }
 }
 
+Uint8List _runImageScript(
+  Image image,
+  String initJs,
+  String script, {
+  void Function(String)? onLifetimeEvent,
+}) {
+  final jsEngine = JsEngine();
+  jsEngine._onLifetimeEvent = onLifetimeEvent;
+  try {
+    jsEngine._initChannel();
+    onLifetimeEvent?.call('runtime.ready');
+    jsEngine.runCode(initJs, '<init>');
+    jsEngine.runCode(script);
+    final key = jsEngine.setImage(image);
+    final res = jsEngine.runCode('''
+      let func = () => {
+        let image = new Image($key);
+        let result = modifyImage(image);
+        return result.key;
+      }
+      func();
+    ''');
+    final newImage = jsEngine.images[res];
+    // Detach the result before releasing any task-owned resources.
+    return Uint8List.fromList(newImage!.encodePng());
+  } finally {
+    jsEngine._close();
+  }
+}
+
+/// Runs the exact worker body on the calling isolate so tests can observe
+/// lifetime events. Production always uses Isolate.run below.
+@visibleForTesting
+Future<Uint8List> runImageScriptForTesting(
+  Uint8List data,
+  String script, {
+  required void Function(String) onLifetimeEvent,
+  String? initScript,
+}) async {
+  final image = await Image.decodeImage(data);
+  final initJs = initScript ?? await rootBundle.loadString('assets/init.js');
+  return _runImageScript(
+    image,
+    initJs,
+    script,
+    onLifetimeEvent: onLifetimeEvent,
+  );
+}
+
 var _tasksCount = 0;
 
 Future<Uint8List> modifyImageWithScript(Uint8List data, String script) async {
@@ -332,23 +429,7 @@ Future<Uint8List> modifyImageWithScript(Uint8List data, String script) async {
   try {
     var image = await Image.decodeImage(data);
     var initJs = await rootBundle.loadString('assets/init.js');
-    return await Isolate.run(() {
-      var jsEngine = JsEngine();
-      jsEngine.runCode(initJs, '<init>');
-      jsEngine.runCode(script);
-      var key = jsEngine.setImage(image);
-      var res = jsEngine.runCode('''
-        let func = () => {
-          let image = new Image($key);
-          let result = modifyImage(image);
-          return result.key;
-        }
-        func();
-      ''');
-      var newImage = jsEngine.images[res];
-      var data = newImage!.encodePng();
-      return Uint8List.fromList(data);
-    });
+    return await Isolate.run(() => _runImageScript(image, initJs, script));
   } finally {
     _tasksCount--;
   }

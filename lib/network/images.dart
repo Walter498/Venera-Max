@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:venera/foundation/cache_manager.dart';
@@ -15,6 +15,54 @@ import 'package:venera/foundation/image_provider/avif_fallback.dart';
 import 'app_dio.dart';
 
 const _imageStreamIdleTimeout = Duration(seconds: 30);
+
+// Dynamic runCode results own native references, independently of the source.
+// Collect before freeing: aliases/cycles and wrappers reused by the next config
+// must not cause a double free or invalidate a still-live replacement.
+class _ImageConfigOwner {
+  Set<JSInvokable> _handles = HashSet<JSInvokable>.identity();
+
+  void replace(Object? value) {
+    final next = HashSet<JSInvokable>.identity();
+    final visited = HashSet<Object>.identity();
+    void visit(Object? node) {
+      if (node == null || !visited.add(node)) return;
+      if (node is JSInvokable) {
+        next.add(node);
+      } else if (node is Map) {
+        for (final entry in node.entries) {
+          visit(entry.key);
+          visit(entry.value);
+        }
+      } else if (node is List) {
+        for (final item in node) {
+          visit(item);
+        }
+      }
+    }
+    visit(value);
+    final previous = _handles;
+    _handles = next;
+    for (final handle in previous) {
+      if (!next.contains(handle)) handle.free();
+    }
+  }
+
+  void retain(Object? value) => replace([value, ..._handles]);
+
+  void dispose() => replace(null);
+}
+
+// Per-call seam, never global: tests run the real downloader/retry/finally with
+// real QJS handles, replacing only disk, transport and retry sleeps.
+class _ImageTaskHooks {
+  final Future<Map<String, dynamic>> Function() config;
+  final Future<Response<ResponseBody>> Function(Map<String, dynamic>) request;
+  final Future<void> Function(List<int>) write;
+  final Future<Uint8List> Function(Uint8List, dynamic)? modify;
+
+  const _ImageTaskHooks(this.config, this.request, this.write, this.modify);
+}
 
 abstract class ImageDownloader {
   /// Disk cache key for a thumbnail/cover. Callers that may need to evict a
@@ -41,6 +89,13 @@ abstract class ImageDownloader {
     String url,
     String? sourceKey, [
     String? cid,
+  ]) => _loadThumbnail(url, sourceKey, cid);
+
+  static Stream<ImageDownloadProgress> _loadThumbnail(
+    String url,
+    String? sourceKey,
+    String? cid, [
+    _ImageTaskHooks? hooks,
   ]) async* {
     // A locally stored cover (a collection's custom cover, or one borrowed from
     // a downloaded member) can't go through the HTTP client: it rejects the
@@ -60,7 +115,9 @@ abstract class ImageDownloader {
     }
 
     final cacheKey = thumbnailCacheKey(url, sourceKey, cid);
-    final cache = await CacheManager().findCache(cacheKey);
+    final cache = hooks == null
+        ? await CacheManager().findCache(cacheKey)
+        : null;
 
     if (cache != null) {
       var data = await cache.readAsBytes();
@@ -71,83 +128,112 @@ abstract class ImageDownloader {
       );
     }
 
-    var configs = <String, dynamic>{};
-    if (sourceKey != null) {
-      var comicSource = ComicSource.find(sourceKey);
-      configs =
-          (await comicSource?.getThumbnailLoadingConfig?.call(url, cid)) ?? {};
-    }
-    configs['headers'] ??= {};
-    if (configs['headers']['user-agent'] == null &&
-        configs['headers']['User-Agent'] == null) {
-      configs['headers']['user-agent'] = webUA;
-    }
-
-    if (((configs['url'] as String?) ?? url).startsWith('cover.') &&
-        sourceKey != null) {
-      var comicSource = ComicSource.find(sourceKey);
-      if (comicSource != null) {
-        var comicInfo = await comicSource.loadComicInfo!(cid!);
-        yield* loadThumbnail(comicInfo.data.cover, sourceKey);
-        return;
+    final owner = _ImageConfigOwner();
+    try {
+      var configs = <String, dynamic>{};
+      if (hooks != null) {
+        configs = await hooks.config();
+      } else if (sourceKey != null) {
+        var comicSource = ComicSource.find(sourceKey);
+        configs =
+            (await comicSource?.getThumbnailLoadingConfig?.call(url, cid)) ?? {};
       }
-    }
-
-    var dio = AppDio(
-      BaseOptions(
-        headers: Map<String, dynamic>.from(configs['headers']),
-        method: configs['method'] ?? 'GET',
-        responseType: ResponseType.stream,
-      ),
-    );
-
-    String requestUrl = configs['url'] ?? url;
-    if (requestUrl.startsWith('//')) {
-      requestUrl = 'https:$requestUrl';
-    }
-    var req = await dio.request<ResponseBody>(
-      requestUrl,
-      data: configs['data'],
-    );
-    var stream = req.data?.stream ?? (throw "Error: Empty response body.");
-    int? expectedBytes = req.data!.contentLength;
-    if (expectedBytes == -1) {
-      expectedBytes = null;
-    }
-    var buffer = <int>[];
-    await for (var data in stream.timeout(_imageStreamIdleTimeout)) {
-      buffer.addAll(data);
-      if (expectedBytes != null) {
-        yield ImageDownloadProgress(
-          currentBytes: buffer.length,
-          totalBytes: expectedBytes,
-        );
+      owner.replace(configs);
+      configs['headers'] ??= {};
+      if (configs['headers']['user-agent'] == null &&
+          configs['headers']['User-Agent'] == null) {
+        configs['headers']['user-agent'] = webUA;
       }
-    }
 
-    // Matches the comic-image path below: an async hook must be awaited, and an
-    // unchecked return would cache a Future/JS object as if it were image bytes.
-    if (configs['onResponse'] is JSInvokable) {
-      dynamic result = (configs['onResponse'] as JSInvokable)([
-        Uint8List.fromList(buffer),
-      ]);
-      if (result is Future) {
-        result = await result;
+      if (((configs['url'] as String?) ?? url).startsWith('cover.') &&
+          sourceKey != null) {
+        var comicSource = ComicSource.find(sourceKey);
+        if (comicSource != null) {
+          var comicInfo = await comicSource.loadComicInfo!(cid!);
+          yield* loadThumbnail(comicInfo.data.cover, sourceKey);
+          return;
+        }
       }
-      if (result is List<int>) {
-        buffer = result;
+
+      final dio = hooks == null
+          ? AppDio(
+              BaseOptions(
+                headers: Map<String, dynamic>.from(configs['headers']),
+                method: configs['method'] ?? 'GET',
+                responseType: ResponseType.stream,
+              ),
+            )
+          : null;
+
+      String requestUrl = configs['url'] ?? url;
+      if (requestUrl.startsWith('//')) {
+        requestUrl = 'https:$requestUrl';
+      }
+      var req = hooks != null
+          ? await hooks.request(configs)
+          : await dio!.request<ResponseBody>(requestUrl, data: configs['data']);
+      var stream = req.data?.stream ?? (throw "Error: Empty response body.");
+      int? expectedBytes = req.data!.contentLength;
+      if (expectedBytes == -1) {
+        expectedBytes = null;
+      }
+      var buffer = <int>[];
+      await for (var data in stream.timeout(_imageStreamIdleTimeout)) {
+        buffer.addAll(data);
+        if (expectedBytes != null) {
+          yield ImageDownloadProgress(
+            currentBytes: buffer.length,
+            totalBytes: expectedBytes,
+          );
+        }
+      }
+
+      // Matches the comic-image path below: an async hook must be awaited, and an
+      // unchecked return would cache a Future/JS object as if it were image bytes.
+      if (configs['onResponse'] is JSInvokable) {
+        dynamic result = (configs['onResponse'] as JSInvokable)([
+          Uint8List.fromList(buffer),
+        ]);
+        if (result is Future) {
+          result = await result;
+        }
+        if (result is List<int>) {
+          buffer = result;
+        } else {
+          owner.retain(result);
+          throw "Error: Invalid onResponse result.";
+        }
+      }
+
+      if (hooks != null) {
+        await hooks.write(buffer);
       } else {
-        throw "Error: Invalid onResponse result.";
+        await CacheManager().writeCache(cacheKey, buffer);
       }
-      (configs['onResponse'] as JSInvokable).free();
+      yield ImageDownloadProgress(
+        currentBytes: buffer.length,
+        totalBytes: buffer.length,
+        imageBytes: Uint8List.fromList(buffer),
+      );
+    } finally {
+      owner.dispose();
     }
+  }
 
-    await CacheManager().writeCache(cacheKey, buffer);
-    yield ImageDownloadProgress(
-      currentBytes: buffer.length,
-      totalBytes: buffer.length,
-      imageBytes: Uint8List.fromList(buffer),
-    );
+  /// Uses production hook ownership, retries and stream cancellation; no IO.
+  @visibleForTesting
+  static Stream<ImageDownloadProgress> debugLoadImageTask({
+    required Future<Map<String, dynamic>> Function() config,
+    required Future<Response<ResponseBody>> Function(Map<String, dynamic>) request,
+    required Future<void> Function(List<int>) write,
+    Future<Uint8List> Function(Uint8List, dynamic)? modify,
+    bool thumbnail = false,
+  }) {
+    final hooks = _ImageTaskHooks(config, request, write, modify);
+    return thumbnail
+        ? _loadThumbnail('https://fixture.invalid/image', null, null, hooks)
+        : _loadComicImage('https://fixture.invalid/image', null, 'c', 'e',
+            false, null, hooks);
   }
 
   static final _loadingImages =
@@ -235,11 +321,14 @@ abstract class ImageDownloader {
     String eid, [
     bool forDownload = false,
     void Function(Duration? retryAfter)? onRateLimited,
+    _ImageTaskHooks? hooks,
   ]) async* {
     // AVIF 曾解碼失敗 → 自動改用 WebP
     imageKey = AvifFallbackRegistry.instance.applyFallback(imageKey);
     final cacheKey = imageCacheKey(imageKey, sourceKey, cid, eid);
-    final cache = await CacheManager().findCache(cacheKey);
+    final cache = hooks == null
+        ? await CacheManager().findCache(cacheKey)
+        : null;
 
     if (cache != null) {
       var data = await cache.readAsBytes();
@@ -255,195 +344,205 @@ abstract class ImageDownloader {
       return;
     }
 
-    Future<Map<String, dynamic>?> Function()? onLoadFailed;
+    Future<dynamic> Function()? onLoadFailed;
 
-    var configs = <String, dynamic>{};
-    if (sourceKey != null) {
-      var comicSource = ComicSource.find(sourceKey);
-      configs =
-          (await comicSource!.getImageLoadingConfig?.call(
-            imageKey,
-            cid,
-            eid,
-          )) ??
-          {};
-    }
-    var retryLimit = 5;
-    var netRetries = 3;
-    // 泛用修復（栗子方案的推廣）：這次載入是否已經重新向源要過頁面清單。
-    var refreshedPageList = false;
-    while (true) {
-      try {
-        // 統一帶 UA：原本用 ??= ，只要源回傳的 headers 不是 null（例如回空 map
-        // 或只帶自己的 header），UA 就補不上 → 下載內頁變成裸請求 → CDN 回
-        // 403/404（閱讀走源 headers 所以正常）。這裡改成「缺 UA 就補」，
-        // 讓閱讀與下載走完全相同的請求形狀。
-        configs['headers'] ??= <String, dynamic>{};
-        var headers = Map<String, dynamic>.from(configs['headers'] as Map);
-        var hasUA = false;
-        for (var key in headers.keys) {
-          if (key.toString().toLowerCase() == 'user-agent') {
-            hasUA = true;
-            break;
+    final owner = _ImageConfigOwner();
+    try {
+      var configs = <String, dynamic>{};
+      if (hooks != null) {
+        configs = await hooks.config();
+      } else if (sourceKey != null) {
+        var comicSource = ComicSource.find(sourceKey);
+        configs =
+            (await comicSource!.getImageLoadingConfig?.call(
+              imageKey,
+              cid,
+              eid,
+            )) ??
+            {};
+      }
+      owner.replace(configs);
+      var retryLimit = 5;
+      var netRetries = 3;
+      // 泛用修復（栗子方案的推廣）：這次載入是否已經重新向源要過頁面清單。
+      var refreshedPageList = false;
+      while (true) {
+        try {
+          // 統一帶 UA：原本用 ??= ，只要源回傳的 headers 不是 null（例如回空 map
+          // 或只帶自己的 header），UA 就補不上 → 下載內頁變成裸請求 → CDN 回
+          // 403/404（閱讀走源 headers 所以正常）。這裡改成「缺 UA 就補」，
+          // 讓閱讀與下載走完全相同的請求形狀。
+          configs['headers'] ??= <String, dynamic>{};
+          var headers = Map<String, dynamic>.from(configs['headers'] as Map);
+          var hasUA = false;
+          for (var key in headers.keys) {
+            if (key.toString().toLowerCase() == 'user-agent') {
+              hasUA = true;
+              break;
+            }
           }
-        }
-        if (!hasUA) {
-          headers['user-agent'] = webUA;
-        }
-        configs['headers'] = headers;
+          if (!hasUA) {
+            headers['user-agent'] = webUA;
+          }
+          configs['headers'] = headers;
 
-        if (configs['onLoadFailed'] is JSInvokable) {
-          onLoadFailed = () async {
-            dynamic result = (configs['onLoadFailed'] as JSInvokable)([]);
+          if (configs['onLoadFailed'] is JSInvokable) {
+            onLoadFailed = () async {
+              dynamic result = (configs['onLoadFailed'] as JSInvokable)([]);
+              if (result is Future) {
+                result = await result;
+              }
+              return result;
+            };
+          }
+
+          final dio = hooks == null
+              ? AppDio(
+                  BaseOptions(
+                    headers: configs['headers'],
+                    method: configs['method'] ?? 'GET',
+                    responseType: ResponseType.stream,
+                  ),
+                )
+              : null;
+
+          var req = hooks != null
+              ? await hooks.request(configs)
+              : await dio!.request<ResponseBody>(
+                  configs['url'] ?? imageKey, data: configs['data']);
+          var stream = req.data?.stream ?? (throw "Error: Empty response body.");
+          int? expectedBytes = req.data!.contentLength;
+          if (expectedBytes == -1) {
+            expectedBytes = null;
+          }
+          var buffer = <int>[];
+          await for (var data in stream.timeout(_imageStreamIdleTimeout)) {
+            buffer.addAll(data);
+            yield ImageDownloadProgress(
+              currentBytes: buffer.length,
+              totalBytes: expectedBytes,
+            );
+          }
+
+          if (configs['onResponse'] is JSInvokable) {
+            dynamic result = (configs['onResponse'] as JSInvokable)([
+              Uint8List.fromList(buffer),
+            ]);
             if (result is Future) {
               result = await result;
             }
-            if (result is! Map<String, dynamic>) return null;
-            return result;
-          };
-        }
-
-        var dio = AppDio(
-          BaseOptions(
-            headers: configs['headers'],
-            method: configs['method'] ?? 'GET',
-            responseType: ResponseType.stream,
-          ),
-        );
-
-        var req = await dio.request<ResponseBody>(
-          configs['url'] ?? imageKey,
-          data: configs['data'],
-        );
-        var stream = req.data?.stream ?? (throw "Error: Empty response body.");
-        int? expectedBytes = req.data!.contentLength;
-        if (expectedBytes == -1) {
-          expectedBytes = null;
-        }
-        var buffer = <int>[];
-        await for (var data in stream.timeout(_imageStreamIdleTimeout)) {
-          buffer.addAll(data);
-          yield ImageDownloadProgress(
-            currentBytes: buffer.length,
-            totalBytes: expectedBytes,
-          );
-        }
-
-        if (configs['onResponse'] is JSInvokable) {
-          dynamic result = (configs['onResponse'] as JSInvokable)([
-            Uint8List.fromList(buffer),
-          ]);
-          if (result is Future) {
-            result = await result;
+            if (result is List<int>) {
+              buffer = result;
+            } else {
+              owner.retain(result);
+              throw "Error: Invalid onResponse result.";
+            }
           }
-          if (result is List<int>) {
-            buffer = result;
+
+          Uint8List data;
+          if (buffer is Uint8List) {
+            data = buffer;
           } else {
-            throw "Error: Invalid onResponse result.";
+            data = Uint8List.fromList(buffer);
+            buffer.clear();
           }
-          (configs['onResponse'] as JSInvokable).free();
-        }
 
-        Uint8List data;
-        if (buffer is Uint8List) {
-          data = buffer;
-        } else {
-          data = Uint8List.fromList(buffer);
-          buffer.clear();
-        }
+          if (configs['modifyImage'] != null) {
+            var newData = hooks?.modify != null
+                ? await hooks!.modify!(data, configs['modifyImage'])
+                : await modifyImageWithScript(data, configs['modifyImage']);
+            data = newData;
+          }
 
-        if (configs['modifyImage'] != null) {
-          var newData = await modifyImageWithScript(
-            data,
-            configs['modifyImage'],
+          if (!forDownload) {
+            if (hooks != null) {
+              await hooks.write(data);
+            } else {
+              await CacheManager().writeCache(cacheKey, data);
+            }
+          }
+          yield ImageDownloadProgress(
+            currentBytes: data.length,
+            totalBytes: data.length,
+            imageBytes: data,
           );
-          data = newData;
-        }
-
-        if (!forDownload) {
-          await CacheManager().writeCache(cacheKey, data);
-        }
-        yield ImageDownloadProgress(
-          currentBytes: data.length,
-          totalBytes: data.length,
-          imageBytes: data,
-        );
-        return;
-      } catch (e) {
-        // The source's own recovery hook takes priority over the generic
-        // net-retry below: onLoadFailed is how a source re-signs / refreshes an
-        // expired image URL, which typically surfaces as a 403/401 (a
-        // clientError). Letting the classifier fast-fail those before the hook
-        // ran would silently break every source that relies on URL refresh, so
-        // the hook gets first crack at ANY error — the original behavior.
-        if (retryLimit >= 0 && onLoadFailed != null) {
-          var newConfig = await onLoadFailed();
-          (configs['onLoadFailed'] as JSInvokable).free();
-          onLoadFailed = null;
-          if (newConfig == null) {
-            rethrow;
-          }
-          configs = newConfig;
-          retryLimit--;
-          continue;
-        }
-        // A hook exists but its retry budget is spent: rethrow, matching the
-        // original behavior. (Falling through to net-retry here would re-free
-        // and re-wrap the hook's JSInvokable across loops.)
-        if (onLoadFailed != null) {
-          rethrow;
-        }
-        // No source-provided recovery: retry transient/rate-limited errors a
-        // bounded number of times with backoff (429/503/网络抖动/5xx). This is
-        // the only retry chance for sources without an onLoadFailed hook.
-        var status = e is DioException ? e.response?.statusCode : null;
-        var cls = status != null
-            ? classifyStatus(status)
-            : HttpErrorClass.transient;
-        if ((cls == HttpErrorClass.rateLimited ||
-                cls == HttpErrorClass.transient) &&
-            netRetries > 0) {
-          netRetries--;
-          Duration? ra;
-          if (cls == HttpErrorClass.rateLimited) {
-            ra = e is DioException
-                ? parseRetryAfter(e.response?.headers.value('retry-after'))
-                : null;
-            onRateLimited?.call(ra);
-          }
-          await Future.delayed(backoff(2 - netRetries, retryAfter: ra));
-          continue;
-        }
-        // 403/404 這類客戶端錯誤，多半是「源給的頁面清單過期」——例如舊版
-        // 探測把 CDN 占位圖當真圖而高估頁數（栗子下載 404 的根因）。
-        // 這裡給一次機會：重新向源要一次本章頁面清單，用新清單裡的同位置
-        // URL 再試一次。只做一次，避免無限重試；不影響其他錯誤的快速失敗。
-        if ((status == 403 || status == 404) &&
-            !refreshedPageList &&
-            sourceKey != null &&
-            cid != null &&
-            eid != null) {
-          refreshedPageList = true;
-          final refreshed = await _refreshComicPageUrl(
-            sourceKey!,
-            cid!,
-            eid!,
-            imageKey,
-          );
-          if (refreshed != null && refreshed != imageKey) {
-            // 只換 URL，保留源原本的 headers / hooks
-            configs = Map<String, dynamic>.from(configs)
-              ..['url'] = refreshed;
+          return;
+        } catch (e) {
+          // The source's own recovery hook takes priority over the generic
+          // net-retry below: onLoadFailed is how a source re-signs / refreshes an
+          // expired image URL, which typically surfaces as a 403/401 (a
+          // clientError). Letting the classifier fast-fail those before the hook
+          // ran would silently break every source that relies on URL refresh, so
+          // the hook gets first crack at ANY error — the original behavior.
+          if (retryLimit >= 0 && onLoadFailed != null) {
+            var newConfig = await onLoadFailed();
+            onLoadFailed = null;
+            // Adopt even invalid results before validation so nested ignored
+            // callbacks returned by recovery are also released on exit.
+            owner.replace(newConfig);
+            if (newConfig is! Map<String, dynamic>) {
+              rethrow;
+            }
+            configs = newConfig;
+            retryLimit--;
             continue;
           }
-        }
-        // 4xx（非 429）或重试次数耗尽：重试无益，快速失败。
-        rethrow;
-      } finally {
-        if (onLoadFailed != null) {
-          (configs['onLoadFailed'] as JSInvokable).free();
+          // A hook exists but its retry budget is spent: rethrow.
+          if (onLoadFailed != null) {
+            rethrow;
+          }
+          // No source-provided recovery: retry transient/rate-limited errors a
+          // bounded number of times with backoff (429/503/网络抖动/5xx). This is
+          // the only retry chance for sources without an onLoadFailed hook.
+          var status = e is DioException ? e.response?.statusCode : null;
+          var cls = status != null
+              ? classifyStatus(status)
+              : HttpErrorClass.transient;
+          if ((cls == HttpErrorClass.rateLimited ||
+                  cls == HttpErrorClass.transient) &&
+              netRetries > 0) {
+            netRetries--;
+            Duration? ra;
+            if (cls == HttpErrorClass.rateLimited) {
+              ra = e is DioException
+                  ? parseRetryAfter(e.response?.headers.value('retry-after'))
+                  : null;
+              onRateLimited?.call(ra);
+            }
+            if (hooks == null) {
+              await Future.delayed(backoff(2 - netRetries, retryAfter: ra));
+            }
+            continue;
+          }
+          // 403/404 這類客戶端錯誤，多半是「源給的頁面清單過期」——例如舊版
+          // 探測把 CDN 占位圖當真圖而高估頁數（栗子下載 404 的根因）。
+          // 這裡給一次機會：重新向源要一次本章頁面清單，用新清單裡的同位置
+          // URL 再試一次。只做一次，避免無限重試；不影響其他錯誤的快速失敗。
+          if ((status == 403 || status == 404) &&
+              !refreshedPageList &&
+              sourceKey != null &&
+              cid != null &&
+              eid != null) {
+            refreshedPageList = true;
+            final refreshed = await _refreshComicPageUrl(
+              sourceKey!,
+              cid!,
+              eid!,
+              imageKey,
+            );
+            if (refreshed != null && refreshed != imageKey) {
+              // 只換 URL，保留源原本的 headers / hooks
+              configs = Map<String, dynamic>.from(configs)
+                ..['url'] = refreshed;
+              continue;
+            }
+          }
+          // 4xx（非 429）或重试次数耗尽：重试无益，快速失败。
+          rethrow;
         }
       }
+    } finally {
+      owner.dispose();
     }
   }
 }

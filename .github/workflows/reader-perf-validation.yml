@@ -74,6 +74,36 @@ jobs:
         id: native
         if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         timeout-minutes: 8
+      - name: Indexed cache eviction and cleanup failure recovery
+        run: bash tool/reader_perf_ci.sh cache
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-cache
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+      - name: Per-image native hook lifetime
+        run: bash tool/reader_perf_ci.sh hooks
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-hooks
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+      - name: Per-image script engine and codec disposal
+        run: bash tool/reader_perf_ci.sh script
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 6
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        with:
+          name: reader-perf-script
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
       - name: History queue and bounded chapter feeds
         run: bash tool/reader_perf_ci.sh history
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}

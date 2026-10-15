@@ -18,7 +18,10 @@ mode = sys.argv[1] if len(sys.argv) > 1 else 'focused'
 groups = {
     'focused': (files, 10),
     'lifetime': (['test/reader_image_lifetime_test.dart'], 8),
-    'history': (['test/history_reader_queue_test.dart', 'test/reader_comment_cache_test.dart'], 10),
+    'history': (['test/history_reader_queue_test.dart', 'test/reader_comment_cache_test.dart'], 11),
+    'cache': (['test/cache_scan_index_test.dart', 'test/reader_cache_cleanup_test.dart'], 2),
+    'hooks': (['test/reader_image_hook_lifetime_test.dart'], 1),
+    'script': (['test/reader_script_image_lifetime_test.dart'], 1),
     'window': (['test/reader_long_session_window_test.dart'], 1),
     'stream': (['test/reader_image_prefetch_stream_test.dart', 'test/image_downloader_stream_test.dart'], 2),
 }

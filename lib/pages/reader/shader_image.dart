@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart';
 import 'package:venera/foundation/image_enhance_shader.dart';
 
 typedef ReaderEnhanceParameters = (double, double, double, double);

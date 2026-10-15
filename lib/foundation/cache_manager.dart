@@ -164,6 +164,9 @@ class CacheManager {
     _db.execute('''
       CREATE INDEX IF NOT EXISTS cache_file_location ON cache (dir, name)
     ''');
+    _db.execute('''
+      CREATE INDEX IF NOT EXISTS cache_expires ON cache (expires)
+    ''');
     ready = _scanDir(_dbPath, _cachePath)
         .then((value) async {
           _currentSize = value;
@@ -296,7 +299,11 @@ class CacheManager {
   /// Only check cache if current size is greater than limit size.
   void checkCacheIfRequired() {
     if (_currentSize != null && _currentSize! > _limitSize) {
-      checkCache();
+      // Background cleanup has no awaiting caller; retain its failure as a
+      // diagnostic while checkCache's finally permits the next attempt.
+      checkCache().catchError((Object error, StackTrace stack) {
+        Log.error('Cache', 'Background cleanup failed: $error', stack);
+      });
     }
   }
 
@@ -308,77 +315,83 @@ class CacheManager {
       return;
     }
     _isChecking = true;
-    var res = _db.select(
-      '''
-      SELECT * FROM cache
-      WHERE expires < ?
-    ''',
-      [DateTime.now().millisecondsSinceEpoch],
-    );
-    for (var row in res) {
-      var dir = row[1] as String;
-      var name = row[2] as String;
-      var file = File('$cachePath/$dir/$name');
-      if (await file.exists()) {
-        var size = await file.length();
-        _currentSize = _currentSize! - size;
-        await file.delete();
-      }
-    }
-    if (res.isNotEmpty) {
-      _db.execute(
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      var res = _db.select(
         '''
-      DELETE FROM cache
-      WHERE expires < ?
-    ''',
-        [DateTime.now().millisecondsSinceEpoch],
-      );
-    }
-
-    while (_currentSize != null && _currentSize! > _limitSize) {
-      var res = _db.select('''
         SELECT * FROM cache
-        ORDER BY expires ASC
-        limit 10
-      ''');
-      if (res.isEmpty) {
-        // There are many files unmanaged by the cache manager.
-        // Clear all cache.
-        await Directory(cachePath).delete(recursive: true);
-        Directory(cachePath).createSync(recursive: true);
-        break;
-      }
+        WHERE expires < ?
+      ''',
+        [now],
+      );
       for (var row in res) {
-        var key = row[0] as String;
         var dir = row[1] as String;
         var name = row[2] as String;
         var file = File('$cachePath/$dir/$name');
         if (await file.exists()) {
           var size = await file.length();
           await file.delete();
-          _db.execute(
-            '''
-            DELETE FROM cache
-            WHERE key = ?
-          ''',
-            [key],
-          );
-          _currentSize = _currentSize! - size;
-          if (_currentSize! <= _limitSize) {
-            break;
+          if (_currentSize != null) {
+            _currentSize = _currentSize! - size;
           }
-        } else {
-          _db.execute(
-            '''
-            DELETE FROM cache
-            WHERE key = ?
-          ''',
-            [key],
-          );
         }
       }
+      if (res.isNotEmpty) {
+        _db.execute(
+          '''
+        DELETE FROM cache
+        WHERE expires < ?
+      ''',
+          [now],
+        );
+      }
+
+      while (_currentSize != null && _currentSize! > _limitSize) {
+        var res = _db.select('''
+          SELECT * FROM cache
+          ORDER BY expires ASC
+          limit 10
+        ''');
+        if (res.isEmpty) {
+          // There are many files unmanaged by the cache manager.
+          // Clear all cache.
+          await Directory(cachePath).delete(recursive: true);
+          Directory(cachePath).createSync(recursive: true);
+          break;
+        }
+        for (var row in res) {
+          var key = row[0] as String;
+          var dir = row[1] as String;
+          var name = row[2] as String;
+          var file = File('$cachePath/$dir/$name');
+          if (await file.exists()) {
+            var size = await file.length();
+            await file.delete();
+            _currentSize = _currentSize! - size;
+            _db.execute(
+              '''
+              DELETE FROM cache
+              WHERE key = ?
+            ''',
+              [key],
+            );
+            if (_currentSize! <= _limitSize) {
+              break;
+            }
+          } else {
+            _db.execute(
+              '''
+              DELETE FROM cache
+              WHERE key = ?
+            ''',
+              [key],
+            );
+          }
+        }
+      }
+    } finally {
+      _isChecking = false;
     }
-    _isChecking = false;
   }
 
   /// Delete cache by key.
