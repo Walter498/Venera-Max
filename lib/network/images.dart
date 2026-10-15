@@ -44,7 +44,9 @@ class _ImageConfigOwner {
     final previous = _handles;
     _handles = next;
     for (final handle in previous) {
-      if (!next.contains(handle)) handle.free();
+      // Config exports are exclusively owned by this task. The bridge may
+      // add nested Promise reference counts, so end ownership explicitly.
+      if (!next.contains(handle)) handle.destroy();
     }
   }
 

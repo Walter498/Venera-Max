@@ -31,7 +31,11 @@ class _Tracked extends JSInvokable {
   }
 
   @override
-  void destroy() => throw StateError('use tracked free');
+  void destroy() {
+    frees++;
+    expect(frees, 1, reason: 'each task-owned wrapper is destroyed exactly once');
+    native.destroy();
+  }
 }
 
 void main() {
