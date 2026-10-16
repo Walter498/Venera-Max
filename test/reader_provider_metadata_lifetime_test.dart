@@ -148,7 +148,7 @@ class MetadataLifetimeFixture extends ComicSource {
     final baseline = owned(source);
     expect(baseline, 3);
     source.data['commentSortPreferences'] = {
-      'alpha': {'work': 'latest'},
+      'alpha': {'work': 'hot'},
     };
     var invalidReads = 0;
     var ownershipChanges = 0;
@@ -157,7 +157,7 @@ class MetadataLifetimeFixture extends ComicSource {
       final value = source.commentProviderValue;
       final sort = source.preferredCommentSort();
       if (options.length != 2 || options['alpha'] != 'Alpha' ||
-          options['beta'] != 'Beta' || value != 'alpha' || sort != 'latest') {
+          options['beta'] != 'Beta' || value != 'alpha' || sort != 'hot') {
         invalidReads++;
       }
       if (owned(source) != baseline) {
