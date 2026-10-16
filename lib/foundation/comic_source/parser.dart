@@ -80,6 +80,10 @@ class _SourceFunction implements JSAutoFreeFunction {
 class ComicSourceParser {
   static final _sourceFunctions = <String, Map<JSInvokable, _SourceFunction>>{};
 
+  @visibleForTesting
+  static int debugOwnedFunctionCount(String key) =>
+      _sourceFunctions[key]?.length ?? 0;
+
   /// Call before removing a parsed source (also on reload and engine shutdown).
   /// Repeated removal is safe; other sources' live functions are untouched.
   static void releaseSourceFunctions(String key) {
@@ -1345,11 +1349,13 @@ class ComicSourceParser {
           '${jsonEncode(id)},${jsonEncode(subId)},${jsonEncode(page)},'
           '${jsonEncode(replyTo)},${jsonEncode(options)})');
         if (res['available'] == false) {
-          return const Res<List<Comment>>([], available: false, total: 0, subData: 0);
+          return Res<List<Comment>>([], available: false, total: 0, subData: 0,
+            effectiveProvider: Res.parseCommentProvider(res));
         }
         return Res((res['comments'] as List).map((e) => Comment.fromJson(e)).toList(),
           subData: res['maxPage'], total: Comment.nonNegativeInt(res['total']),
           commentContext: Res.parseCommentContext(res['commentContext']),
+          effectiveProvider: Res.parseCommentProvider(res),
           available: res['available'] is bool ? res['available'] as bool : null);
       } catch (e, s) { Log.error('Network', '$e\n$s'); return Res.error(e.toString()); }
     };
@@ -1364,7 +1370,8 @@ class ComicSourceParser {
             ${jsonEncode(id)}, ${jsonEncode(subId)}, ${jsonEncode(page)}, ${jsonEncode(replyTo)})
         """);
         if (res['available'] == false) {
-          return const Res<List<Comment>>([], available: false, total: 0, subData: 0);
+          return Res<List<Comment>>([], available: false, total: 0, subData: 0,
+            effectiveProvider: Res.parseCommentProvider(res));
         }
         return Res(
           (res["comments"] as List).map((e) => Comment.fromJson(e)).toList(),
@@ -1372,6 +1379,7 @@ class ComicSourceParser {
           total: Comment.nonNegativeInt(res["total"]),
           available: res["available"] is bool ? res["available"] as bool : null,
           commentContext: Res.parseCommentContext(res['commentContext']),
+          effectiveProvider: Res.parseCommentProvider(res),
         );
       } catch (e, s) {
         Log.error("Network", "$e\n$s");
@@ -1418,7 +1426,8 @@ class ComicSourceParser {
             ${jsonEncode(comicId)}, ${jsonEncode(epId)}, ${jsonEncode(page)}, ${jsonEncode(replyTo)})
         """);
         if (res['available'] == false) {
-          return const Res<List<Comment>>([], available: false, total: 0, subData: 0);
+          return Res<List<Comment>>([], available: false, total: 0, subData: 0,
+            effectiveProvider: Res.parseCommentProvider(res));
         }
         return Res(
           (res["comments"] as List).map((e) => Comment.fromJson(e)).toList(),
@@ -1426,6 +1435,7 @@ class ComicSourceParser {
           total: Comment.nonNegativeInt(res["total"]),
           available: res["available"] is bool ? res["available"] as bool : null,
           commentContext: Res.parseCommentContext(res['commentContext']),
+          effectiveProvider: Res.parseCommentProvider(res),
         );
       } catch (e, s) {
         Log.error("Network", "$e\n$s");

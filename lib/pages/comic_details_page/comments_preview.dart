@@ -52,7 +52,7 @@ class _CommentsPartState extends State<_CommentsPart> {
               Align(alignment: Alignment.centerLeft, child: Wrap(
                 crossAxisAlignment: WrapCrossAlignment.center, children: [
                   CommentProviderSelector(source: widget.source),
-                  CommentSortSelector(sorts: widget.source.availableCommentSorts(),
+                  CommentSortSelector(sorts: widget.source.availableCommentSorts(provider: widget.feed.effectiveProvider),
                     value: widget.feed.sort, onSelected: (sort) async {
                       try { await widget.source.setPreferredCommentSort(sort); }
                       catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
@@ -61,7 +61,7 @@ class _CommentsPartState extends State<_CommentsPart> {
               CommentContextStats(context: widget.feed.commentContext),
               for (final comment in comments.take(4))
                 _CommentWidget(comment: comment,
-                  width: double.infinity, source: widget.source, data: widget.data),
+                  provider: widget.feed.effectiveProvider, width: double.infinity, source: widget.source, data: widget.data),
               const SizedBox(height: 12),
             ],
           ),
@@ -72,8 +72,9 @@ class _CommentsPartState extends State<_CommentsPart> {
 }
 
 class _CommentWidget extends StatelessWidget {
-  const _CommentWidget({required this.comment, required this.width, required this.source, required this.data});
+  const _CommentWidget({required this.comment, required this.width, required this.source, required this.data, this.provider});
   final Comment comment;
+  final String? provider;
   final double width;
   final ComicSource source;
   final ComicDetails data;
@@ -84,6 +85,6 @@ class _CommentWidget extends StatelessWidget {
       borderRadius: BorderRadius.circular(12)),
     child: CommentPresentation(comment: comment,
       sourceKey: source.key, fontSize: commentsFontSize,
-      onReply: source.canReadReplies(comment) ? () => showSideBar(context,
+      onReply: source.canReadReplies(comment, provider: provider) ? () => showSideBar(context,
         CommentsPage(data: data, source: source, replyComment: comment), showBarrier: false) : null));
 }

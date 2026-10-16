@@ -19,6 +19,21 @@ class Res<T> {
 
   final dynamic subData;
 
+  /// Backend confirmed by this response, independent of the selected route.
+  final String? effectiveProvider;
+
+  static String? parseEffectiveProvider(dynamic value) {
+    if (value is! String || value.trim().isEmpty) return null;
+    return value.trim();
+  }
+
+  /// New responses use effectiveProvider; older candidates may use provider.
+  static String? parseCommentProvider(dynamic value) {
+    if (value is! Map) return null;
+    return parseEffectiveProvider(value['effectiveProvider']) ??
+        parseEffectiveProvider(value['provider']);
+  }
+
   /// Optional server-reported total for paged category / search results.
   /// Null means the source does not report one; callers must not invent it.
   final int? total;
@@ -50,18 +65,20 @@ class Res<T> {
 
   Res.fromErrorRes(Res another, {this.subData, this.total, this.available})
       : _data = null,
+        effectiveProvider = null,
         commentContext = null,
         errorMessage = another.errorMessage;
 
   /// network result
   const Res(this._data, {this.errorMessage, this.subData, this.total, this.available,
-    this.commentContext});
+    this.commentContext, this.effectiveProvider});
 
   const Res.error(String err)
       : _data = null,
         subData = null,
         total = null,
         available = null,
+        effectiveProvider = null,
         commentContext = null,
         errorMessage = err;
 }

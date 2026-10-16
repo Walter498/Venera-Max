@@ -16,6 +16,8 @@ files=['test/continuous_reader_geometry_work_test.dart',
 import sys
 mode = sys.argv[1] if len(sys.argv) > 1 else 'focused'
 groups = {
+    'metadata': (['test/reader_provider_metadata_lifetime_test.dart', 'test/reader_provider_scroll_lifetime_test.dart'], 7),
+    'effective-provider': (['test/comments_effective_provider_test.dart', 'test/shelf_navigation_regression_test.dart'], 15),
     'focused': (files, 10),
     'lifetime': (['test/reader_image_lifetime_test.dart'], 8),
     'history': (['test/history_reader_queue_test.dart', 'test/reader_comment_cache_test.dart'], 11),

@@ -16,6 +16,7 @@ class CommentsController extends ChangeNotifier {
   int page = 0;
   int? maxPage, total;
   Map<String, dynamic>? commentContext;
+  String? effectiveProvider;
 
   void _mergeCommentContext(Map<String, dynamic>? value) {
     final incoming = Res.parseCommentContext(value);
@@ -50,6 +51,7 @@ class CommentsController extends ChangeNotifier {
     final generation = ++_generation;
     comments = []; page = 0; maxPage = null; total = null; available = null;
     commentContext = null;
+    effectiveProvider = null;
     _rawEmpty = false;
     error = null; pageError = null; loaded = false;
     loading = true; loadingMore = false; notifyListeners();
@@ -67,6 +69,7 @@ class CommentsController extends ChangeNotifier {
       final result = await loader(requestedPage, sort);
       if (_disposed || _invalidated || generation != _generation) return;
       if (result.error) throw StateError(result.errorMessage ?? 'Comments unavailable');
+      effectiveProvider = Res.parseEffectiveProvider(result.effectiveProvider) ?? effectiveProvider;
       available = result.available ?? available;
       if (available == false) {
         commentContext = null;
@@ -113,6 +116,7 @@ class CommentsController extends ChangeNotifier {
     maxPage = null;
     total = null;
     commentContext = null;
+    effectiveProvider = null;
     available = null;
     error = null;
     pageError = null;
@@ -131,6 +135,7 @@ class CommentsController extends ChangeNotifier {
     _disposed = true;
     ++_generation;
     commentContext = null;
+    effectiveProvider = null;
     super.dispose();
   }
 }

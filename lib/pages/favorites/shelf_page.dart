@@ -27,68 +27,98 @@ class ShelfPage extends StatefulWidget {
   State<ShelfPage> createState() => _ShelfPageState();
 }
 
-class _ShelfPageState extends State<ShelfPage> {
+class _ShelfPageState extends State<ShelfPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs;
+  NaviPaneState? _naviPane;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: 3, vsync: this);
+  }
+
+  void _onMainNavigationTap(int index) {
+    if (index != 1 || !mounted) return;
+    // Returning to Favorites always starts from the local collection tab.
+    _tabs.animateTo(0);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final pane = NaviPane.of(context);
+    if (identical(_naviPane, pane)) return;
+    _naviPane?.removeNaviItemTapListener(_onMainNavigationTap);
+    _naviPane = pane;
+    _naviPane!.addNaviItemTapListener(_onMainNavigationTap);
+  }
+
+  @override
+  void dispose() {
+    _naviPane?.removeNaviItemTapListener(_onMainNavigationTap);
+    _tabs.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Material(
-        child: Column(
-          children: [
-            SizedBox(
-              height: 48,
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: TabBar(
-                        tabs: [
-                          Tab(text: '收藏'),
-                          Tab(text: '網絡收藏'),
-                          Tab(text: '足跡'),
-                        ],
-                      ),
-                    ),
-                    // 緩存中心 → 下載管理頁
-                    InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () =>
-                          context.to(() => const LocalComicsPage()),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: context.colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.download_outlined,
-                                size: 16,
-                                color: context.colorScheme.primary),
-                            const SizedBox(width: 4),
-                            Text('緩存中心',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: context.colorScheme.primary)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+    return Material(
+      child: Column(
+        children: [
+          SizedBox(
+            height: 48,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TabBar(
+                    controller: _tabs,
+                    tabs: const [
+                      Tab(text: '收藏'),
+                      Tab(text: '網絡收藏'),
+                      Tab(text: '足跡'),
+                    ],
+                  ),
                 ),
-              ),
-              const Expanded(
-                child: TabBarView(
-                  children: [
-                    _ShelfFavTab(),
-                    _ShelfNetworkFavTab(),
-                    _ShelfHistoryTab(),
-                  ],
-              ),
+                // 緩存中心 → 下載管理頁
+                InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => context.to(() => const LocalComicsPage()),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: context.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.download_outlined,
+                            size: 16, color: context.colorScheme.primary),
+                        const SizedBox(width: 4),
+                        Text('緩存中心',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: context.colorScheme.primary)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: const [
+                _ShelfFavTab(),
+                _ShelfNetworkFavTab(),
+                _ShelfHistoryTab(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -192,7 +222,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
           shrinkWrap: true,
           children: [
             ListTile(
-              title: const Text('漫畫'),
+              title: const Text('全部漫畫'),
               trailing: _folder == null ? const Icon(Icons.check) : null,
               onTap: () {
                 setState(() => _folder = null);
@@ -348,7 +378,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                 onTap: () => _pickFolder(folders),
                 child: Row(
                   children: [
-                    Text(_folder ?? '漫畫',
+                    Text(_folder ?? '全部漫畫',
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w600)),
                     const Icon(Icons.arrow_drop_down, size: 20),

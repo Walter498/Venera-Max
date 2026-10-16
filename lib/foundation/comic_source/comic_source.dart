@@ -547,9 +547,25 @@ class ComicSource {
   final CommentCapabilities? Function(bool chapter)? resolveCommentCapabilities;
   CommentCapabilities? get commentCapabilities => resolveCommentCapabilities?.call(false) ?? _initialCommentCapabilities.work;
   CommentCapabilities? get chapterCommentCapabilities => resolveCommentCapabilities?.call(true) ?? _initialCommentCapabilities.chapter;
+  /// Resolve actual response capabilities without mutating source settings.
+  /// Null/unknown providers preserve source-declared and legacy behavior.
+  CommentCapabilities? commentCapabilitiesFor({bool chapter = false, String? provider}) {
+    if (provider == 'qingman') {
+      return const CommentCapabilities(sorts: ['new', 'hot'],
+        defaultSort: 'new', canLoadReplies: false);
+    }
+    return chapter ? chapterCommentCapabilities : commentCapabilities;
+  }
+
+  bool canInteractWithComments({bool chapter = false, String? provider}) {
+    if (provider == 'qingman') return false;
+    return commentProviderSetting == null ||
+        commentCapabilitiesFor(chapter: chapter, provider: provider)?.canLoadReplies != false;
+  }
+
   /// Read-only resolution: never writes defaults during construction/build.
-  List<String> availableCommentSorts({bool chapter = false}) {
-    final capability = chapter ? chapterCommentCapabilities : commentCapabilities;
+  List<String> availableCommentSorts({bool chapter = false, String? provider}) {
+    final capability = commentCapabilitiesFor(chapter: chapter, provider: provider);
     final loader = chapter ? chapterCommentsOptionsLoader : commentsOptionsLoader;
     if (loader == null || capability?.enabled == false) return const [];
     return capability?.sorts ?? const [];
@@ -616,7 +632,7 @@ class ComicSource {
   Map<String, String> get commentProviderOptions {
     final key = commentProviderSetting;
     if (key == null) return const {};
-    final definition = (getSettingsDynamic() ?? settings)?[key];
+    final definition = _commentProviderDefinition(key);
     if (definition == null || definition['type'] != 'select' || definition['options'] is! List) return const {};
     return {for (final option in definition['options'] as List)
       if (option is Map && option['value'] is String)
@@ -625,8 +641,47 @@ class ComicSource {
   String? get commentProviderValue {
     final key = commentProviderSetting;
     if (key == null) return null;
-    return (data['settings']?[key] ?? (getSettingsDynamic() ?? settings)?[key]?['default'])?.toString();
+    return (data['settings']?[key] ?? _commentProviderDefinition(key)?['default'])?.toString();
   }
+
+  /// Reader availability is queried while scrolling. Export only the select
+  /// setting's scalar metadata, never the whole settings graph: that graph
+  /// contains unrelated callbacks whose native handles live until source removal.
+  /// Evaluate each time so source-defined dynamic defaults/options remain live.
+  Map<String, dynamic>? _commentProviderDefinition(String settingKey) {
+    try {
+      final value = JsEngine().runCode('''
+(() => {
+  const source = ComicSource.sources[${jsonEncode(key)}];
+  const settings = source && source.settings;
+  if (!settings) return false;
+  const definition = settings[${jsonEncode(settingKey)}];
+  if (!definition) return null;
+  const scalar = value => value === null ||
+      ['string', 'number', 'boolean'].includes(typeof value);
+  return {
+    type: typeof definition.type === 'string' ? definition.type : null,
+    default: scalar(definition.default) ? definition.default : null,
+    options: Array.isArray(definition.options) ? definition.options
+      .filter(option => option && typeof option.value === 'string')
+      .map(option => ({value: option.value,
+        text: scalar(option.text) ? option.text : option.value})) : null
+  };
+})()
+''');
+      if (value is Map) {
+        return Map<String, dynamic>.from(value);
+      }
+      if (value == false) {
+        return settings?[settingKey];
+      }
+      return null;
+    } catch (error) {
+      Log.error('ComicSource', 'Failed to read comment provider metadata: $error');
+    }
+    return settings?[settingKey];
+  }
+
   Future<void> setCommentProvider(String value) async {
     final key = commentProviderSetting;
     if (key == null || !commentProviderOptions.containsKey(value) || commentProviderValue == value) return;
@@ -682,12 +737,12 @@ class ComicSource {
     if (loader == null) return Future.value(const Res.error('Comments loader unavailable'));
     return loader(id, subId, page, replyTo);
   }
-  bool canReadReplies(Comment comment, {bool chapter = false}) {
+  bool canReadReplies(Comment comment, {bool chapter = false, String? provider}) {
     if (comment.id == null || !(chapter ? hasChapterComments : hasComments)) {
       return false;
     }
     final capability = chapter ? chapterCommentCapabilities : commentCapabilities;
-    if (capability?.canLoadReplies == false) return false;
+    if (provider == 'qingman' || capability?.canLoadReplies == false) return false;
     if (capability?.canLoadReplies == true) return true;
     // Unknown is not disabled: preserve the pre-capability replyCount + id
     // entry only for a legacy loader. Preview alone cannot prove that path.

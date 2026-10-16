@@ -94,7 +94,7 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
     Widget tile(Comment comment, {bool actions = true}) => _ChapterCommentTile(
       key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
       comment: comment, source: widget.source, comicId: widget.comicId, epId: widget.epId,
-      showAvatar: true, showActions: actions);
+      showAvatar: true, showActions: actions, provider: feed.effectiveProvider);
     return Column(children: [
       if (widget.chapterTitle.isNotEmpty) Align(alignment: Alignment.centerLeft,
         child: Padding(padding: const EdgeInsets.symmetric(horizontal:16,vertical:8),
@@ -106,7 +106,7 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
         try { await widget.source.setPreferredCommentSort(sort, chapter: true); }
         catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
       },
-      sorts: widget.source.availableCommentSorts(chapter: true),
+      sorts: widget.source.availableCommentSorts(chapter: true, provider: feed.effectiveProvider),
       totalLabel: widget.replyComment == null ? '评论' : '回复',
       parent: widget.replyComment == null ? null : Column(
         crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -119,7 +119,7 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
 
   Widget buildBottom(BuildContext context) {
     if (widget.source.sendChapterCommentFunc == null ||
-        (widget.source.commentProviderSetting != null && widget.source.chapterCommentCapabilities?.canLoadReplies == false)) {
+        !widget.source.canInteractWithComments(chapter: true, provider: feed.effectiveProvider)) {
       return const SizedBox(height: 0);
     }
     return Container(
@@ -209,6 +209,7 @@ class _ChapterCommentTile extends StatefulWidget {
     required this.epId,
     required this.showAvatar,
     this.showActions = true,
+    this.provider,
   });
 
   final Comment comment;
@@ -217,6 +218,7 @@ class _ChapterCommentTile extends StatefulWidget {
   final String epId;
   final bool showAvatar;
   final bool showActions;
+  final String? provider;
 
   @override
   State<_ChapterCommentTile> createState() => _ChapterCommentTileState();
@@ -241,7 +243,7 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
     }
   }
   void openReply() {
-    if (!widget.source.canReadReplies(widget.comment, chapter: true)) return;
+    if (!widget.source.canReadReplies(widget.comment, chapter: true, provider: widget.provider)) return;
     final parent = context.findAncestorStateOfType<_ChapterCommentsPageState>();
     showSideBar(context, ChapterCommentsPage(comicId: widget.comicId, epId: widget.epId,
       source: widget.source, comicTitle: parent?.widget.comicTitle ?? '',
@@ -251,17 +253,17 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
   Widget build(BuildContext context) => CommentPresentation(
     comment: widget.comment, sourceKey: widget.source.key, fontSize: commentsFontSize,
     actions: widget.showActions ? buildActions() : CommentReadOnlyStats(comment: widget.comment),
-    onReply: widget.showActions && widget.source.canReadReplies(widget.comment, chapter: true) ? openReply : null);
+    onReply: widget.showActions && widget.source.canReadReplies(widget.comment, chapter: true, provider: widget.provider) ? openReply : null);
 
   Widget buildActions() {
     if (!widget.showActions) return const SizedBox.shrink();
     final hasId = widget.comment.id != null;
-    final canReply = widget.source.canReadReplies(widget.comment, chapter: true);
+    final canReply = widget.source.canReadReplies(widget.comment, chapter: true, provider: widget.provider);
     return Padding(padding: const EdgeInsets.only(top: 8), child: Wrap(
       spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
       if (widget.comment.score != null)
-        if (hasId && widget.source.voteCommentFunc != null && (widget.source.commentProviderSetting == null || widget.source.chapterCommentCapabilities?.canLoadReplies != false)) buildVote()
-        else if (hasId && widget.source.likeCommentFunc != null && (widget.source.commentProviderSetting == null || widget.source.chapterCommentCapabilities?.canLoadReplies != false)) buildLike()
+        if (hasId && widget.source.voteCommentFunc != null && widget.source.canInteractWithComments(chapter: true, provider: widget.provider)) buildVote()
+        else if (hasId && widget.source.likeCommentFunc != null && widget.source.canInteractWithComments(chapter: true, provider: widget.provider)) buildLike()
         else CommentReadOnlyStats(comment: Comment.fromJson({'score': widget.comment.score})),
       if (widget.comment.replyCount != null)
         if (canReply) buildReply()
@@ -718,7 +720,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
     return AnimatedBuilder(animation: Listenable.merge([feed, appdata.settings]),
       builder: (context, _) {
         if ((feed.unavailable || feed.confirmedEmpty) && !hasSelector) return const SizedBox.shrink();
-        final sorts = widget.source.availableCommentSorts(chapter: true);
+        final sorts = widget.source.availableCommentSorts(chapter: true, provider: feed.effectiveProvider);
         final sortSelector = CommentSortSelector(sorts: sorts, value: feed.sort,
           onSelected: (sort) async {
             try { await widget.source.setPreferredCommentSort(sort, chapter: true); }
@@ -797,7 +799,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
                 panel([CommentMetadata(comment: comment),
                   if (comment.time != null) preview(comment.time!, style: ts.s12)]),
                 panel([CommentReadOnlyStats(comment:comment,onReply:
-                  widget.source.canReadReplies(comment,chapter:true) ? ()=>_openReply(comment) : null)]),
+                  widget.source.canReadReplies(comment,chapter:true,provider:feed.effectiveProvider) ? ()=>_openReply(comment) : null)]),
                 ...textPanels(comment.content),
                 for (final reply in comment.effectiveReplyPreviews) ...[
                   ...textPanels(reply.userName, fontSize: 14),
@@ -832,7 +834,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
               CommentPresentation(key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
                 comment:comment,sourceKey:widget.source.key,fontSize:commentsFontSize,
                 selectable:false,
-                onReply:widget.source.canReadReplies(comment,chapter:true) ? () => _openReply(comment) : null),
+                onReply:widget.source.canReadReplies(comment,chapter:true,provider:feed.effectiveProvider) ? () => _openReply(comment) : null),
             Padding(padding: const EdgeInsets.fromLTRB(16,0,16,12), child: OutlinedButton(
               onPressed:_openAll,child:Text('View all comments'.tl))),
           ]));

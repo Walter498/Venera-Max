@@ -160,7 +160,7 @@ class _CommentsPageState extends State<CommentsPage> {
     Widget tile(Comment comment, {bool actions = true}) => _CommentTile(
       key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
       comment: comment, source: widget.source, comic: widget.data,
-      showAvatar: true, showActions: actions);
+      showAvatar: true, showActions: actions, provider: feed.effectiveProvider);
     return Column(children: [
       CommentContextStats(context: feed.commentContext),
       Expanded(child: CommentsFeed(
@@ -169,7 +169,7 @@ class _CommentsPageState extends State<CommentsPage> {
         try { await widget.source.setPreferredCommentSort(sort); }
         catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
       },
-      sorts: widget.source.availableCommentSorts(),
+      sorts: widget.source.availableCommentSorts(provider: feed.effectiveProvider),
       totalLabel: widget.replyComment == null ? '评论' : '回复',
       parent: widget.replyComment == null ? null : Column(
         crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -182,7 +182,7 @@ class _CommentsPageState extends State<CommentsPage> {
 
   Widget buildBottom(BuildContext context) {
     if (widget.source.sendCommentFunc == null ||
-        (widget.source.commentProviderSetting != null && widget.source.commentCapabilities?.canLoadReplies == false)) {
+        !widget.source.canInteractWithComments(chapter: false, provider: feed.effectiveProvider)) {
       return const SizedBox(
         height: 0,
       );
@@ -273,6 +273,7 @@ class _CommentTile extends StatefulWidget {
     required this.comic,
     required this.showAvatar,
     this.showActions = true,
+    this.provider,
   });
 
   final Comment comment;
@@ -284,6 +285,7 @@ class _CommentTile extends StatefulWidget {
   final bool showAvatar;
 
   final bool showActions;
+  final String? provider;
 
   @override
   State<_CommentTile> createState() => _CommentTileState();
@@ -308,7 +310,7 @@ class _CommentTileState extends State<_CommentTile> {
     }
   }
   void openReply() {
-    if (!widget.source.canReadReplies(widget.comment, chapter: false)) return;
+    if (!widget.source.canReadReplies(widget.comment, chapter: false, provider: widget.provider)) return;
     showSideBar(context, CommentsPage(data: widget.comic, source: widget.source,
       replyComment: widget.comment), showBarrier: false);
   }
@@ -316,17 +318,17 @@ class _CommentTileState extends State<_CommentTile> {
   Widget build(BuildContext context) => CommentPresentation(
     comment: widget.comment, sourceKey: widget.source.key, fontSize: commentsFontSize,
     actions: widget.showActions ? buildActions() : CommentReadOnlyStats(comment: widget.comment),
-    onReply: widget.showActions && widget.source.canReadReplies(widget.comment, chapter: false) ? openReply : null);
+    onReply: widget.showActions && widget.source.canReadReplies(widget.comment, chapter: false, provider: widget.provider) ? openReply : null);
 
   Widget buildActions() {
     if (!widget.showActions) return const SizedBox.shrink();
     final hasId = widget.comment.id != null;
-    final canReply = widget.source.canReadReplies(widget.comment, chapter: false);
+    final canReply = widget.source.canReadReplies(widget.comment, chapter: false, provider: widget.provider);
     return Padding(padding: const EdgeInsets.only(top: 8), child: Wrap(
       spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
       if (widget.comment.score != null)
-        if (hasId && widget.source.voteCommentFunc != null && (widget.source.commentProviderSetting == null || widget.source.commentCapabilities?.canLoadReplies != false)) buildVote()
-        else if (hasId && widget.source.likeCommentFunc != null && (widget.source.commentProviderSetting == null || widget.source.commentCapabilities?.canLoadReplies != false)) buildLike()
+        if (hasId && widget.source.voteCommentFunc != null && widget.source.canInteractWithComments(chapter: false, provider: widget.provider)) buildVote()
+        else if (hasId && widget.source.likeCommentFunc != null && widget.source.canInteractWithComments(chapter: false, provider: widget.provider)) buildLike()
         else CommentReadOnlyStats(comment: Comment.fromJson({'score': widget.comment.score})),
       if (widget.comment.replyCount != null)
         if (canReply) buildReply()
