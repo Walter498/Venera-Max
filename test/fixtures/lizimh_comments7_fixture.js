@@ -2181,7 +2181,7 @@ class LiziTencentComments {
             const candidates = await this.search(ctx, local.title);
             const exact = candidates.filter(x => LiziTencentComments.titleKey(x.title) === titleKey);
             if (exact.length !== 1) {
-                const incomplete = !!candidates.searchEvidence;
+                const incomplete = exact.length === 0 && !!candidates.searchEvidence;
                 const error = this.fail(incomplete ? 'incomplete' : 'work');
                 error.matchReason = incomplete ? 'match-unresolved' : exact.length === 0 ? 'no-match' : 'nonunique';
                 error.searchEvidence = candidates.searchEvidence || { searchComplete: true, scope: 'validated-search', observedRows: candidates.length };
@@ -2539,8 +2539,15 @@ class LiziTencentComments {
                     return observed;
                 }
                 if (page === pages) {
-                    if (rows.size !== declared) throw this.fail('incomplete');
-                    return Array.from(rows.values());
+                    if (rows.size > declared) throw this.fail('incomplete');
+                    const observed = Array.from(rows.values());
+                    // Search metadata may overstate the number of returned rows. The page
+                    // budget is exhausted and every observed row has passed shape/ID checks;
+                    // retain an explicit incomplete marker so zero-match stays fail-closed.
+                    if (rows.size < declared) observed.searchEvidence = { declaredTotal: declared, observedRows: rows.size,
+                        searchComplete: false, scope: 'validated-short-final-page',
+                        exactCandidateIds: observed.filter(x => LiziTencentComments.titleKey(x.title) === title).map(x => x.id) };
+                    return observed;
                 }
                 // Short fragments never prove exhaustion; request every declared page.
                 url = base + '&page=' + (page + 1) + '&pageSize=10&style=items';
