@@ -312,6 +312,13 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          ChapterDateSourceButton(
+            value: appdata.settings['chapterDateSource'] == 'tencent' ? 'tencent' : 'lizi',
+            onChanged: (value) {
+              setState(() { appdata.settings['chapterDateSource'] = value; });
+              appdata.saveData();
+            },
+          ),
           Tooltip(
             message: "Preview covers".tl,
             child: IconButton(
@@ -390,7 +397,7 @@ class _NormalComicChapters extends StatefulWidget {
 }
 
 class _NormalComicChaptersState extends State<_NormalComicChapters>
-    with _ChapterSelectionMixin {
+    with _ChapterSelectionMixin, WidgetsBindingObserver {
   late _ComicPageState state;
 
   late bool reverse;
@@ -398,23 +405,99 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
   bool showAll = false;
 
   final Map<String, ChapterMetadata> _chapterMetadata = {};
+  final Set<String> _metadataQueued = {};
+  final Set<String> _metadataRequested = {};
   String? _metadataScope;
   int _metadataGeneration = 0;
+  bool _metadataBusy = false;
+  Timer? _metadataTimer;
+  Timer? _metadataRefreshTimer;
+  ComicDetails? _metadataDetails;
+  bool _metadataRouteWasCurrent = true;
 
   void _loadChapterMetadata() {
     final details = state.comic;
     final scope = '${details.sourceKey}:${details.id}';
     if (_metadataScope == scope) return;
+    _metadataDetails = details;
     _metadataScope = scope;
+    _metadataGeneration++;
     _chapterMetadata.clear();
-    final generation = ++_metadataGeneration;
+    _metadataQueued.clear();
+    _metadataRequested.clear();
+    _metadataBusy = false;
+    _metadataTimer?.cancel();
+    _metadataTimer = null;
+  }
+
+  void _queueChapterMetadata(String key) {
+    if (_metadataRequested.contains(key)) return;
+    if (ComicSource.find(state.comic.sourceKey)?.loadChapterMetadata == null) return;
+    _metadataQueued.add(key);
+    if (!_metadataBusy) {
+      _metadataTimer ??= Timer(const Duration(milliseconds: 50), _flushChapterMetadata);
+    }
+  }
+
+  Future<void> _flushChapterMetadata() async {
+    _metadataTimer = null;
+    if (!mounted || _metadataBusy || _metadataQueued.isEmpty) return;
+    final details = state.comic;
     final loader = ComicSource.find(details.sourceKey)?.loadChapterMetadata;
     if (loader == null) return;
-    Future<void>(() async {
-      final result = await loader(details.id);
-      if (!mounted || generation != _metadataGeneration || result.error) return;
-      setState(() => _chapterMetadata.addAll(result.data));
-    }).catchError((Object _) {});
+    final generation = _metadataGeneration;
+    final ids = _metadataQueued.take(8).toList();
+    _metadataQueued.removeAll(ids);
+    _metadataRequested.addAll(ids);
+    _metadataBusy = true;
+    try {
+      final result = await loader(details.id, ids);
+      if (!mounted || generation != _metadataGeneration) return;
+      setState(() {
+        _chapterMetadata.clear();
+        if (!result.error) {
+          _chapterMetadata.addAll(result.data);
+          _metadataRequested.addAll(result.data.keys);
+          _metadataQueued.removeAll(result.data.keys);
+        }
+      });
+    } catch (_) {
+      // Enrichment failures leave dates and the reader fully usable.
+    } finally {
+      if (mounted && generation == _metadataGeneration) {
+        _metadataBusy = false;
+        if (_metadataQueued.isNotEmpty) {
+          _metadataTimer = Timer(const Duration(milliseconds: 50), _flushChapterMetadata);
+        }
+      }
+    }
+  }
+
+  void _refreshRealtimeMetadata() {
+    if (!mounted || _metadataBusy || _metadataScope == null ||
+        appdata.settings['chapterCoverGrid'] != true ||
+        ModalRoute.of(context)?.isCurrent == false ||
+        (WidgetsBinding.instance.lifecycleState != null &&
+         WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed)) return;
+    setState(() {
+      _chapterMetadata.clear();
+      _metadataRequested.clear();
+      _metadataQueued.clear();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    if (lifecycle == AppLifecycleState.resumed) _refreshRealtimeMetadata();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _metadataGeneration++;
+    _metadataTimer?.cancel();
+    _metadataRefreshTimer?.cancel();
+    super.dispose();
   }
 
   History? _history;
@@ -454,6 +537,8 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _metadataRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshRealtimeMetadata());
     reverse = appdata.settings["reverseChapterOrder"] ?? false;
     _history = widget.history;
   }
@@ -464,6 +549,9 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     chapters = state.comic.chapters!;
     _computeVisible();
     _loadChapterMetadata();
+    final routeIsCurrent = ModalRoute.of(context)?.isCurrent != false;
+    if (routeIsCurrent && !_metadataRouteWasCurrent) _refreshRealtimeMetadata();
+    _metadataRouteWasCurrent = routeIsCurrent;
     super.didChangeDependencies();
   }
 
@@ -476,6 +564,10 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     // mid-selection would shift them under the user. Re-read once selection
     // ends; picked up on the next rebuild.
     if (!selectMode) {
+      if (!identical(_metadataDetails, state.comic)) {
+        _metadataDetails = state.comic;
+        _refreshRealtimeMetadata();
+      }
       setState(() {
         chapters = state.comic.chapters!;
         _computeVisible();
@@ -501,8 +593,14 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
       final i = mapSlot(slot);
       final key = chapters.ids.elementAt(i);
       final value = chapters[key]!;
-      final metadata = (details.chapterMetadata[key] ?? const ChapterMetadata())
-          .merge(_chapterMetadata[key] ?? const ChapterMetadata());
+      _queueChapterMetadata(key);
+      final stored = details.chapterMetadata[key] ?? const ChapterMetadata();
+      final fresh = _chapterMetadata[key] ?? const ChapterMetadata();
+      final useTencentDate = appdata.settings['chapterDateSource'] == 'tencent';
+      final metadata = ChapterMetadata(
+        updateTime: useTencentDate ? fresh.tencentUpdateTime ?? stored.tencentUpdateTime : stored.updateTime,
+        likesCount: fresh.likesCount, likesSource: fresh.likesSource,
+      );
       final epKey = (i + 1).toString();
       final visited = (_history?.readEpisode ?? const {}).contains(epKey);
       final covers = details.chapterCovers ?? const <String, String>{};

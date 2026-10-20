@@ -1692,6 +1692,12 @@ class _ContinuousModeState extends State<_ContinuousMode>
     if (HardwareKeyboard.instance.isShiftPressed) {
       return;
     }
+    // A wheel/key event can arrive in the same frame the reader is torn down
+    // (chapter remount, back navigation). Reading position/animating a
+    // detached controller throws; the scroll itself is already moot.
+    if (!mounted || !scrollController.hasClients) {
+      return;
+    }
     var currentLocation = scrollController.position.pixels;
     var old = _futurePosition;
     _futurePosition ??= currentLocation;
@@ -1723,6 +1729,9 @@ class _ContinuousModeState extends State<_ContinuousMode>
     scrollController
         .animateTo(_futurePosition!, duration: duration, curve: Curves.linear)
         .then((_) {
+          // animateTo completes after a dispose/remount too; the position
+          // assertion would then escape as an unhandled async error.
+          if (!mounted || !scrollController.hasClients) return;
           var current = scrollController.position.pixels;
           if (current == target && current == _futurePosition) {
             _futurePosition = null;
@@ -2057,6 +2066,15 @@ class _ContinuousModeState extends State<_ContinuousMode>
   }
 
   final Map<int, GlobalKey> _footerKeys = {};
+
+  /// Whether this chapter actually renders a comments footer right now.
+  /// The key map outlives a footer that a confirmed-empty/unavailable feed
+  /// removed, so presence must come from the live element, not the map entry.
+  bool _footerPresent(int chapter) {
+    final context = _footerKeys[chapter]?.currentContext;
+    final box = context?.findRenderObject();
+    return box is RenderBox && box.attached && box.hasSize;
+  }
 
   bool _footerReached(int chapter) {
     final box = _footerKeys[chapter]?.currentContext?.findRenderObject();
@@ -2659,13 +2677,19 @@ class _ContinuousModeState extends State<_ContinuousMode>
         currentEntry.page >= chapterImages.length;
     if (forward &&
         atLastImage &&
-        _footerKeys[currentEntry.chapter] != null &&
+        _footerPresent(currentEntry.chapter) &&
         !_footerReached(currentEntry.chapter)) {
-      // Bring the rest of this chapter's comments footer into view. Once it is
-      // fully visible (including a short pending/error placeholder) the turn is
-      // no longer consumed, so navigation can leave the chapter.
-      smoothTo(_axis == Axis.vertical ? reader.size.height : reader.size.width);
-      return true;
+      // Bring the rest of this chapter's comments footer into view. Only a turn
+      // that can actually scroll is consumed; a clamped pending/error footer
+      // must report a hard boundary instead of swallowing every turn forever.
+      final pos = scrollController.hasClients ? scrollController.position : null;
+      final canScroll = pos != null &&
+          pos.hasContentDimensions &&
+          pos.pixels < pos.maxScrollExtent - 1;
+      if (canScroll) {
+        smoothTo(_axis == Axis.vertical ? reader.size.height : reader.size.width);
+        return true;
+      }
     }
     for (var i = curIdx + step; i >= 0 && i < _entries.length; i += step) {
       final entry = _entries[i];

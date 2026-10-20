@@ -152,14 +152,19 @@ void main() {
       null,
     );
     expect(ComicSourceManager().add(result), isTrue);
+    // Gallery mounts providers with enableResize=false and continuous with
+    // true; both identities must be warm so no test hands a file:// URI to the
+    // real loader and leaves an async decode error for a later test.
     for (final ep in ['one', 'two']) {
-      for (var page = 1; page <= 3; page++) {
-        final provider = ReaderImageProvider(imageUrl, key, 'work', ep, page,
-            enableResize: true);
-        PaintingBinding.instance.imageCache.putIfAbsent(
-            provider,
-            () => OneFrameImageStreamCompleter(
-                SynchronousFuture(ImageInfo(image: testImage.clone()))));
+      for (final resize in [false, true]) {
+        for (var page = 1; page <= 3; page++) {
+          final provider = ReaderImageProvider(imageUrl, key, 'work', ep, page,
+              enableResize: resize);
+          PaintingBinding.instance.imageCache.putIfAbsent(
+              provider,
+              () => OneFrameImageStreamCompleter(
+                  SynchronousFuture(ImageInfo(image: testImage.clone()))));
+        }
       }
     }
     return (source: result, loads: loads);

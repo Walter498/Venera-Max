@@ -50,6 +50,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         navigatorKey: App.rootNavigatorKey,
+        // Mirror the production app builder (lib/main.dart wraps the app's
+        // navigator in a Material). Without that ancestor every InkWell in
+        // HomePage asserts and is replaced by an ErrorWidget, which then
+        // overflows the tab Row. Keep the real NaviPane/navigation intact.
+        builder: (context, child) => Material(child: child ?? const SizedBox.shrink()),
         home: NaviPane(
           paneItems: [
             PaneItemEntry(

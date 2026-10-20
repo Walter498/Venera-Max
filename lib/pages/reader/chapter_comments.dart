@@ -727,7 +727,11 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
           });
         if (widget.horizontal) {
-          return LayoutBuilder(builder: (context, constraints) {
+          // The Material host (and the DefaultTextStyle it installs) sits above
+          // the measurement builder, so chunking sees exactly the text style
+          // the painted Text widgets below will use.
+          return Material(color: context.colorScheme.surface,
+            child: LayoutBuilder(builder: (context, constraints) {
           final width = MediaQuery.sizeOf(context).width;
           // Each semantic section occupies a chapter-scroll panel. No nested
           // scrollable: at large text/short heights the reply action gets its
@@ -747,34 +751,66 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             }));
           // Unlike the old ellipsized body, every measured line gets a panel.
           // This keeps a finite horizontal chapter viewport free of inner scroll.
-          List<Widget> textPanels(String text, {double? fontSize}) {
-            final style = TextStyle(fontSize: fontSize ?? commentsFontSize, height: 1.5);
-            final available = math.max(1.0, constraints.maxHeight - 32);
-            final painter = TextPainter(text: TextSpan(text: text, style: style),
+          // Chunk boundaries come from measuring the exact substring that will
+          // be painted. Extrapolating from caret/line indices can place one
+          // extra rendered line in a panel at large text scales (a wrapped line
+          // start maps back to the previous line's baseline), which overflows
+          // the finite viewport by a line and clips its last line.
+          final panelWidth = math.max(1.0,
+            (constraints.hasBoundedWidth ? constraints.maxWidth : width) - 32);
+          final available = math.max(1.0, constraints.maxHeight - 32);
+          double paintedHeight(String value, TextStyle style) {
+            final painter = TextPainter(text: TextSpan(text: value, style: style),
               textDirection: Directionality.of(context),
-              textScaler: MediaQuery.textScalerOf(context))..layout(maxWidth: math.max(1.0, width - 32));
+              textScaler: MediaQuery.textScalerOf(context))..layout(maxWidth: panelWidth);
+            final height = painter.height;
+            painter.dispose();
+            return height;
+          }
+          List<Widget> textPanels(String text, {double? fontSize}) {
+            if (text.isEmpty) return const [];
+            // Text merges the ambient DefaultTextStyle (letter spacing, font
+            // family, …) into the explicit style, so measure that exact merged
+            // style: measuring the bare style can wrap one glyph earlier than
+            // the painted text and bring back the overflowing line.
+            final style = DefaultTextStyle.of(context).style.merge(
+              TextStyle(fontSize: fontSize ?? commentsFontSize, height: 1.5));
             final result = <Widget>[];
             var start = 0;
             while (start < text.length) {
-              var end = start;
-              final startY = painter.getOffsetForCaret(TextPosition(offset: start), Rect.zero).dy;
-              for (final line in painter.computeLineMetrics()) {
-                if (line.baseline - line.ascent < startY - 0.1) continue;
-                if (line.baseline + line.descent - startY > available && end > start) break;
-                final position = painter.getPositionForOffset(Offset(0, line.baseline));
-                final boundary = painter.getLineBoundary(position);
-                end = math.max(end, boundary.end);
-                if (end < text.length && text.codeUnitAt(end) == 10) end++;
-                if (line.baseline + line.descent - startY > available) break;
+              // Largest prefix of the remaining text whose painted height fits
+              // the panel. Height grows monotonically with the prefix, so a
+              // binary search over character offsets is exact and cheap.
+              var low = start + 1, high = text.length, end = start;
+              while (low <= high) {
+                final mid = (low + high) ~/ 2;
+                var candidate = mid;
+                // Never cut a surrogate pair in half.
+                if (candidate < text.length &&
+                    (text.codeUnitAt(candidate) & 0xFC00) == 0xDC00) {
+                  candidate--;
+                }
+                if (candidate <= start) { low = mid + 1; continue; }
+                if (paintedHeight(text.substring(start, candidate), style) <= available) {
+                  end = candidate;
+                  low = mid + 1;
+                } else {
+                  high = mid - 1;
+                }
               }
-              if (end <= start) end = text.length;
+              if (end <= start) {
+                // Degenerate viewport: no full line fits. Keep the text
+                // reachable as the single ellipsized line the panel can paint.
+                result.add(panel([Text(text.substring(start), style: style,
+                  maxLines: 1, overflow: TextOverflow.ellipsis)]));
+                break;
+              }
               result.add(panel([Text(text.substring(start, end), style: style)]));
               start = end;
             }
-            painter.dispose();
             return result;
           }
-          return Material(color:context.colorScheme.surface,child:Row(
+          return Row(
             textDirection:widget.reverse ? TextDirection.rtl : TextDirection.ltr,
             key:const ValueKey('chapter-comments-region'),
             crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -809,8 +845,8 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
                 ],
               ],
             panel([OutlinedButton(onPressed:_openAll,child:Text('View all comments'.tl))]),
-          ]));
-          });
+          ]);
+          }));
         }
         return Material(color: context.colorScheme.surface,
           child: Column(key: const ValueKey('chapter-comments-region'),

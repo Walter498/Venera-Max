@@ -1,8 +1,9 @@
 /// Optional chapter facts. Unknown likes stay unknown, never fabricated as zero.
 class ChapterMetadata {
-  const ChapterMetadata({this.updateTime, this.likesCount, this.likesSource});
+  const ChapterMetadata({this.updateTime, this.tencentUpdateTime, this.likesCount, this.likesSource});
 
   final String? updateTime;
+  final String? tencentUpdateTime;
   final int? likesCount;
   final String? likesSource;
 
@@ -10,6 +11,7 @@ class ChapterMetadata {
     final raw = json['likesCount'];
     return ChapterMetadata(
       updateTime: _text(json['updateTime']),
+      tencentUpdateTime: _text(json['tencentUpdateTime']),
       likesCount: raw is num && raw.isFinite && raw >= 0 &&
           raw <= 9007199254740991 && raw == raw.truncateToDouble()
           ? raw.toInt() : null,
@@ -31,6 +33,7 @@ class ChapterMetadata {
 
   ChapterMetadata merge(ChapterMetadata other) => ChapterMetadata(
     updateTime: other.updateTime ?? updateTime,
+    tencentUpdateTime: other.tencentUpdateTime ?? tencentUpdateTime,
     likesCount: other.likesCount ?? likesCount,
     likesSource: other.likesSource ?? likesSource,
   );
@@ -51,9 +54,10 @@ class ChapterMetadata {
     return '${value.endsWith('.0') ? value.substring(0, value.length - 2) : value}万';
   }
 
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson({bool includeLikes = true}) => {
     if (updateTime != null) 'updateTime': updateTime,
-    if (likesCount != null) 'likesCount': likesCount,
-    if (likesSource != null) 'likesSource': likesSource,
+    if (tencentUpdateTime != null) 'tencentUpdateTime': tencentUpdateTime,
+    if (includeLikes && likesCount != null) 'likesCount': likesCount,
+    if (includeLikes && likesSource != null) 'likesSource': likesSource,
   };
 }

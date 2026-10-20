@@ -288,7 +288,7 @@ class ComicDetails with HistoryMixin {
       "tags": tags,
       "chapters": chapters?.toJson(),
       "chapterCovers": chapterCovers,
-      "chapterMetadata": chapterMetadata.map((k, v) => MapEntry(k, v.toJson())),
+      "chapterMetadata": chapterMetadata.map((k, v) => MapEntry(k, v.toJson(includeLikes: false))),
       "thumbnails": thumbnails,
       "recommend": null,
       "sourceKey": sourceKey,

@@ -232,8 +232,17 @@ class ReaderCommentsFixture extends ComicSource {
               }
               if (chapter == 6) {
                 expect(state.chapterEndReached, isFalse);
-                // Pending comments do not consume forward input any more.
-                // Production gestures fall back to explicit chapter navigation.
+                // A pending footer may consume the first forward turn to bring
+                // its placeholder into view. It must then report a hard
+                // boundary (so the gesture falls back to explicit chapter
+                // navigation) instead of swallowing every turn on the page.
+                var revealTurns = 0;
+                while (revealTurns < 4 && state.toNextPage()) {
+                  revealTurns++;
+                  await frames(tester, 24);
+                  expect(state.chapter, 6);
+                  expect(state.page, pageCount);
+                }
                 expect(state.toNextPage(), isFalse);
                 await frames(tester, 24);
                 expect(state.chapter, 6);

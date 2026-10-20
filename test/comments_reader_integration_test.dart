@@ -237,12 +237,10 @@ class ReaderCommentsFixture extends ComicSource {
         }
         expect(state.page,2);
         for(var i=0;i<8;i++) { state.toNextPage(); await frames(tester,4); }
-        if(mode.startsWith('gallery')) {
-          await tester.drag(find.byType(Reader),mode=='galleryTopToBottom'
-            ? const Offset(0,-844) : Offset(mode=='galleryRightToLeft' ? 390 : -390,0));
-          await frames(tester,30);
-          expect(state.chapter,1);
-        }
+        // The forward-drag-on-a-pending-footer case is its own test below:
+        // pending comments now allow the chapter turn, so asserting the old
+        // "drag stays on chapter 1" here would pin the very behaviour #259
+        // removes. Auto-reading still waits for a settled chapter.
         state.autoPageTurning('work',ComicType.fromKey(s.key));
         await frames(tester,160);
         expect(state.chapter,1);
@@ -282,6 +280,33 @@ class ReaderCommentsFixture extends ComicSource {
         expect(tester.takeException(),isNull);
       });
     }
+  }
+
+  // Forward gestures on a still-pending footer must leave the chapter instead
+  // of pinning the reader (issue #259). This is the drag counterpart of the
+  // mounted-Reader pending key/auto coverage above.
+  for(final mode in ['galleryLeftToRight','galleryRightToLeft','galleryTopToBottom']) {
+    readerTest('$mode pending footer forward drag opens the next chapter',
+      (tester) async {
+        final s=await source(tester,mode);
+        final dynamic state=await mount(tester,s,mode);
+        state.toPage(state.totalPages);
+        await frames(tester,40);
+        expect(state.chapter,1);
+        expect(state.isOnChapterCommentsPage,isTrue);
+        expect(state.chapterEndReached,isFalse);
+        await tester.drag(find.byType(Reader),mode=='galleryTopToBottom'
+          ? const Offset(0,-844) : Offset(mode=='galleryRightToLeft' ? 390 : -390,0));
+        await frames(tester,60);
+        expect(state.chapter,2);
+        expect(state.page,1);
+        // A late reply for the chapter that was left must not drag it back.
+        resolve(nonempty());
+        await frames(tester,40);
+        expect(state.chapter,2);
+        expect(state.page,1);
+        expect(tester.takeException(),isNull);
+      });
   }
 
   for(final mode in ['continuousLeftToRight','continuousRightToLeft']) {

@@ -65,7 +65,7 @@ void main() {
   });
 
   test('returns null before anything is cached', () {
-    expect(cache.find('test_source', 'a'), isNull);
+    expect(cache.readStoredForTesting('test_source', 'a'), isNull);
   });
 
   test('round-trips flat chapters through cache', () {
@@ -75,7 +75,7 @@ void main() {
     );
     cache.update('test_source', 'a', details);
 
-    final restored = cache.find('test_source', 'a');
+    final restored = cache.readStoredForTesting('test_source', 'a');
     expect(restored, isNotNull);
     expect(restored!.chapters!.isGrouped, isFalse);
     expect(restored.chapters!.length, 2);
@@ -94,7 +94,7 @@ void main() {
     );
     cache.update('test_source', 'g', details);
 
-    final restored = cache.find('test_source', 'g')!;
+    final restored = cache.readStoredForTesting('test_source', 'g')!;
     expect(restored.chapters!.isGrouped, isTrue);
     expect(restored.chapters!.groups.toList(), ['Main', 'Extra']);
     expect(restored.chapters!.length, 3);
@@ -111,18 +111,18 @@ void main() {
       'a',
       _details(id: 'a', chapters: {'c1': 'Chapter 1', 'c2': 'Chapter 2'}),
     );
-    expect(cache.find('test_source', 'a')!.chapters!.length, 2);
+    expect(cache.readStoredForTesting('test_source', 'a')!.chapters!.length, 2);
   });
 
   test('does not cache local comics', () {
     cache.update('local', 'x', _details(id: 'x', chapters: {'c1': 'C1'}));
-    expect(cache.find('local', 'x'), isNull);
+    expect(cache.readStoredForTesting('local', 'x'), isNull);
   });
 
   test('does not cache collection sources', () {
     const key = 'comic_collection_1';
     cache.update(key, 'x', _details(id: 'x', chapters: {'c1': 'C1'}));
-    expect(cache.find(key, 'x'), isNull);
+    expect(cache.readStoredForTesting(key, 'x'), isNull);
   });
 
   test('prunes oldest entries beyond the cap', () {
@@ -144,7 +144,7 @@ void main() {
 
     var remaining = 0;
     for (var i = 0; i < 5; i++) {
-      if (cache.find('test_source', 'id$i') != null) remaining++;
+      if (cache.readStoredForTesting('test_source', 'id$i') != null) remaining++;
     }
     expect(remaining, 3);
   });
@@ -158,13 +158,13 @@ void main() {
     );
     db.dispose();
 
-    expect(cache.find('test_source', 'bad'), isNull);
+    expect(cache.readStoredForTesting('test_source', 'bad'), isNull);
     // The bad row is gone, so a later good write is retrievable.
     cache.update(
       'test_source',
       'bad',
       _details(id: 'bad', chapters: {'c1': 'C1'}),
     );
-    expect(cache.find('test_source', 'bad'), isNotNull);
+    expect(cache.readStoredForTesting('test_source', 'bad'), isNotNull);
   });
 }

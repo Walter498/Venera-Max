@@ -65,7 +65,11 @@ class ComicDetailsCache {
     // 依需求：詳情頁不做快取 —— 每次進入都重新向源載入（章節清單/封面/標籤
     // 永遠是最新的）。寫入仍保留（供其他路徑使用），但不再讀取。
     return null;
-    // ignore: dead_code
+  }
+
+  /// Verifies stored encodings without re-enabling production details caching.
+  @visibleForTesting
+  ComicDetails? readStoredForTesting(String sourceKey, String comicId) {
     if (!isCacheable(sourceKey)) return null;
     try {
       final rows = _db.select(
@@ -146,7 +150,7 @@ class ComicDetailsCache {
       'tags': details.tags,
       'chapters': details.chapters?.toJson(),
       'chapterCovers': details.chapterCovers,
-      'chapterMetadata': details.chapterMetadata.map((k, v) => MapEntry(k, v.toJson())),
+      'chapterMetadata': details.chapterMetadata.map((k, v) => MapEntry(k, v.toJson(includeLikes: false))),
       'sourceKey': details.sourceKey,
       'comicId': details.comicId,
       'thumbnails': details.thumbnails,

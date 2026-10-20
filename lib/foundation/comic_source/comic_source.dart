@@ -526,7 +526,7 @@ class ComicSource {
   final LoadComicFunc? loadComicInfo;
 
   /// Optional independent chapter enrichment; never blocks details or reading.
-  final Future<Res<Map<String, ChapterMetadata>>> Function(String id)? loadChapterMetadata;
+  final Future<Res<Map<String, ChapterMetadata>>> Function(String id, List<String> chapterIds)? loadChapterMetadata;
 
   final ComicThumbnailLoader? loadComicThumbnail;
 

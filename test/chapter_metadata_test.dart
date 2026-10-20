@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/chapter_metadata_line.dart';
+import 'package:venera/components/chapter_date_source_button.dart';
 import 'package:venera/foundation/chapter_metadata.dart';
 import 'package:venera/foundation/comic_details_cache.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
@@ -37,11 +38,11 @@ void main() {
     });
     final restored = ComicDetails.fromJson(ComicDetailsCache.encode(details));
     expect(restored.chapterMetadata['52']!.displayDate, '22-04-23');
-    expect(restored.chapterMetadata['52']!.likesCount, 21000);
+    expect(restored.chapterMetadata['52']!.likesCount, isNull);
     expect(restored.chapterMetadata.containsKey('53'), isFalse);
     expect(restored.chapterCovers!['52'], 'first.jpg');
     final jsonRestored = ComicDetails.fromJson({...details.toJson(), 'subtitle': null});
-    expect(jsonRestored.chapterMetadata['52']!.likesCount, 21000);
+    expect(jsonRestored.chapterMetadata['52']!.likesCount, isNull);
   });
   for (final theme in [ThemeData.light(), ThemeData.dark()]) {
     testWidgets('chapter facts visible under cover without overflow ${theme.brightness}', (tester) async {
@@ -61,4 +62,25 @@ void main() {
     expect(find.text('0'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('date selector offers Lizi and Tencent and reports selection', (tester) async {
+    var selected = 'lizi';
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ChapterDateSourceButton(
+      value: selected, onChanged: (value) => selected = value))));
+    await tester.tap(find.byKey(const ValueKey('chapter-date-source')));
+    await tester.pumpAndSettle();
+    expect(find.text('栗子日期'), findsOneWidget);
+    expect(find.text('腾讯发布日期'), findsOneWidget);
+    await tester.tap(find.text('腾讯发布日期'));
+    await tester.pumpAndSettle();
+    expect(selected, 'tencent');
+    expect(tester.takeException(), isNull);
+  });
+  test('Tencent date can persist independently, fresh likes never serialize', () {
+    const data = ChapterMetadata(updateTime: '2026-01-17', tencentUpdateTime: '2022-04-23', likesCount: 4);
+    final datesOnly = ChapterMetadata.fromJson(data.toJson(includeLikes: false));
+    expect(datesOnly.updateTime, '2026-01-17');
+    expect(datesOnly.tencentUpdateTime, '2022-04-23');
+    expect(datesOnly.likesCount, isNull);
+  });
+
 }

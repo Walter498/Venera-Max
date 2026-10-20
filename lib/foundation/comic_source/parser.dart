@@ -1118,12 +1118,12 @@ class ComicSourceParser {
     );
   }
 
-  Future<Res<Map<String, ChapterMetadata>>> Function(String)? _parseChapterMetadataLoader() {
+  Future<Res<Map<String, ChapterMetadata>>> Function(String, List<String>)? _parseChapterMetadataLoader() {
     if (!_checkExists('comic.loadChapterMetadata')) return null;
-    return (id) async {
+    return (id, chapterIds) async {
       try {
         final result = await JsEngine().runCode(
-          'ComicSource.sources.$_key.comic.loadChapterMetadata(${jsonEncode(id)})',
+          'ComicSource.sources.$_key.comic.loadChapterMetadata(${jsonEncode(id)}, ${jsonEncode(chapterIds)})',
         ).timeout(const Duration(seconds: 20));
         return Res(ChapterMetadata.parse(result));
       } catch (e, s) {
