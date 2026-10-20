@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 phase=${1:?phase required}
-test "${GITHUB_REF:?}" = refs/heads/fix/reader-comments-auto-258
+test "${GITHUB_REF:?}" = refs/heads/fix/reader-gestures-metadata-259
 evidence="${RUNNER_TEMP:?}/venera-comments-evidence"
 mkdir -p "$evidence"
 case "$phase" in

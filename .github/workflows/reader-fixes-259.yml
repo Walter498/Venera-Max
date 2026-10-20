@@ -1,0 +1,79 @@
+name: Reader gestures chapter cards and navigation 259
+on:
+  push:
+    branches: [fix/reader-gestures-metadata-259]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: reader-fixes-259-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: macos-15
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - run: bash tool/reader_perf_ci.sh init
+      - run: bash tool/reader_perf_ci.sh dependencies-ios
+        id: deps
+        timeout-minutes: 12
+      - run: bash tool/reader_perf_ci.sh analyze
+        id: analyze
+        timeout-minutes: 8
+      - run: bash tool/reader_perf_ci.sh native-tests
+        id: native
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        timeout-minutes: 8
+      - name: Targeted multitouch chapter metadata and pending comments regressions
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 12
+        run: python3 tool/reader_fixes_259_tests.py
+      - name: Existing reader navigation footer and history regressions
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 12
+        run: python3 tool/reader_fixes_259_tests.py regression
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reader-fixes-259-verification
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error
+  candidate:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - run: bash tool/reader_perf_ci.sh init
+      - run: bash tool/reader_perf_ci.sh dependencies-ios
+        timeout-minutes: 12
+      - run: bash tool/reader_perf_ci.sh ios
+        timeout-minutes: 28
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reader-fixes-259-device
+          path: build/comments-artifacts/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reader-fixes-259-build-evidence
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: error

@@ -57,6 +57,8 @@ import 'package:venera/utils/local_comic_scanner.dart';
 import 'package:venera/utils/tags_translation.dart';
 import 'package:venera/utils/translations.dart';
 import 'dart:math' as math;
+import 'package:venera/foundation/chapter_metadata.dart';
+import 'package:venera/components/chapter_metadata_line.dart';
 
 part 'comments_page.dart';
 

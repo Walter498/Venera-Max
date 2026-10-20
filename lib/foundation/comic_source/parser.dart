@@ -329,6 +329,7 @@ class ComicSourceParser {
       _parseStarRatingFunc(),
       _parseArchiveDownloader(),
       handleClickAuthorEvent: _parseClickAuthorEvent(),
+      loadChapterMetadata: _parseChapterMetadataLoader(),
       commentProviderSetting: _getValue('comic.commentProviderSetting') is String
           ? _getValue('comic.commentProviderSetting') as String : null,
       resolveCommentCapabilities: _parseCommentCapabilities,
@@ -1115,6 +1116,21 @@ class ComicSourceParser {
       loadAuthor: loadAuthor,
       loadAuthorNext: loadAuthorNext,
     );
+  }
+
+  Future<Res<Map<String, ChapterMetadata>>> Function(String)? _parseChapterMetadataLoader() {
+    if (!_checkExists('comic.loadChapterMetadata')) return null;
+    return (id) async {
+      try {
+        final result = await JsEngine().runCode(
+          'ComicSource.sources.$_key.comic.loadChapterMetadata(${jsonEncode(id)})',
+        ).timeout(const Duration(seconds: 20));
+        return Res(ChapterMetadata.parse(result));
+      } catch (e, s) {
+        Log.error('ChapterMetadata', '$e\n$s');
+        return Res.error(e.toString());
+      }
+    };
   }
 
   LoadComicFunc? _parseLoadComicFunc() {

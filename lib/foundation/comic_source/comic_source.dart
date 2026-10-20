@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'package:venera/foundation/chapter_metadata.dart';
 
 import 'package:flutter/widgets.dart';
 import 'package:venera/foundation/app.dart';
@@ -524,6 +525,9 @@ class ComicSource {
   /// Load comic info.
   final LoadComicFunc? loadComicInfo;
 
+  /// Optional independent chapter enrichment; never blocks details or reading.
+  final Future<Res<Map<String, ChapterMetadata>>> Function(String id)? loadChapterMetadata;
+
   final ComicThumbnailLoader? loadComicThumbnail;
 
   /// Load comic pages.
@@ -921,6 +925,7 @@ class ComicSource {
     this.starRatingFunc,
     this.archiveDownloader, {
     this.handleClickAuthorEvent,
+    this.loadChapterMetadata,
     this.commentProviderSetting,
     CommentCapabilities? commentCapabilities,
     CommentCapabilities? chapterCommentCapabilities,

@@ -397,6 +397,26 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
 
   bool showAll = false;
 
+  final Map<String, ChapterMetadata> _chapterMetadata = {};
+  String? _metadataScope;
+  int _metadataGeneration = 0;
+
+  void _loadChapterMetadata() {
+    final details = state.comic;
+    final scope = '${details.sourceKey}:${details.id}';
+    if (_metadataScope == scope) return;
+    _metadataScope = scope;
+    _chapterMetadata.clear();
+    final generation = ++_metadataGeneration;
+    final loader = ComicSource.find(details.sourceKey)?.loadChapterMetadata;
+    if (loader == null) return;
+    Future<void>(() async {
+      final result = await loader(details.id);
+      if (!mounted || generation != _metadataGeneration || result.error) return;
+      setState(() => _chapterMetadata.addAll(result.data));
+    }).catchError((Object _) {});
+  }
+
   History? _history;
 
   late ComicChapters chapters;
@@ -443,6 +463,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     state = context.findAncestorStateOfType<_ComicPageState>()!;
     chapters = state.comic.chapters!;
     _computeVisible();
+    _loadChapterMetadata();
     super.didChangeDependencies();
   }
 
@@ -474,12 +495,14 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     final total = collapsed ? limit : visible.length;
 
     /// 顯示槽位 → visible 下標：倒序時從最新一話往回數
-    int mapSlot(int slot) => reverse ? visible.length - 1 - slot : slot;
+    int mapSlot(int slot) => visible[reverse ? visible.length - 1 - slot : slot];
 
     Widget cell(int slot) {
       final i = mapSlot(slot);
       final key = chapters.ids.elementAt(i);
       final value = chapters[key]!;
+      final metadata = (details.chapterMetadata[key] ?? const ChapterMetadata())
+          .merge(_chapterMetadata[key] ?? const ChapterMetadata());
       final epKey = (i + 1).toString();
       final visited = (_history?.readEpisode ?? const {}).contains(epKey);
       final covers = details.chapterCovers ?? const <String, String>{};
@@ -551,8 +574,13 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: visited ? context.colorScheme.onSurfaceVariant : null,
+                ),
               ),
+              const SizedBox(height: 4),
+              ChapterMetadataLine(metadata: metadata),
             ],
           ),
         ),
@@ -564,10 +592,10 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
       return SliverToBoxAdapter(
         child: LayoutBuilder(
           builder: (context, c) {
-            const cross = 5;
-            const spacing = 10.0;
+            final cross = math.max(2, (c.maxWidth / 220).floor());
+            const spacing = 12.0;
             final cellW = (c.maxWidth - spacing * (cross - 1)) / cross;
-            final cellH = cellW / 0.58 + 20;
+            final cellH = cellW * 0.62 + 64;
             return Wrap(
               spacing: spacing,
               runSpacing: spacing,
@@ -581,19 +609,22 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
       );
     }
 
-    return SliverGrid(
-      key: _chapterGridKey,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.58,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        (context, slot) => cell(slot),
-        childCount: total,
-      ),
-    );
+    return SliverLayoutBuilder(builder: (context, constraints) {
+      final columns = math.max(2, (constraints.crossAxisExtent / 220).floor());
+      final width = (constraints.crossAxisExtent - 12 * (columns - 1)) / columns;
+      return SliverGrid(
+        key: _chapterGridKey,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          mainAxisExtent: width * 0.62 + 64,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, slot) => cell(slot), childCount: total,
+        ),
+      );
+    });
   }
 
   @override

@@ -226,11 +226,65 @@ class IOSBackGestureController {
 
   final NavigatorState navigator;
 
+  /// Whether this controller started the navigator user gesture and therefore
+  /// owns the single matching [NavigatorState.didStopUserGesture] call.
+  bool _ownsUserGesture = false;
+
+  /// The gesture has been resolved (completed / dismissed / aborted). After
+  /// this no further animation may be started for this controller.
+  bool _finished = false;
+
+  bool _disposed = false;
+
+  /// Whether this gesture has already resolved. The detector keeps the
+  /// reference around so an in-flight settle animation can still be disposed
+  /// with the widget; a new swipe replaces a finished controller.
+  bool get isFinished => _finished;
+
   IOSBackGestureController(this.controller, this.navigator) {
-    navigator.didStartUserGesture();
+    // Never nest user gestures: the navigator's counter must stay balanced, or
+    // `userGestureInProgress` latches on and every later back swipe is refused.
+    if (!navigator.userGestureInProgress) {
+      _ownsUserGesture = true;
+      navigator.didStartUserGesture();
+    }
+  }
+
+  /// Releases the navigator user gesture exactly once, whatever path (fling,
+  /// cancel, route disposed mid-gesture) got us here.
+  void _finish() {
+    if (_finished) return;
+    _finished = true;
+    controller.removeStatusListener(_handleAnimationStatus);
+    if (_ownsUserGesture && navigator.mounted) {
+      _ownsUserGesture = false;
+      navigator.didStopUserGesture();
+    }
+  }
+
+  void _handleAnimationStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      _finish();
+    }
+  }
+
+  /// Keeps the navigator locked until the settle animation reaches a terminal
+  /// status, then releases it. If nothing is animating (zero-length animation
+  /// or the pop never started), release immediately so the lock cannot leak.
+  void _releaseWhenSettled() {
+    if (_finished) return;
+    if (!controller.isAnimating) {
+      _finish();
+      return;
+    }
+    controller.removeStatusListener(_handleAnimationStatus);
+    controller.addStatusListener(_handleAnimationStatus);
   }
 
   void dragEnd(double velocity) {
+    if (_finished || _disposed) return;
+
     const Curve animationCurve = Curves.fastLinearToSlowEaseIn;
     final bool animateForward;
 
@@ -241,49 +295,74 @@ class IOSBackGestureController {
     }
 
     if (animateForward) {
-      final droppedPageForwardAnimationTime = min(
-        lerpDouble(
-          _kMaxDroppedSwipePageForwardAnimationTime,
-          0,
-          controller.value,
-        )!.floor(),
-        _kMaxPageBackAnimationTime,
-      );
-      controller.animateTo(
-        1.0,
-        duration: Duration(milliseconds: droppedPageForwardAnimationTime),
-        curve: animationCurve,
-      );
+      // Snap the page back to its resting position without popping.
+      _animateToRest(animationCurve);
     } else {
       navigator.pop();
+      if (_finished) return;
       if (controller.isAnimating) {
-        final droppedPageBackAnimationTime = lerpDouble(
-          0,
-          _kMaxDroppedSwipePageForwardAnimationTime,
-          controller.value,
-        )!.floor();
-        controller.animateBack(
-          0.0,
-          duration: Duration(milliseconds: droppedPageBackAnimationTime),
-          curve: animationCurve,
-        );
+        // The pop is reversing the route animation; release on dismissal.
+        _releaseWhenSettled();
+      } else if (controller.value > 0.0) {
+        // The pop was vetoed (the route is still here) and no animation is
+        // driving the transition: put the page back instead of leaving it
+        // stranded at a partial offset.
+        _animateToRest(animationCurve);
+      } else {
+        _finish();
       }
-    }
-
-    if (controller.isAnimating) {
-      late AnimationStatusListener animationStatusCallback;
-      animationStatusCallback = (status) {
-        navigator.didStopUserGesture();
-        controller.removeStatusListener(animationStatusCallback);
-      };
-      controller.addStatusListener(animationStatusCallback);
-    } else {
-      navigator.didStopUserGesture();
     }
   }
 
+  /// Aborts an in-flight interactive pop (drag cancel, second finger landing on
+  /// the screen, widget disposal) and animates the page back to fully visible.
+  ///
+  /// This must not pop: a cancelled gesture has to leave the user on the page
+  /// they were already on, never halfway between two pages.
+  void cancel() {
+    if (_finished || _disposed) return;
+    _animateToRest(Curves.fastLinearToSlowEaseIn);
+  }
+
+  void _animateToRest(Curve curve) {
+    final droppedPageForwardAnimationTime = min(
+      lerpDouble(_kMaxDroppedSwipePageForwardAnimationTime, 0, controller.value)!
+          .floor(),
+      _kMaxPageBackAnimationTime,
+    );
+    controller.animateTo(
+      1.0,
+      duration: Duration(milliseconds: droppedPageForwardAnimationTime),
+      curve: curve,
+    );
+    _releaseWhenSettled();
+  }
+
   void dragUpdate(double delta) {
+    if (_finished || _disposed) return;
+    // A fresh drag takes over from a running settle animation; the user gesture
+    // lock stays held by this controller until the drag ends.
+    if (controller.isAnimating) {
+      controller.stop();
+    }
+    // Dragging to 0.0/1.0 must not fire the settle callback mid-gesture: that
+    // would release the navigator lock while the finger is still down.
+    controller.removeStatusListener(_handleAnimationStatus);
     controller.value -= delta;
+  }
+
+  /// Called when the owning detector is disposed. If the gesture never resolved
+  /// (the route was removed while the user was still dragging) the navigator
+  /// would otherwise stay in `userGestureInProgress` forever.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    if (!_finished) {
+      if (controller.isAnimating) {
+        controller.stop();
+      }
+      _finish();
+    }
   }
 }
 
@@ -326,6 +405,13 @@ class _IOSBackGestureDetectorState extends State<IOSBackGestureDetector> {
   @override
   void dispose() {
     _recognizer.dispose();
+    // A gesture still running when this detector goes away (the route was
+    // popped / replaced mid-swipe) must release the navigator user gesture,
+    // otherwise `userGestureInProgress` stays true and every later back swipe
+    // is ignored.
+    final IOSBackGestureController? controller = _backGestureController;
+    _backGestureController = null;
+    controller?.dispose();
     super.dispose();
   }
 
@@ -392,10 +478,16 @@ class _IOSBackGestureDetectorState extends State<IOSBackGestureDetector> {
   }
 
   void _handleDragStart(DragStartDetails details) {
-    if (!widget.enabledCallback()) return;
-    if (mounted && _backGestureController == null) {
-      _backGestureController = widget.onStartPopGesture();
+    if (!mounted || !widget.enabledCallback()) return;
+    final IOSBackGestureController? existing = _backGestureController;
+    if (existing != null) {
+      // Reuse a gesture that is still settling (so the navigator lock stays
+      // balanced); otherwise replace the finished one.
+      if (!existing.isFinished) return;
+      existing.dispose();
+      _backGestureController = null;
     }
+    _backGestureController = widget.onStartPopGesture();
   }
 
   void _handleDragUpdate(DragUpdateDetails details) {
@@ -407,21 +499,24 @@ class _IOSBackGestureDetectorState extends State<IOSBackGestureDetector> {
   }
 
   void _handleDragEnd(DragEndDetails details) {
-    if (mounted && _backGestureController != null) {
-      _backGestureController!.dragEnd(
-        _convertToLogical(
-          details.velocity.pixelsPerSecond.dx / context.size!.width,
-        ),
-      );
-      _backGestureController = null;
-    }
+    final IOSBackGestureController? controller = _backGestureController;
+    if (!mounted || controller == null) return;
+    controller.dragEnd(
+      _convertToLogical(
+        details.velocity.pixelsPerSecond.dx / context.size!.width,
+      ),
+    );
   }
 
+  /// The drag was aborted (pointer cancel, or a second finger landed while the
+  /// swipe was in flight). Restore the page instead of resolving the drag by
+  /// position/velocity, which could pop it or freeze it midway.
   void _handleDragCancel() {
-    if (mounted && _backGestureController != null) {
-      _backGestureController?.dragEnd(0.0);
-      _backGestureController = null;
-    }
+    final IOSBackGestureController? controller = _backGestureController;
+    if (!mounted || controller == null) return;
+    // Keep the reference: the restore animation still owns the navigator user
+    // gesture and must be releasable from dispose().
+    controller.cancel();
   }
 
   double _convertToLogical(double value) {
@@ -453,9 +548,24 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
   final VoidCallback onCancel;
 
   Offset? _startGlobal;
+
+  /// The single pointer that owns the current back swipe. Extra fingers that
+  /// land while a swipe is in flight are ignored (never tracked) so they cannot
+  /// overwrite the drag origin, the accepted flag or the velocity tracker.
+  int? _activePointer;
+
   bool _accepted = false;
-  bool _startedInHorizontal = false;
+
+  /// Set when the swipe was aborted mid-flight (second finger) — remaining
+  /// events from [_activePointer] are swallowed until it is lifted.
+  bool _suppressed = false;
+
   bool _startedNearLeftEdge = false;
+
+  /// Whether the drag started on top of a horizontal scrollable / swipeable
+  /// tile. Recorded for diagnostics; the edge requirement already gates the
+  /// gesture for every surface.
+  bool _startedOverHorizontal = false;
 
   VelocityTracker? _velocityTracker;
 
@@ -464,12 +574,34 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
 
   @override
   void addPointer(PointerDownEvent event) {
+    // Second (or later) touch during an active back swipe.
+    //
+    // Previously this re-ran the init below: `_startGlobal` jumped to the new
+    // finger and `_accepted` was cleared, so the ongoing drag lost its origin
+    // and the following pointer-up ran `_reset()` (which stopped tracking
+    // pointer 0, i.e. the wrong pointer). No dragEnd ever reached the
+    // controller, leaving the page frozen at a partial offset and the
+    // navigator stuck in `userGestureInProgress`.
+    //
+    // iOS cancels the interactive pop when another finger touches during the
+    // transition; do the same — restore the page once and swallow the rest of
+    // the gesture.
+    if (_activePointer != null) {
+      if (_accepted && !_suppressed) {
+        _suppressed = true;
+        onCancel();
+      }
+      return;
+    }
+
+    _activePointer = event.pointer;
     startTrackingPointer(event.pointer);
     _startGlobal = event.position;
     _accepted = false;
+    _suppressed = false;
 
-    _startedInHorizontal = isPointerInHorizontal(event.position);
     _startedNearLeftEdge = event.position.dx <= gestureWidth;
+    _startedOverHorizontal = isPointerInHorizontal(event.position);
 
     _velocityTracker = VelocityTracker.withKind(event.kind);
     _velocityTracker?.addPosition(event.timeStamp, event.position);
@@ -477,12 +609,15 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
 
   @override
   void handleEvent(PointerEvent event) {
+    // Ignore stray events from pointers we do not own.
+    if (event.pointer != _activePointer) return;
+
     if (event is PointerMoveEvent || event is PointerUpEvent) {
       _velocityTracker?.addPosition(event.timeStamp, event.position);
     }
 
     if (event is PointerMoveEvent) {
-      if (_startGlobal == null) return;
+      if (_startGlobal == null || _suppressed) return;
       final delta = event.position - _startGlobal!;
       final dx = delta.dx;
       final dy = delta.dy.abs();
@@ -506,9 +641,8 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
           );
         } else {
           resolve(GestureDisposition.rejected);
-          stopTrackingPointer(event.pointer);
-          _startGlobal = null;
-          _velocityTracker = null;
+          _reset();
+          return;
         }
       }
 
@@ -523,7 +657,8 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
         );
       }
     } else if (event is PointerUpEvent) {
-      if (_accepted) {
+      // Only a swipe that was not aborted resolves through a drag end.
+      if (_accepted && !_suppressed) {
         final Velocity velocity =
             _velocityTracker?.getVelocity() ?? Velocity.zero;
 
@@ -536,7 +671,7 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
       }
       _reset();
     } else if (event is PointerCancelEvent) {
-      if (_accepted) {
+      if (_accepted && !_suppressed) {
         onCancel();
       }
       _reset();
@@ -544,16 +679,23 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
   }
 
   void _reset() {
-    stopTrackingPointer(0);
+    final int? pointer = _activePointer;
+    _activePointer = null;
     _accepted = false;
+    _suppressed = false;
     _startGlobal = null;
-    _startedInHorizontal = false;
     _startedNearLeftEdge = false;
+    _startedOverHorizontal = false;
     _velocityTracker = null;
+    if (pointer != null) {
+      stopTrackingPointer(pointer);
+    }
   }
 
   @override
-  String get debugDescription => 'IOSBackSwipe';
+  String get debugDescription =>
+      'IOSBackSwipe(overHorizontal=$_startedOverHorizontal, '
+      'nearEdge=$_startedNearLeftEdge)';
 
   @override
   void didStopTrackingLastPointer(int pointer) {}

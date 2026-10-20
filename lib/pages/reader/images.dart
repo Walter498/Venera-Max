@@ -529,8 +529,10 @@ class _GalleryModeState extends State<_GalleryMode>
               controller.jumpToPage(1);
             }
           } else if (i == totalPages + 1) {
-            if (!reader.chapterEndReached ||
-                reader.isLastChapterOfGroup || !reader.toNextChapter()) {
+            // Last page swiped forward: chapter comments (or their pending /
+            // failed footer) have already had their own page, so the next
+            // chapter is allowed regardless of comment load state.
+            if (reader.isLastChapterOfGroup || !reader.toNextChapter()) {
               controller.jumpToPage(totalPages);
             }
           } else {
@@ -683,8 +685,10 @@ class _GalleryModeState extends State<_GalleryMode>
         duration:const Duration(milliseconds:200),curve:Curves.ease));
       return true;
     }
-    // Consume forward input while pending/error, including a short footer.
-    return forward && !reader.chapterEndReached;
+    // The footer is already fully on screen. Do not consume the turn while it
+    // is pending/errored: the gesture caller falls back to chapter navigation,
+    // so an unreachable comment source cannot pin the reader here forever.
+    return false;
   }
 
   @override
@@ -2196,7 +2200,10 @@ class _ContinuousModeState extends State<_ContinuousMode>
           if (jumpToPrevChapter) {
             context.readerScaffold.setFloatingButton(0);
             reader.toPrevChapter(toLastPage: true);
-          } else if (jumpToNextChapter && reader.chapterEndReached) {
+          } else if (jumpToNextChapter) {
+            // The swipe already crossed maxScrollExtent. Requiring
+            // chapterEndReached here made a pending/errored comments footer
+            // silently drop the chapter turn.
             context.readerScaffold.setFloatingButton(0);
             reader.toNextChapter();
           }
@@ -2648,18 +2655,29 @@ class _ContinuousModeState extends State<_ContinuousMode>
     final step = forward ? 1 : -1;
     final currentEntry = intended ?? _entries[curIdx];
     final chapterImages = _continuousChapterImages[currentEntry.chapter] ?? reader.images;
-    if (forward && chapterImages != null && currentEntry.page >= chapterImages.length &&
-        reader.chapterCommentsEnabled && reader.chapterCommentsAvailable(
-          reader.widget.chapters!.ids.elementAt(currentEntry.chapter - 1)) &&
-        (!reader.chapterCommentsSettled(currentEntry.chapter) ||
-          !_footerReached(currentEntry.chapter))) {
-      // Consume taps/keys before selecting a next image across the separator.
+    final atLastImage = chapterImages != null &&
+        currentEntry.page >= chapterImages.length;
+    if (forward &&
+        atLastImage &&
+        _footerKeys[currentEntry.chapter] != null &&
+        !_footerReached(currentEntry.chapter)) {
+      // Bring the rest of this chapter's comments footer into view. Once it is
+      // fully visible (including a short pending/error placeholder) the turn is
+      // no longer consumed, so navigation can leave the chapter.
       smoothTo(_axis == Axis.vertical ? reader.size.height : reader.size.width);
       return true;
     }
     for (var i = curIdx + step; i >= 0 && i < _entries.length; i += step) {
       final entry = _entries[i];
       if (!entry.isImage) continue;
+      // While this chapter's comments are unresolved the trailing sliver is
+      // clamped at the chapter boundary, so a later chapter's entry cannot be
+      // laid out. Hand the turn to chapter navigation (repivot/remount) instead
+      // of requesting a target this list will never build.
+      if (entry.chapter != reader.chapter &&
+          !reader.chapterCommentsSettled(reader.chapter)) {
+        return false;
+      }
       if (_boundaryTurnChapter != null) {
         _turnInteractionGeneration++;
         _boundaryTurnChapter = null;
@@ -2680,6 +2698,9 @@ class _ContinuousModeState extends State<_ContinuousMode>
         forward ? 1 : -1,
       );
       if (atBoundary && adjacentChapter != null) {
+        // Same clamp as above: a boundary turn cannot lay the target out until
+        // the footer resolves, so fall back to chapter navigation.
+        if (!reader.chapterCommentsSettled(current.chapter)) return false;
         _requestBoundaryTurn(adjacentChapter, forward: forward);
         return true;
       }

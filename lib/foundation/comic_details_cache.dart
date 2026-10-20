@@ -145,6 +145,8 @@ class ComicDetailsCache {
       'description': details.description,
       'tags': details.tags,
       'chapters': details.chapters?.toJson(),
+      'chapterCovers': details.chapterCovers,
+      'chapterMetadata': details.chapterMetadata.map((k, v) => MapEntry(k, v.toJson())),
       'sourceKey': details.sourceKey,
       'comicId': details.comicId,
       'thumbnails': details.thumbnails,

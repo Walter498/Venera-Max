@@ -268,8 +268,12 @@ class _ReaderState extends State<Reader>
     }
   }
 
-  // A short spinner/error footer is not a completed first page. Keep all
-  // implicit navigation paths at this chapter until a real result is known.
+  // A short spinner/error footer is not a completed first page, so the footer
+  // geometry and the "chapter complete" mark must not treat it as read. This is
+  // deliberately *not* a navigation gate: [atForwardChapterBoundary] decides
+  // whether a chapter turn is allowed, so a request that never settles cannot
+  // pin the reader (issue #259). The continuous list clamps its trailing window
+  // while this is false, and those turns fall back to chapter navigation.
   bool chapterCommentsSettled(int chapterIndex) {
     if (!chapterCommentsEnabled) return true;
     final ep = widget.chapters!.ids.elementAt(chapterIndex - 1);
@@ -1130,11 +1134,22 @@ abstract mixin class _ReaderLocation {
 
   int? _nextVisibleChapter(int step) => visibleChapterFrom(chapter, step);
 
+  /// Whether the reader sits on the page a forward chapter turn leaves from.
+  ///
+  /// This is page geometry only: the last *image* page (gallery mode may add a
+  /// separate chapter-comments page after it). Chapter comments have their own
+  /// page/footer, and a request that is still pending or has failed must never
+  /// be the reason the reader cannot turn the chapter. [chapterEndReached] stays
+  /// the "chapter fully read, footer included" mark used by history and
+  /// auto-reading, so the two concerns no longer share a gate.
+  bool get atForwardChapterBoundary => page >= maxPage;
+
   /// Returns true if the chapter is changed
   bool toNextChapter() {
-    // Volume/pointer/key fallbacks share this path. A footer wait is handled
-    // input, not permission to escape the last image into the next chapter.
-    if (page >= maxPage && !chapterEndReached) return false;
+    // Volume/pointer/key fallbacks share this path. Waiting for a comment
+    // request is not a precondition: an unreachable source leaves the feed
+    // pending forever, which used to trap the reader on the last page.
+    if (isLoading) return false;
     final target = _nextVisibleChapter(1);
     return target != null && toChapter(target);
   }

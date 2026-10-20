@@ -232,7 +232,9 @@ class ReaderCommentsFixture extends ComicSource {
               }
               if (chapter == 6) {
                 expect(state.chapterEndReached, isFalse);
-                expect(state.toNextPage(), isTrue);
+                // Pending comments do not consume forward input any more.
+                // Production gestures fall back to explicit chapter navigation.
+                expect(state.toNextPage(), isFalse);
                 await frames(tester, 24);
                 expect(state.chapter, 6);
                 expect(state.page, pageCount);
