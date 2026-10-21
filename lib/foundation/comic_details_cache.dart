@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:venera/foundation/app.dart';
+import 'package:venera/foundation/chapter_metadata.dart';
 import 'package:venera/foundation/comic_collection_store.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comic_type.dart';
@@ -67,9 +68,25 @@ class ComicDetailsCache {
     return null;
   }
 
-  /// Verifies stored encodings without re-enabling production details caching.
+  /// Reads only durable dates for the first chapter frame. Full details remain
+  /// network-first; cached likes, comments and counts are never restored.
+  Map<String, ChapterMetadata> readChapterMetadata(String sourceKey, String comicId) {
+    final details = _readStored(sourceKey, comicId);
+    return {
+      for (final entry in details?.chapterMetadata.entries ??
+          const <MapEntry<String, ChapterMetadata>>[])
+        entry.key: ChapterMetadata(
+          updateTime: entry.value.updateTime,
+          tencentUpdateTime: entry.value.tencentUpdateTime,
+        ),
+    };
+  }
+
   @visibleForTesting
-  ComicDetails? readStoredForTesting(String sourceKey, String comicId) {
+  ComicDetails? readStoredForTesting(String sourceKey, String comicId) =>
+      _readStored(sourceKey, comicId);
+
+  ComicDetails? _readStored(String sourceKey, String comicId) {
     if (!isCacheable(sourceKey)) return null;
     try {
       final rows = _db.select(
@@ -106,7 +123,20 @@ class ComicDetailsCache {
   void update(String sourceKey, String comicId, ComicDetails details) {
     if (!isCacheable(sourceKey)) return;
     try {
-      final encoded = jsonEncode(encode(details));
+      final previous = _readStored(sourceKey, comicId);
+      final data = encode(details);
+      if (previous != null) {
+        final merged = <String, ChapterMetadata>{...previous.chapterMetadata};
+        for (final entry in details.chapterMetadata.entries) {
+          merged[entry.key] = (merged[entry.key] ?? const ChapterMetadata())
+              .merge(entry.value);
+        }
+        data['chapterMetadata'] = {
+          for (final entry in merged.entries)
+            entry.key: entry.value.toJson(includeLikes: false),
+        };
+      }
+      final encoded = jsonEncode(data);
       final rows = _db.select(
         'SELECT data FROM details_cache WHERE source_key = ? AND comic_id = ?;',
         [sourceKey, comicId],
@@ -119,6 +149,45 @@ class ComicDetailsCache {
       );
     } catch (e) {
       Log.warning('ComicDetailsCache', 'Cache write failed: $e');
+    }
+  }
+
+  /// Merges durable chapter dates into the cached details without persisting
+  /// live likes. Each provider's date field remains independent.
+  void mergeChapterMetadata(
+    String sourceKey,
+    String comicId,
+    Map<String, ChapterMetadata> updates,
+  ) {
+    if (!isCacheable(sourceKey) || updates.isEmpty) {
+      return;
+    }
+    try {
+      final stored = _readStored(sourceKey, comicId);
+      if (stored == null) {
+        return;
+      }
+      final merged = <String, ChapterMetadata>{...stored.chapterMetadata};
+      for (final entry in updates.entries) {
+        final old = merged[entry.key] ?? const ChapterMetadata();
+        final dateOnly = ChapterMetadata(
+          updateTime: entry.value.updateTime,
+          tencentUpdateTime: entry.value.tencentUpdateTime,
+        );
+        merged[entry.key] = old.merge(dateOnly);
+      }
+      final data = encode(stored)..['chapterMetadata'] = {
+        for (final entry in merged.entries)
+          entry.key: entry.value.toJson(includeLikes: false),
+      };
+      final encoded = jsonEncode(data);
+      _db.execute(
+        'UPDATE details_cache SET data = ?, time = ? '
+        'WHERE source_key = ? AND comic_id = ?;',
+        [encoded, DateTime.now().millisecondsSinceEpoch, sourceKey, comicId],
+      );
+    } catch (e) {
+      Log.warning('ComicDetailsCache', 'Metadata merge failed: $e');
     }
   }
 

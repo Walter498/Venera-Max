@@ -58,6 +58,7 @@ import 'package:venera/utils/tags_translation.dart';
 import 'package:venera/utils/translations.dart';
 import 'dart:math' as math;
 import 'package:venera/foundation/chapter_metadata.dart';
+import 'package:venera/foundation/chapter_metadata_session.dart';
 import 'package:venera/components/chapter_metadata_line.dart';
 import 'package:venera/components/chapter_date_source_button.dart';
 
@@ -161,6 +162,64 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   Future<bool>? _detailsRefreshFuture;
 
   int _detailsRefreshGeneration = 0;
+
+  final Map<String, ChapterMetadata> _chapterMetadata = {};
+  final Map<String, ChapterMetadata> _storedChapterDates = {};
+  ChapterMetadataSession? _metadataSession;
+  String? _metadataScope;
+
+  /// Starts as soon as details return, before any lazy chapter widget is built.
+  void _ensureChapterMetadata(ComicDetails details) {
+    if (details.chapters == null) {
+      return;
+    }
+    final scope = '${details.sourceKey}:${details.id}';
+    if (_metadataScope != scope) {
+      _metadataSession?.dispose();
+      _metadataScope = scope;
+      _chapterMetadata.clear();
+      _storedChapterDates
+        ..clear()
+        ..addAll(ComicDetailsCache().readChapterMetadata(
+            widget.sourceKey, widget.id));
+      final loader = ComicSource.find(details.sourceKey)?.loadChapterMetadata;
+      if (loader != null) {
+        _metadataSession = ChapterMetadataSession(
+          load: (ids) async {
+            final result = await loader(details.id, ids);
+            if (result.error) {
+              throw StateError('Chapter metadata request failed');
+            }
+            return result.data;
+          },
+          onResult: (updates) {
+            if (!mounted || _metadataScope != scope) {
+              return;
+            }
+            setState(() {
+              for (final entry in updates.entries) {
+                _chapterMetadata[entry.key] =
+                    (_chapterMetadata[entry.key] ?? const ChapterMetadata())
+                        .merge(entry.value);
+                _storedChapterDates[entry.key] =
+                    (_storedChapterDates[entry.key] ?? const ChapterMetadata())
+                        .merge(ChapterMetadata(
+                          updateTime: entry.value.updateTime,
+                          tencentUpdateTime: entry.value.tencentUpdateTime,
+                        ));
+              }
+            });
+            ComicDetailsCache().mergeChapterMetadata(
+                widget.sourceKey, widget.id, updates);
+          },
+        );
+      } else {
+        _metadataSession = null;
+      }
+    }
+    unawaited(_metadataSession?.request(details.chapters!.ids) ?? Future.value());
+  }
+
 
   @override
   bool get isDetailsLoading => _detailsRefreshing;
@@ -303,6 +362,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     appdata.settings.removeListener(_onCommentsSettingsChanged);
     ComicSource.settingsChanges.removeListener(_onCommentsSettingsChanged);
     _releaseComments();
+    _metadataSession?.dispose();
     scrollController.removeListener(onScroll);
     ComicCollectionStore.changes.removeListener(_onCollectionChanged);
     PreTranslationTaskManager.instance.removeListener(update);
@@ -717,6 +777,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
             data = res.data;
           });
           ComicDetailsCache().update(widget.sourceKey, widget.id, res.data);
+      _ensureChapterMetadata(res.data);
           _preloadComments(source, res.data.id, res.data.subId);
           await onDataLoaded();
           return true;

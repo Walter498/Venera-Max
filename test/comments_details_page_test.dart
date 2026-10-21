@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/chapter_metadata.dart';
 import 'package:venera/foundation/comic_details_cache.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/favorites.dart';
@@ -22,11 +23,15 @@ import 'comments_fixtures.dart';
 // Dart mock loaders sit behind the real source registry, repository and page.
 // Real JS/source/local readiness is initialized below; comment loaders remain
 // Dart fixtures. No HTTP, device plugin boot or App.isInitialized override.
-ComicSource _source(LoadComicFunc info, CommentsLoader comments) => ComicSource(
+ComicSource _source(LoadComicFunc info, CommentsLoader comments, {
+  Future<Res<Map<String, ChapterMetadata>>> Function(String, List<String>)?
+      metadata,
+}) => ComicSource(
   'Details fixture', 'details_page_fixture', null, null, null, null,
   const [], null, null, info, null, null, null, null, '', '', '1.0',
   comments, null, null, null, null, null, null, null, null, null, null,
   null, false, false, null, null,
+  loadChapterMetadata: metadata,
   commentCapabilities: const CommentCapabilities(canLoadReplies: false),
 )..data['settings'] = <String, dynamic>{'domain': 'fixture.invalid'};
 
@@ -395,6 +400,89 @@ void main() {
     expect(full.sharedSession!.controller.loaded, isTrue);
     return full;
   }
+
+  _pageTest('metadata loads all 385 IDs before scrolling and stays fresh per entry', (tester) async {
+    final ids = List.generate(385, (index) => 'chapter-${index + 1}');
+    final calls = <List<String>>[];
+    final oldDateSource = appdata.settings['chapterDateSource'];
+    final oldGrid = appdata.settings['chapterCoverGrid'];
+    try {
+      appdata.settings['chapterDateSource'] = 'lizi';
+      appdata.settings['chapterCoverGrid'] = false;
+      final details = ComicDetails.fromJson({
+        'title': 'Real details host', 'cover': cover,
+        'tags': <String, List<String>>{},
+        'sourceKey': 'details_page_fixture', 'comicId': 'work',
+        'chapters': {for (final id in ids) id: 'Chapter $id'},
+      });
+      await mount(tester, _source((_) async => Res(details),
+        (a, b, c, d) async => const Res<List<Comment>>(
+          [], available: false, total: 0, subData: 0),
+        metadata: (id, requested) async {
+          expect(id, 'work');
+          calls.add(List.of(requested));
+          return Res({
+            for (final chapter in requested)
+              chapter: ChapterMetadata(
+                updateTime: '2026-01-17', tencentUpdateTime: '2022-04-23',
+                likesCount: calls.length == 1 ? 0 : 9, likesSource: 'tencent'),
+          });
+        },
+      ));
+      // mount has not scrolled. The chapter section remains collapsed by default.
+      expect(calls, hasLength(1));
+      expect(calls.single, orderedEquals(ids));
+      expect(calls.single, hasLength(385));
+      final dates = ComicDetailsCache().readChapterMetadata(
+        'details_page_fixture', 'work');
+      expect(dates, hasLength(385));
+      expect(dates[ids.last]!.updateTime, '2026-01-17');
+      expect(dates[ids.last]!.tencentUpdateTime, '2022-04-23');
+      expect(dates.values.every((value) =>
+        value.likesCount == null && value.likesSource == null), isTrue);
+
+      final dateButton = find.byKey(const ValueKey('chapter-date-source'));
+      final scrollable = find.descendant(
+        of: find.byType(ComicPage), matching: find.byType(Scrollable),
+      ).first;
+      await tester.scrollUntilVisible(dateButton, 180, scrollable: scrollable);
+      await _frames(tester, 2);
+      await tester.tap(dateButton);
+      await _frames(tester, 2);
+      await tester.tap(find.text('腾讯发布日期'));
+      await _frames(tester, 2);
+      expect(appdata.settings['chapterDateSource'], 'tencent');
+      // The toolbar remains reachable while expanding/collapsing the list.
+      await tester.tap(find.byTooltip('Expand').first);
+      await _frames(tester, 2);
+      await tester.tap(find.byTooltip('Collapse').first);
+      await _frames(tester, 2);
+      await tester.tap(find.byTooltip('Preview covers'));
+      await _frames(tester, 2);
+      expect(appdata.settings['chapterCoverGrid'], isTrue);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await _frames(tester, 4);
+      expect(calls, hasLength(1),
+        reason: 'date, mode, collapse and resume must reuse the entry session');
+
+      App.rootNavigatorKey.currentState!.pop();
+      await _until(tester, () => find.byType(ComicPage,
+        skipOffstage: false).evaluate().isEmpty);
+      await tester.tap(find.text('Open real details'));
+      await _until(tester, () => calls.length == 2);
+      await _frames(tester, 4);
+      expect(calls, hasLength(2));
+      expect(calls.last, orderedEquals(ids),
+        reason: 'a new entry requests fresh likes despite cached dates');
+      expect(tester.takeException(), isNull);
+    } finally {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      appdata.settings['chapterDateSource'] = oldDateSource;
+      appdata.settings['chapterCoverGrid'] = oldGrid;
+    }
+  });
 
   _pageTest('real ComicPage pending then nonempty gates both entries', (tester) async {
     var calls = 0;

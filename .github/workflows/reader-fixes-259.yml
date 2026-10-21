@@ -37,6 +37,17 @@ jobs:
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
         timeout-minutes: 12
         run: python3 tool/reader_fixes_259_tests.py
+      - name: Whole comic metadata entry lifecycle
+        if: ${{ !cancelled() && steps.native.outcome == 'success' }}
+        timeout-minutes: 5
+        run: >-
+          python3 -c "from pathlib import Path; import os; from tool.comments_test_runner import execute; raise SystemExit(0 if execute('chapter-metadata-entry', ['test/comments_details_page_test.dart', '--plain-name', 'metadata loads all 385 IDs before scrolling and stays fresh per entry'], Path(os.environ['RUNNER_TEMP']) / 'venera-comments-evidence') else 1)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chapter-metadata-early-verification
+          path: ${{ runner.temp }}/venera-comments-evidence/
+          if-no-files-found: warn
       - name: Existing reader navigation footer and history regressions
         if: ${{ !cancelled() && steps.native.outcome == 'success' }}
         timeout-minutes: 12
