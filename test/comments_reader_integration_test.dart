@@ -358,10 +358,23 @@ class ReaderCommentsFixture extends ComicSource {
         expect(find.text('评论详情'),findsOneWidget);
         Navigator.of(tester.element(find.text('评论详情'))).pop();
         await frames(tester,40);
-        for(var i=0;i<30 && !state.chapterEndReached;i++) {
+        // Full text now spans as many panels as it needs at 200% scaling;
+        // four long comments can legitimately exceed the old 30-turn budget.
+        // Derive a finite budget from the actual laid-out footer and require
+        // every page turn to make progress, so a navigation stall still fails.
+        final position = scroll.controller!.position;
+        final footerWidth = tester.getSize(find.byKey(
+          const ValueKey('chapter-comments-region'))).width;
+        final maxTurns = (footerWidth / position.viewportDimension).ceil() + 2;
+        for(var i=0;i<maxTurns && !state.chapterEndReached;i++) {
+          final before = position.pixels;
           state.toNextPage(); await frames(tester,20);
+          expect(position.pixels, greaterThan(before),
+            reason: 'footer turn $i of $maxTurns must advance toward its tail');
+          expect(state.chapter,1);
         }
         expect(state.chapterEndReached,true);
+        expect(position.pixels, closeTo(position.maxScrollExtent,1));
         expect(state.chapter,1);
         state.toNextChapter(); await frames(tester,40);
         expect(state.chapter,2);

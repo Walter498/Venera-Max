@@ -475,7 +475,6 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
 
   void _refreshRealtimeMetadata() {
     if (!mounted || _metadataBusy || _metadataScope == null ||
-        appdata.settings['chapterCoverGrid'] != true ||
         ModalRoute.of(context)?.isCurrent == false ||
         (WidgetsBinding.instance.lifecycleState != null &&
          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed)) return;
@@ -576,6 +575,19 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     }
   }
 
+  ChapterMetadata _metadataFor(ComicDetails details, String key) {
+    final stored = details.chapterMetadata[key] ?? const ChapterMetadata();
+    final fresh = _chapterMetadata[key] ?? const ChapterMetadata();
+    final useTencentDate = appdata.settings['chapterDateSource'] == 'tencent';
+    return ChapterMetadata(
+      updateTime: useTencentDate
+          ? fresh.tencentUpdateTime ?? stored.tencentUpdateTime
+          : stored.updateTime,
+      // Only the current request supplies likes; never restore cached likes.
+      likesCount: fresh.likesCount, likesSource: fresh.likesSource,
+    );
+  }
+
   /// 章節封面網格（詳情頁「封面預覽」模式）
   ///
   /// 收起時改用 Wrap + 固定格子尺寸（SliverToBoxAdapter 包住）：
@@ -594,13 +606,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
       final key = chapters.ids.elementAt(i);
       final value = chapters[key]!;
       _queueChapterMetadata(key);
-      final stored = details.chapterMetadata[key] ?? const ChapterMetadata();
-      final fresh = _chapterMetadata[key] ?? const ChapterMetadata();
-      final useTencentDate = appdata.settings['chapterDateSource'] == 'tencent';
-      final metadata = ChapterMetadata(
-        updateTime: useTencentDate ? fresh.tencentUpdateTime ?? stored.tencentUpdateTime : stored.updateTime,
-        likesCount: fresh.likesCount, likesSource: fresh.likesSource,
-      );
+      final metadata = _metadataFor(details, key);
       final epKey = (i + 1).toString();
       final visited = (_history?.readEpisode ?? const {}).contains(epKey);
       final covers = details.chapterCovers ?? const <String, String>{};
@@ -668,17 +674,10 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: visited ? context.colorScheme.onSurfaceVariant : null,
-                ),
+              ChapterCoverCaption(
+                title: value, metadata: metadata,
+                titleColor: visited ? context.colorScheme.onSurfaceVariant : null,
               ),
-              const SizedBox(height: 4),
-              ChapterMetadataLine(metadata: metadata),
             ],
           ),
         ),
@@ -690,10 +689,10 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
       return SliverToBoxAdapter(
         child: LayoutBuilder(
           builder: (context, c) {
-            final cross = math.max(2, (c.maxWidth / 220).floor());
-            const spacing = 12.0;
+            final cross = ChapterCardLayout.coverColumns(c.maxWidth);
+            const spacing = 8.0;
             final cellW = (c.maxWidth - spacing * (cross - 1)) / cross;
-            final cellH = cellW * 0.62 + 64;
+            final cellH = ChapterCardLayout.coverExtent(context, cellW);
             return Wrap(
               spacing: spacing,
               runSpacing: spacing,
@@ -708,15 +707,15 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     }
 
     return SliverLayoutBuilder(builder: (context, constraints) {
-      final columns = math.max(2, (constraints.crossAxisExtent / 220).floor());
-      final width = (constraints.crossAxisExtent - 12 * (columns - 1)) / columns;
+      final columns = ChapterCardLayout.coverColumns(constraints.crossAxisExtent);
+      final width = (constraints.crossAxisExtent - 8 * (columns - 1)) / columns;
       return SliverGrid(
         key: _chapterGridKey,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          mainAxisExtent: width * 0.62 + 64,
+          mainAxisSpacing: 14,
+          crossAxisSpacing: 8,
+          mainAxisExtent: ChapterCardLayout.coverExtent(context, width),
         ),
         delegate: SliverChildBuilderDelegate(
           (context, slot) => cell(slot), childCount: total,
@@ -735,8 +734,8 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     return SliverLayoutBuilder(
       builder: (context, constrains) {
         final gridMode = appdata.settings['chapterCoverGrid'] == true;
-        // 封面模式收起時固定 3 行 × 5 欄 = 15 格；文字模式收起時 8 行。
-        const coverLimit = 3 * 5;
+        // 封面模式收起時顯示三行；文字模式維持原有八行。
+        final coverLimit = 3 * ChapterCardLayout.coverColumns(constrains.crossAxisExtent);
         int length = visible.length;
         bool canShowAll = showAll || selectMode;
         if (!canShowAll) {
@@ -793,6 +792,8 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 var i = visible[slot];
                 var key = chapters.ids.elementAt(i);
                 var value = chapters[key]!;
+                _queueChapterMetadata(key);
+                final metadata = _metadataFor(pageState.comic, key);
                 var epKey = (i + 1).toString();
                 bool visited = (_history?.readEpisode ?? const {}).contains(
                   epKey,
@@ -817,29 +818,20 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                       borderRadius: BorderRadius.circular(10),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Center(
-                          child: Text(
-                            value,
-                            maxLines: 1,
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? context.colorScheme.onPrimaryContainer
-                                  : visited
-                                  ? context.colorScheme.outline
-                                  : null,
-                            ),
-                          ),
+                        child: ChapterTextContent(
+                          title: value, metadata: metadata,
+                          titleColor: isSelected
+                              ? context.colorScheme.onPrimaryContainer
+                              : visited ? context.colorScheme.outline : null,
                         ),
                       ),
                     ),
                   ),
                 );
               }),
-              gridDelegate: const SliverGridDelegateWithFixedHeight(
+              gridDelegate: SliverGridDelegateWithFixedHeight(
                 maxCrossAxisExtent: 220,
-                itemHeight: 44,
+                itemHeight: ChapterCardLayout.textExtent(context),
               ),
             ).sliverPadding(EdgeInsets.zero),
             // 「顯示全部」按鈕：文字模式與封面模式都要出現

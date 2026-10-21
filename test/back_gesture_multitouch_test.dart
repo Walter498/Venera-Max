@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/foundation/app_page_route.dart';
@@ -22,7 +21,7 @@ import 'package:venera/foundation/app_page_route.dart';
 ///  * disposing the detector mid-swipe still releases the user gesture;
 ///  * once restored, a fresh swipe works normally.
 void main() {
-  const Size _testSurface = Size(480, 720);
+  const Size testSurface = Size(480, 720);
 
   /// Width of the edge area the swipe must start in.
   const double kEdgeX = 5;
@@ -30,19 +29,11 @@ void main() {
   /// Logical screen width; drag deltas are divided by it.
   const double kWidth = 480;
 
-  setUp(() {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-  });
-
-  tearDown(() {
-    debugDefaultTargetPlatformOverride = null;
-  });
-
   Future<AppPageRoute<void>> pumpRoute(
     WidgetTester tester,
     GlobalKey<NavigatorState> navigatorKey,
   ) async {
-    tester.view.physicalSize = _testSurface;
+    tester.view.physicalSize = testSurface;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
@@ -132,6 +123,7 @@ void main() {
       expect(find.text('home'), findsOneWidget);
       expect(navigator.userGestureInProgress, isFalse);
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 
   testWidgets(
@@ -158,6 +150,7 @@ void main() {
       expect(find.text('home'), findsOneWidget);
       expect(navigator.userGestureInProgress, isFalse);
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 
   testWidgets(
@@ -197,6 +190,7 @@ void main() {
       expect(find.text('home'), findsOneWidget);
       expect(navigator.userGestureInProgress, isFalse);
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 
   testWidgets(
@@ -237,6 +231,7 @@ void main() {
       expect(find.text('home'), findsOneWidget);
       expect(navigator.userGestureInProgress, isFalse);
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 
   testWidgets(
@@ -251,7 +246,7 @@ void main() {
       );
       addTearDown(animation.dispose);
 
-      tester.view.physicalSize = _testSurface;
+      tester.view.physicalSize = testSurface;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
 
@@ -307,5 +302,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(navigator.userGestureInProgress, isFalse);
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 }

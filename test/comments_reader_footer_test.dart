@@ -208,7 +208,10 @@ void main() {
     await tester.tap(find.byType(CommentSortSelector));
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
-      await tester.tap(find.text('最热').last);
+      // CheckedPopupMenuItem excludes its Text child from hit testing.
+      // Exercise the actual interactive menu item instead of warning on Text.
+      await tester.tap(find.byWidgetPredicate((widget) =>
+        widget is CheckedPopupMenuItem<String> && widget.value == 'hot'));
       await source.saveData();
     });
     await tester.pumpAndSettle();

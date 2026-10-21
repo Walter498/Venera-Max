@@ -252,13 +252,23 @@ class IOSBackGestureController {
 
   /// Releases the navigator user gesture exactly once, whatever path (fling,
   /// cancel, route disposed mid-gesture) got us here.
-  void _finish() {
+  void _finish({bool deferNotification = false}) {
     if (_finished) return;
     _finished = true;
     controller.removeStatusListener(_handleAnimationStatus);
-    if (_ownsUserGesture && navigator.mounted) {
+    if (_ownsUserGesture) {
       _ownsUserGesture = false;
-      navigator.didStopUserGesture();
+      void releaseGesture() {
+        if (navigator.mounted) navigator.didStopUserGesture();
+      }
+
+      if (deferNotification) {
+        // Detector disposal runs while the widget tree is locked. The
+        // navigator's notifier rebuilds listeners, so release after unmount.
+        WidgetsBinding.instance.addPostFrameCallback((_) => releaseGesture());
+      } else {
+        releaseGesture();
+      }
     }
   }
 
@@ -361,7 +371,7 @@ class IOSBackGestureController {
       if (controller.isAnimating) {
         controller.stop();
       }
-      _finish();
+      _finish(deferNotification: true);
     }
   }
 }
