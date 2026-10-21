@@ -449,7 +449,8 @@ void main() {
       await _frames(tester, 2);
       await tester.tap(dateButton);
       await _frames(tester, 2);
-      await tester.tap(find.text('腾讯发布日期'));
+      await tester.tap(find.byWidgetPredicate((widget) =>
+        widget is CheckedPopupMenuItem<String> && widget.value == 'tencent'));
       await _frames(tester, 2);
       expect(appdata.settings['chapterDateSource'], 'tencent');
       // The toolbar remains reachable while expanding/collapsing the list.
