@@ -43,7 +43,7 @@ void main() {
                       final cellWidth = (constraints.crossAxisExtent - 8 * (columns - 1)) / columns;
                       final height = covers ? ChapterCardLayout.coverExtent(context, cellWidth)
                           : ChapterCardLayout.textExtent(context);
-                      Widget cell(int i) => SizedBox(width: cellWidth, height: height,
+                      Widget cell(int i) => SizedBox(key: ValueKey('chapter-card-$i'), width: cellWidth, height: height,
                         child: Material(color: covers ? Colors.transparent : const Color(0xff181c1d),
                           borderRadius: BorderRadius.circular(10),
                           child: InkWell(onTap: () => tapped = i,
@@ -54,8 +54,10 @@ void main() {
                               ChapterCoverCaption(title: titles[i], metadata: facts[i]),
                             ]) : Padding(padding: const EdgeInsets.symmetric(horizontal: 8),
                               child: ChapterTextContent(title: titles[i], metadata: facts[i])))));
-                      if (!expanded) return SliverToBoxAdapter(child: Wrap(
-                        spacing: 8, runSpacing: 8, children: [for (var i=0;i<4;i++) cell(i)]));
+                      if (!expanded) {
+                        return SliverToBoxAdapter(child: Wrap(
+                          spacing: 8, runSpacing: 8, children: [for (var i=0;i<4;i++) cell(i)]));
+                      }
                       return SliverGrid(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: columns, mainAxisExtent: height, crossAxisSpacing: 8, mainAxisSpacing: 14),
@@ -69,15 +71,21 @@ void main() {
             for (final likes in ['1549', '1711', '2215', '1855']) {
               expect(find.text(likes), findsOneWidget);
             }
-            final a = tester.getTopLeft(find.text(titles[0]));
-            final b = tester.getTopLeft(find.text(titles[1]));
-            final c = tester.getTopLeft(find.text(titles[2]));
+            // Align card boxes, not glyph bounds: font fallback can shift
+            // glyph metrics by fractions of a pixel at 200% text scale.
+            final a = tester.getTopLeft(find.byKey(const ValueKey('chapter-card-0')));
+            final b = tester.getTopLeft(find.byKey(const ValueKey('chapter-card-1')));
+            final c = tester.getTopLeft(find.byKey(const ValueKey('chapter-card-2')));
+            Rect paintedRect(Finder finder) {
+              final render = tester.renderObject<RenderBox>(finder);
+              return MatrixUtils.transformRect(render.getTransformTo(null), render.paintBounds);
+            }
             expect(b.dy, closeTo(a.dy, 0.1));
             if (covers) {
               expect(c.dy, closeTo(a.dy, 0.1));
-              final title = tester.getRect(find.text(titles[0]));
-              final date = tester.getRect(find.text('26-10-18'));
-              final likes = tester.getRect(find.text('1549'));
+              final title = paintedRect(find.text(titles[0]));
+              final date = paintedRect(find.text('26-10-18'));
+              final likes = paintedRect(find.text('1549'));
               expect(date.top, greaterThanOrEqualTo(title.bottom));
               expect(likes.top, greaterThanOrEqualTo(date.bottom));
             } else {

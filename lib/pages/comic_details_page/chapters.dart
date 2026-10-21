@@ -477,7 +477,9 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     if (!mounted || _metadataBusy || _metadataScope == null ||
         ModalRoute.of(context)?.isCurrent == false ||
         (WidgetsBinding.instance.lifecycleState != null &&
-         WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed)) return;
+         WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed)) {
+      return;
+    }
     setState(() {
       _chapterMetadata.clear();
       _metadataRequested.clear();
