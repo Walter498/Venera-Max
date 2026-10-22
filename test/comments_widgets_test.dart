@@ -112,7 +112,33 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('refresh-chapter-comments')));
     await tester.pumpAndSettle();
     expect(requests, 2);
-    expect(find.text('refresh-2'), findsOneWidget);
+    expect(tester.widgetList<CommentPresentation>(find.byType(CommentPresentation))
+      .any((widget) => widget.comment.id == 'refresh-2'), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('actual chapter preview retries a failed loader after five seconds', (tester) async {
+    var requests = 0;
+    final source = commentsSource(chapterLegacy: (id, ep, page, reply) async {
+      if (++requests == 1) return const Res.error('offline');
+      return Res([commentFixture('auto-recovered', preview: false)], subData: 1);
+    });
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(
+      child: ChapterCommentsPreview(comicId: 'work', epId: 'ep', source: source,
+        comicTitle: 'Work', chapterTitle: 'Chapter')))));
+    await tester.pump();
+    expect(requests, 1);
+    expect(find.text('重试'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 4999));
+    expect(requests, 1);
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+    expect(requests, 2);
+    expect(tester.widgetList<CommentPresentation>(find.byType(CommentPresentation))
+      .any((widget) => widget.comment.id == 'auto-recovered'), isTrue);
+    expect(find.text('重试'), findsNothing);
+    await tester.pump(const Duration(seconds: 10));
+    expect(requests, 2);
+    await tester.pumpWidget(const SizedBox.shrink());
     expect(tester.takeException(), isNull);
   });
   testWidgets('successful empty footer hides but error footer keeps retry', (tester) async {

@@ -6,7 +6,10 @@ import 'package:venera/foundation/res.dart';
 
 /// No global source setting mutation and no App-side stale page cache.
 class CommentsController extends ChangeNotifier {
-  CommentsController({required this.loader, this.sort, this.block});
+  CommentsController({required this.loader, this.sort, this.block,
+    this.autoRetry = false});
+  /// Chapter feeds opt in; work discussions retain explicit retry behavior.
+  final bool autoRetry;
   final Future<Res<List<Comment>>> Function(int page, String? sort) loader;
   final bool Function(Comment)? block;
   String? sort;
@@ -37,16 +40,47 @@ class CommentsController extends ChangeNotifier {
   bool get hasMore => loaded && !unavailable && (maxPage == null || page < maxPage!);
 
   Future<void>? _initialLoad;
+  Timer? _retryTimer;
+
+  void _cancelRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+  }
+
+  void _scheduleRetry(int requestedPage, int generation) {
+    _cancelRetry();
+    if (!autoRetry) return;
+    _retryTimer = Timer(const Duration(seconds: 5), () {
+      _retryTimer = null;
+      if (_disposed || _invalidated || generation != _generation ||
+          loading || loadingMore) return;
+      // Retry the failed page in place, keeping already loaded pages intact.
+      // A one-shot timer is rearmed only after another failure completes.
+      if (requestedPage == 1) {
+        loading = true;
+        error = null;
+      } else {
+        loadingMore = true;
+        pageError = null;
+      }
+      notifyListeners();
+      // A listener may synchronously refresh, invalidate or dispose this feed.
+      if (_disposed || _invalidated || generation != _generation) return;
+      unawaited(_request(requestedPage, generation));
+    });
+  }
 
   /// Probe and full-page consumers join the same first-page request.
   /// Explicit refresh still supersedes a request (e.g. a sort change).
   Future<void> ensureLoaded() {
     if (_disposed || _invalidated || loaded || error != null) return Future.value();
+    if (loading) return _initialLoad ?? Future.value();
     return _initialLoad ??= refresh().whenComplete(() => _initialLoad = null);
   }
 
   Future<void> refresh({String? nextSort}) async {
     if (_disposed || _invalidated) return;
+    _cancelRetry();
     if (nextSort != null) sort = nextSort;
     final generation = ++_generation;
     comments = []; page = 0; maxPage = null; total = null; available = null;
@@ -60,11 +94,13 @@ class CommentsController extends ChangeNotifier {
 
   Future<void> loadMore() async {
     if (_disposed || _invalidated || loading || loadingMore || !hasMore) return;
+    _cancelRetry();
     loadingMore = true; pageError = null; notifyListeners();
     await _request(page + 1, _generation);
   }
 
   Future<void> _request(int requestedPage, int generation) async {
+    if (_disposed || _invalidated || generation != _generation) return;
     try {
       final result = await loader(requestedPage, sort);
       if (_disposed || _invalidated || generation != _generation) return;
@@ -95,8 +131,10 @@ class CommentsController extends ChangeNotifier {
       loaded = true; error = null; pageError = null;
     } catch (e) {
       if (_disposed || _invalidated || generation != _generation) return;
-      if (requestedPage == 1) { error = e.toString(); }
-      else { pageError = e.toString(); }
+      if (requestedPage == 1) {
+        error = e.toString();
+      } else { pageError = e.toString(); }
+      _scheduleRetry(requestedPage, generation);
     } finally {
       if (!_disposed && !_invalidated && generation == _generation) {
         loading = false; loadingMore = false; notifyListeners();
@@ -109,6 +147,7 @@ class CommentsController extends ChangeNotifier {
   /// every borrowed page has detached its listeners.
   void invalidate() {
     if (_disposed || _invalidated) return;
+    _cancelRetry();
     _invalidated = true;
     ++_generation;
     comments = [];
@@ -132,6 +171,7 @@ class CommentsController extends ChangeNotifier {
   @override
   void dispose() {
     if (_disposed) return;
+    _cancelRetry();
     _disposed = true;
     ++_generation;
     commentContext = null;

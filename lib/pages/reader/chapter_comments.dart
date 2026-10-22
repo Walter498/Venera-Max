@@ -42,7 +42,7 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
   late String _scopeRevision;
   void _createFeed() {
     _scopeRevision = widget.source.commentScopeRevision;
-    feed = CommentsController(loader: (page, sort) async {
+    feed = CommentsController(autoRetry: true, loader: (page, sort) async {
       final revision = _scopeRevision;
       final result = await widget.source.loadCommentPage(widget.comicId, widget.epId, page, widget.replyComment?.id, chapter: true, sort: sort);
       if (revision != widget.source.commentScopeRevision) return const Res.error("Source settings changed; refresh comments");
@@ -453,7 +453,8 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
 // unavailable/empty result. Payload and metadata remain unmodified.
 class _ProviderChapterFeed extends CommentsController {
   _ProviderChapterFeed({required this.source, required super.loader,
-    required this.onBorrowersChanged, super.sort, super.block});
+    required this.onBorrowersChanged, super.sort, super.block})
+      : super(autoRetry: true);
   final ComicSource source;
   final VoidCallback onBorrowersChanged;
   final List<VoidCallback> _borrowers = [];
@@ -680,7 +681,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
       _ownsFeed = false; feed = widget.sharedFeed!; return;
     }
     _ownsFeed = true;
-    feed = CommentsController(loader: (page, sort) async {
+    feed = CommentsController(autoRetry: true, loader: (page, sort) async {
       final revision = _scopeRevision;
       final result = await widget.source.loadCommentPage(
         widget.comicId, widget.epId, page, null, chapter: true, sort: sort);

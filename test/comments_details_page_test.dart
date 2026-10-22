@@ -448,10 +448,13 @@ void main() {
       await tester.scrollUntilVisible(dateButton, 180, scrollable: scrollable);
       await _frames(tester, 2);
       await tester.tap(dateButton);
-      await _frames(tester, 2);
-      await tester.tap(find.byWidgetPredicate((widget) =>
-        widget is CheckedPopupMenuItem<String> && widget.value == 'tencent'));
-      await _frames(tester, 2);
+      // PopupMenuRoute blocks hits during its opening transition.
+      await _frames(tester, 20);
+      final tencentOption = find.byWidgetPredicate((widget) =>
+        widget is CheckedPopupMenuItem<String> && widget.value == 'tencent');
+      expect(tencentOption.hitTestable(), findsOneWidget);
+      await tester.tap(tencentOption.hitTestable());
+      await _frames(tester, 20);
       expect(appdata.settings['chapterDateSource'], 'tencent');
       // The toolbar remains reachable while expanding/collapsing the list.
       await tester.tap(find.byTooltip('Expand').first);

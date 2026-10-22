@@ -124,6 +124,196 @@ void main() {
     await c.loadMore(); expect(c.page,2); expect(c.pageError,isNull);
     expect(c.comments.map((c)=>c.id),['one','two']); c.dispose();
   });
+  testWidgets('opted-in failures retry every five seconds until success', (tester) async {
+    var calls = 0;
+    final c = CommentsController(autoRetry: true, loader: (_, __) async {
+      calls++;
+      if (calls < 3) return const Res.error('offline');
+      return Res([commentFixture('recovered')], subData: 1);
+    });
+    addTearDown(c.dispose);
+    await c.refresh();
+    expect(c.error, isNotNull);
+    await tester.pump(const Duration(milliseconds: 4999));
+    expect(calls, 1);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(calls, 2);
+    expect(c.error, isNotNull);
+    await tester.pump(const Duration(milliseconds: 4999));
+    expect(calls, 2);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(calls, 3);
+    expect(c.error, isNull);
+    expect(c.comments.single.id, 'recovered');
+    await tester.pump(const Duration(seconds: 30));
+    expect(calls, 3);
+  });
+  testWidgets('successful empty and unavailable results stop retrying', (tester) async {
+    for (final available in [true, false]) {
+      var calls = 0;
+      final c = CommentsController(autoRetry: true, loader: (_, __) async {
+        if (++calls == 1) return const Res.error('offline');
+        return Res<List<Comment>>([], subData: 0, total: 0, available: available);
+      });
+      addTearDown(c.dispose);
+      await c.refresh();
+      await tester.pump(const Duration(seconds: 5));
+      expect(calls, 2);
+      expect(c.error, isNull);
+      expect(c.confirmedEmpty, isTrue);
+      expect(c.unavailable, !available);
+      await tester.pump(const Duration(seconds: 30));
+      expect(calls, 2);
+    }
+  });
+  testWidgets('page retry keeps existing data and never overlaps a slow request', (tester) async {
+    final calls = <int>[];
+    final pending = Completer<Res<List<Comment>>>();
+    var pageAttempts = 0;
+    final c = CommentsController(autoRetry: true, loader: (page, _) async {
+      calls.add(page);
+      if (page == 1) return Res([commentFixture('one')], subData: 3);
+      pageAttempts++;
+      if (pageAttempts == 1) return const Res.error('page offline');
+      if (pageAttempts == 2) return pending.future;
+      return Res([commentFixture('two')], subData: 3);
+    });
+    addTearDown(c.dispose);
+    await c.refresh();
+    await c.loadMore();
+    expect(c.page, 1);
+    expect(c.pageError, isNotNull);
+    await tester.pump(const Duration(seconds: 5));
+    expect(calls, [1, 2, 2]);
+    expect(c.loadingMore, isTrue);
+    expect(c.comments.single.id, 'one');
+    await c.loadMore();
+    await c.ensureLoaded();
+    await tester.pump(const Duration(seconds: 20));
+    expect(calls, [1, 2, 2]);
+    pending.complete(const Res.error('still offline'));
+    await tester.pump();
+    expect(c.pageError, isNotNull);
+    await tester.pump(const Duration(milliseconds: 4999));
+    expect(calls, [1, 2, 2]);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(calls, [1, 2, 2, 2]);
+    expect(c.page, 2);
+    expect(c.pageError, isNull);
+    expect(c.comments.map((comment) => comment.id), ['one', 'two']);
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls, [1, 2, 2, 2]);
+  });
+  testWidgets('manual refresh cancels timer and rejects a late retry result', (tester) async {
+    final calls = <String?>[];
+    final manual = Completer<Res<List<Comment>>>();
+    final stale = Completer<Res<List<Comment>>>();
+    final c = CommentsController(autoRetry: true, sort: 'new', loader: (_, sort) {
+      calls.add(sort);
+      if (calls.length == 1) return Future.value(const Res.error('offline'));
+      if (calls.length == 2) return manual.future;
+      if (calls.length == 3) return Future.value(const Res.error('offline again'));
+      if (calls.length == 4) return stale.future;
+      return Future.value(Res([commentFixture('hot')], subData: 1));
+    });
+    addTearDown(c.dispose);
+    await c.refresh();
+    await tester.pump(const Duration(seconds: 4));
+    final refresh = c.refresh();
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls, ['new', 'new']);
+    manual.complete(Res([commentFixture('manual')], subData: 1));
+    await refresh;
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls.length, 2);
+    await c.refresh();
+    await tester.pump(const Duration(seconds: 5));
+    expect(calls.length, 4);
+    await c.ensureLoaded();
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls.length, 4, reason: 'probe must not overlap a first-page retry');
+    await c.refresh(nextSort: 'hot');
+    stale.complete(const Res.error('late old sort'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls, ['new', 'new', 'new', 'new', 'hot']);
+    expect(c.comments.single.id, 'hot');
+    expect(c.error, isNull);
+  });
+  testWidgets('manual page retry replaces the pending automatic retry', (tester) async {
+    final calls = <int>[];
+    final pending = Completer<Res<List<Comment>>>();
+    final c = CommentsController(autoRetry: true, loader: (page, _) {
+      calls.add(page);
+      if (page == 1) return Future.value(Res([commentFixture('one')], subData: 2));
+      if (calls.length == 2) return Future.value(const Res.error('offline'));
+      return pending.future;
+    });
+    addTearDown(c.dispose);
+    await c.refresh();
+    await c.loadMore();
+    await tester.pump(const Duration(seconds: 4));
+    final manual = c.loadMore();
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls, [1, 2, 2]);
+    pending.complete(Res([commentFixture('two')], subData: 2));
+    await manual;
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls, [1, 2, 2]);
+    expect(c.page, 2);
+  });
+  testWidgets('dispose and invalidate cancel pending timers and ignore late retries', (tester) async {
+    for (final invalidate in [false, true]) {
+      for (final inFlight in [false, true]) {
+        for (final succeeds in [false, true]) {
+          var calls = 0;
+          final late = Completer<Res<List<Comment>>>();
+          final c = CommentsController(autoRetry: true, loader: (_, __) {
+            if (++calls == 1) return Future.value(const Res.error('offline'));
+            return late.future;
+          });
+          await c.refresh();
+          if (inFlight) await tester.pump(const Duration(seconds: 5));
+          final previousError = c.error;
+          if (invalidate) {
+            c.invalidate();
+          } else {
+            c.dispose();
+          }
+          late.complete(succeeds ? Res([commentFixture('old-chapter')], subData: 1)
+            : const Res.error('late failure'));
+          await tester.pump();
+          await c.refresh();
+          await c.loadMore();
+          await c.ensureLoaded();
+          await tester.pump(const Duration(seconds: 30));
+          expect(calls, inFlight ? 2 : 1);
+          expect(c.comments, isEmpty);
+          expect(c.error, invalidate ? null : previousError);
+          if (invalidate) {
+            expect(c.loaded, isFalse);
+            expect(c.loading, isFalse);
+            c.dispose();
+          }
+        }
+      }
+    }
+  });
+  testWidgets('ordinary comments do not retry by default, including page failures', (tester) async {
+    for (final firstPageFails in [true, false]) {
+      final calls = <int>[];
+      final c = CommentsController(loader: (page, _) async {
+        calls.add(page);
+        if (firstPageFails || page > 1) return const Res.error('offline');
+        return Res([commentFixture('one')], subData: 2);
+      });
+      addTearDown(c.dispose);
+      await c.refresh();
+      if (!firstPageFails) await c.loadMore();
+      await tester.pump(const Duration(seconds: 30));
+      expect(calls, firstPageFails ? [1] : [1, 2]);
+    }
+  });
   test('filtered empty never hides raw nonempty or ends unknown pagination', () async {
     final c=CommentsController(block:(_)=>true,loader:(_,__) async => Res([commentFixture('raw')]));
     await c.refresh(); expect(c.confirmedEmpty,isFalse); expect(c.hasMore,isTrue); c.dispose();
@@ -182,6 +372,54 @@ void main() {
       });
     await source.loadCommentPage('book','ep',2,'parent',chapter:true,sort:'new');
     expect(calls,[['book','ep',2,'parent']]);
+  });
+  testWidgets('shared chapter feeds opt in and retirement cancels retry', (tester) async {
+    var calls = 0;
+    final source = commentsSource(chapterLegacy: (_, __, ___, ____) async {
+      calls++;
+      return const Res.error('offline');
+    });
+    final feeds = ReaderChapterCommentsFeeds();
+    final feed = feeds.chapterLoading(source, 'book', 'ep');
+    await tester.pump();
+    expect(feed.autoRetry, isTrue);
+    expect(calls, 1);
+    await tester.pump(const Duration(seconds: 5));
+    expect(calls, 2);
+    feeds.dispose();
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls, 2);
+  });
+  testWidgets('chapter switch ignores an in-flight old chapter retry', (tester) async {
+    final calls = <String?>[];
+    final oldRetry = Completer<Res<List<Comment>>>();
+    final source = commentsSource(chapterLegacy: (_, ep, __, ___) {
+      calls.add(ep);
+      if (ep == 'old') {
+        if (calls.length == 1) return Future.value(const Res.error('offline'));
+        return oldRetry.future;
+      }
+      return Future.value(Res([commentFixture('new-chapter')], subData: 1));
+    });
+    Widget page(String ep) => MaterialApp(home: ChapterCommentsPage(
+      comicId: 'book', epId: ep, source: source,
+      comicTitle: 'Book', chapterTitle: ep));
+    await tester.pumpWidget(page('old'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 4999));
+    expect(calls, ['old']);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(calls, ['old', 'old']);
+    await tester.pumpWidget(page('new'));
+    await tester.pump();
+    oldRetry.complete(Res([commentFixture('old-chapter')], subData: 1));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 10));
+    expect(calls, ['old', 'old', 'new']);
+    final tiles = tester.widgetList<CommentPresentation>(find.byType(CommentPresentation));
+    expect(tiles.map((tile) => tile.comment.id), ['new-chapter']);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
   testWidgets('explicit false keeps chapter reply counters but cannot navigate', (tester) async {
     var calls = 0;
