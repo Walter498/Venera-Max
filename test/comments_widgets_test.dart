@@ -71,14 +71,25 @@ void main() {
         widget is CheckedPopupMenuItem<String> &&
         widget.value == (label == '最热' ? 'hot' : 'wonderful'));
       expect(option.hitTestable(), findsOneWidget);
-      await tester.tap(option.hitTestable());
-      // Route dismissal dispatches onSelected; disk I/O needs real async time.
-      await tester.pumpAndSettle();
+      // Start the callback in the real async zone, including saveData's
+      // serialized-write timer. A new request starts before saving completes,
+      // so wait for the persisted preference as well as the network request.
       await tester.runAsync(() async {
-        for (var i = 0; i < 50 && requested.length <
-            (label == '最热' ? 2 : 3); i++) {
+        await tester.tap(option.hitTestable());
+        await tester.pumpAndSettle();
+        final value = label == '最热' ? 'hot' : 'wonderful';
+        final saved = File('${temp.path}/comic_source/${source.key}.data');
+        var persisted = false;
+        for (var i = 0; i < 100; i++) {
+          if (await saved.exists()) {
+            persisted = (await saved.readAsString()).contains('"chapter":"$value"');
+          }
+          if (persisted && requested.length >= (value == 'hot' ? 2 : 3)) {
+            break;
+          }
           await Future<void>.delayed(const Duration(milliseconds: 20));
         }
+        expect(persisted, isTrue, reason: 'Sort preference must finish saving');
       });
       await tester.pumpAndSettle();
     }
