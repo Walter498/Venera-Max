@@ -67,9 +67,18 @@ void main() {
     for (final label in ['最热', '精彩']) {
       await tester.tap(find.byType(CommentSortSelector));
       await tester.pumpAndSettle();
+      final option = find.byWidgetPredicate((widget) =>
+        widget is CheckedPopupMenuItem<String> &&
+        widget.value == (label == '最热' ? 'hot' : 'wonderful'));
+      expect(option.hitTestable(), findsOneWidget);
+      await tester.tap(option.hitTestable());
+      // Route dismissal dispatches onSelected; disk I/O needs real async time.
+      await tester.pumpAndSettle();
       await tester.runAsync(() async {
-        await tester.tap(find.text(label).last);
-        await source.saveData();
+        for (var i = 0; i < 50 && requested.length <
+            (label == '最热' ? 2 : 3); i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
       });
       await tester.pumpAndSettle();
     }

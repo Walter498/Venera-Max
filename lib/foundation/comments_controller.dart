@@ -53,7 +53,9 @@ class CommentsController extends ChangeNotifier {
     _retryTimer = Timer(const Duration(seconds: 5), () {
       _retryTimer = null;
       if (_disposed || _invalidated || generation != _generation ||
-          loading || loadingMore) return;
+          loading || loadingMore) {
+        return;
+      }
       // Retry the failed page in place, keeping already loaded pages intact.
       // A one-shot timer is rearmed only after another failure completes.
       if (requestedPage == 1) {
