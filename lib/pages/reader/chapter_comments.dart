@@ -815,12 +815,24 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             key:const ValueKey('chapter-comments-region'),
             crossAxisAlignment:CrossAxisAlignment.stretch,children:[
             panel([
-              Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [Text('Chapter Comments'.tl,style:ts.s18), CommentProviderSelector(source: widget.source)]),
+              Row(children: [
+                Expanded(child: Text('Chapter Comments'.tl, style: ts.s18)),
+                CommentProviderSelector(source: widget.source),
+              ]),
               preview(widget.chapterTitle),
               TextButton(onPressed:_openAll,child:Text('View all comments'.tl)),
             ]),
-            if (sorts.length > 1 || feed.commentContext != null) panel([
+            panel([
               if (sorts.length > 1) sortSelector,
+              IconButton(
+                key: const ValueKey('refresh-chapter-comments'),
+                tooltip: '刷新评论',
+                icon: feed.loading
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.refresh_rounded),
+                onPressed: feed.loading ? null : feed.refresh,
+                visualDensity: VisualDensity.compact,
+              ),
               CommentContextStats(context: feed.commentContext),
             ]),
             if(feed.loading) panel([const Center(child:CircularProgressIndicator())]),
@@ -858,8 +870,19 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
                 TextButton(onPressed: _openAll, child: Text('View all comments'.tl))])),
             if (widget.chapterTitle.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal:16),
               child: Text(widget.chapterTitle,style: ts.s12)),
-            if (sorts.length > 1) Align(alignment: Alignment.centerLeft,
-              child: sortSelector),
+            Align(alignment: Alignment.centerLeft,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (sorts.length > 1) sortSelector,
+                IconButton(
+                  key: const ValueKey('refresh-chapter-comments'),
+                  tooltip: '刷新评论',
+                  icon: feed.loading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.refresh_rounded),
+                  onPressed: feed.loading ? null : feed.refresh,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ])),
             CommentContextStats(context: feed.commentContext),
             if (feed.loading) const Padding(padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()))

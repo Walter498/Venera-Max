@@ -14,32 +14,40 @@ class ChapterMetadataLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.onSurfaceVariant;
-    final date = Text(metadata.displayDate ?? '日期暂无',
+    final dateText = metadata.displayDate;
+    final likesText = metadata.displayLikes;
+    final date = dateText == null ? null : Text(dateText,
       key: const ValueKey('chapter-update-date'), maxLines: 1);
-    final likes = Tooltip(
+    final likes = likesText == null ? null : Tooltip(
       message: metadata.likesSource == 'tencent' ? '腾讯章节点赞' : '章节点赞',
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.thumb_up_outlined, size: 12, color: color),
         const SizedBox(width: 3),
-        Text(metadata.displayLikes ?? '暂无',
-          key: const ValueKey('chapter-like-count'), maxLines: 1),
+        Text(likesText, key: const ValueKey('chapter-like-count'), maxLines: 1),
       ]),
     );
     final alignment = centered ? Alignment.center : Alignment.centerLeft;
     Widget fitted(Widget child) => FittedBox(
       fit: BoxFit.scaleDown, alignment: alignment, child: child);
+    final facts = <Widget>[
+      if (date != null) date,
+      if (date != null && likes != null) ...[
+        const SizedBox(width: 7),
+        Text('|', style: TextStyle(color: color.withValues(alpha: 0.45))),
+        const SizedBox(width: 7),
+      ],
+      if (likes != null) likes,
+    ];
+    if (facts.isEmpty) return const SizedBox.shrink();
     return DefaultTextStyle(
       style: Theme.of(context).textTheme.bodySmall!.copyWith(
         color: color, fontSize: 11, height: 16 / 11),
       child: stacked
         ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            fitted(date), fitted(likes),
+            if (date != null) fitted(date),
+            if (likes != null) fitted(likes),
           ])
-        : fitted(Row(mainAxisSize: MainAxisSize.min, children: [
-            date, const SizedBox(width: 7),
-            Text('|', style: TextStyle(color: color.withValues(alpha: 0.45))),
-            const SizedBox(width: 7), likes,
-          ])),
+        : fitted(Row(mainAxisSize: MainAxisSize.min, children: facts)),
     );
   }
 }

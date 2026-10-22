@@ -55,11 +55,14 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
-  testWidgets('missing likes renders unknown instead of fabricated zero', (tester) async {
+  testWidgets('missing metadata renders no date or like row', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox(width: 150,
-      child: ChapterMetadataLine(metadata: ChapterMetadata(updateTime: '2026-01-17'))))));
-    expect(find.text('暂无'), findsOneWidget);
-    expect(find.text('0'), findsNothing);
+      child: ChapterMetadataLine(metadata: ChapterMetadata())))));
+    expect(find.byKey(const ValueKey('chapter-update-date')), findsNothing);
+    expect(find.byKey(const ValueKey('chapter-like-count')), findsNothing);
+    expect(find.byIcon(Icons.thumb_up_outlined), findsNothing);
+    expect(find.text('日期暂无'), findsNothing);
+    expect(find.text('暂无'), findsNothing);
     expect(tester.takeException(), isNull);
   });
   testWidgets('date selector offers Lizi and Tencent and reports selection', (tester) async {

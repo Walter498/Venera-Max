@@ -123,8 +123,10 @@ void main() {
       home: Scaffold(body: SizedBox(width: 82, child: ChapterMetadataLine(
         metadata: metadata, stacked: true)))));
     await show(const ChapterMetadata());
-    expect(find.text('日期暂无'), findsOneWidget);
-    expect(find.text('暂无'), findsOneWidget);
+    expect(find.byKey(const ValueKey('chapter-update-date')), findsNothing);
+    expect(find.byKey(const ValueKey('chapter-like-count')), findsNothing);
+    expect(find.text('日期暂无'), findsNothing);
+    expect(find.text('暂无'), findsNothing);
     expect(find.text('0'), findsNothing);
     await show(const ChapterMetadata(updateTime: '2026-10-18', likesCount: 0));
     expect(find.text('0'), findsOneWidget);

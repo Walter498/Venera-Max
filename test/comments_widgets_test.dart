@@ -96,6 +96,25 @@ void main() {
     expect(tester.getSize(find.byKey(const ValueKey('chapter-comments-region'))).height,closeTo(legacy,0.01));
     expect(tester.takeException(),isNull);
   });
+  testWidgets('chapter comments preview exposes manual refresh', (tester) async {
+    var requests = 0;
+    final source = commentsSource(chapterCapabilities: const CommentCapabilities(sorts: ['new']),
+      chapterOptions: (id, ep, page, reply, options) async {
+        requests++;
+        return Res([commentFixture('refresh-$requests')], subData: 1);
+      });
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(
+      child: ChapterCommentsPreview(comicId: 'work', epId: 'ep', source: source,
+        comicTitle: 'Work', chapterTitle: 'Chapter')))));
+    await tester.pumpAndSettle();
+    expect(requests, 1);
+    expect(find.byKey(const ValueKey('refresh-chapter-comments')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('refresh-chapter-comments')));
+    await tester.pumpAndSettle();
+    expect(requests, 2);
+    expect(find.text('refresh-2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('successful empty footer hides but error footer keeps retry', (tester) async {
     var fail=true;
     final source=commentsSource(chapterLegacy:(id,ep,page,reply) async =>
