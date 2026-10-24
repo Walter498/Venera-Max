@@ -154,7 +154,30 @@ void main() {
   );
 
   testWidgets(
-    'pointer cancel restores the page instead of popping or freezing it',
+    'center swipe does not pop the route',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final route = await pumpRoute(tester, navigatorKey);
+      final navigator = navigatorKey.currentState!;
+      final animation = route.animation!;
+
+      final gesture = await tester.startGesture(
+        const Offset(240, 300),
+        pointer: 1,
+      );
+      await gesture.moveBy(const Offset(300, 0));
+      await tester.pump();
+      expect(animation.value, closeTo(1.0, 0.0001));
+      expect(navigator.userGestureInProgress, isFalse);
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(find.text('details'), findsOneWidget);
+      expect(find.text('home'), findsNothing);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+
     (tester) async {
       final navigatorKey = GlobalKey<NavigatorState>();
       final route = await pumpRoute(tester, navigatorKey);

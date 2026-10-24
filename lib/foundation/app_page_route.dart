@@ -658,12 +658,9 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
 
         final isRight = dx > 0;
         final isHorizontal = dx.abs() > dy * 1.5;
-        // Hit-test at decision time. A long-press zoom can turn the reader
-        // into a pan surface after the finger lands.
-        final bool eligible =
-            isRight &&
-            isHorizontal &&
-            (_startedNearLeftEdge || !isPointerInHorizontal(_startGlobal!));
+        // The back gesture is deliberately edge-only. Do not let a normal
+        // horizontal drag in the reader or any other page become a pop.
+        final bool eligible = isRight && isHorizontal && _startedNearLeftEdge;
 
         if (eligible) {
           _accepted = true;
