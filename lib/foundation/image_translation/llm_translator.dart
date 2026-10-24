@@ -6,6 +6,7 @@ import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/image_translation/public_translator.dart';
 import 'package:venera/foundation/image_translation/script_translator.dart';
 import 'package:venera/foundation/image_translation/rate_limiter.dart';
+import 'package:venera/foundation/image_translation/translation_targets.dart';
 import 'package:venera/foundation/image_translation/translation_performance_config.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/network/app_dio.dart';
@@ -472,6 +473,10 @@ abstract class LlmTranslator {
   }
 
   static String _targetName(String targetLang) {
+    final custom = TranslationTargets.promptName(targetLang);
+    if (custom != targetLang || TranslationTargets.isTaken(targetLang)) {
+      return custom;
+    }
     return switch (targetLang) {
       'zh' => '简体中文',
       'zh-TW' => '繁体中文（台湾用语习惯）',
@@ -482,6 +487,7 @@ abstract class LlmTranslator {
       'de' => 'Deutsch',
       'es' => 'Español',
       'ru' => 'Русский',
+      'vi' => 'Tiếng Việt',
       _ => targetLang,
     };
   }

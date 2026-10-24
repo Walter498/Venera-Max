@@ -18,14 +18,34 @@ const double _kMinFlingVelocity = 1.0;
 /// region the back gesture is only allowed from the screen's left edge. This
 /// lets left-swipe-to-favorite and right-swipe-to-go-back coexist.
 class SwipeRegionMarker extends SingleChildRenderObjectWidget {
-  const SwipeRegionMarker({super.key, required Widget super.child});
+  const SwipeRegionMarker({
+    super.key,
+    this.active,
+    required Widget super.child,
+  });
+
+  final bool Function()? active;
 
   @override
   RenderSwipeRegionMarker createRenderObject(BuildContext context) =>
-      RenderSwipeRegionMarker();
+      RenderSwipeRegionMarker(active: active);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    RenderSwipeRegionMarker renderObject,
+  ) {
+    renderObject.active = active;
+  }
 }
 
-class RenderSwipeRegionMarker extends RenderProxyBox {}
+class RenderSwipeRegionMarker extends RenderProxyBox {
+  RenderSwipeRegionMarker({this.active});
+
+  bool Function()? active;
+
+  bool get isActive => active?.call() ?? true;
+}
 
 class AppPageRoute<T> extends PageRoute<T> with _AppRouteTransitionMixin {
   /// Construct a MaterialPageRoute whose contents are defined by [builder].
@@ -458,9 +478,10 @@ class _IOSBackGestureDetectorState extends State<IOSBackGestureDetector> {
       // from the true left edge over it, instead of stealing the swipe-back-to-
       // close drag and popping the page.
       if (target is RenderSwipeRegionMarker) {
-        return true;
-      }
-      if (target is RenderViewport) {
+        if (target.isActive) {
+          return true;
+        }
+      } else if (target is RenderViewport) {
         if (target.axisDirection == AxisDirection.left ||
             target.axisDirection == AxisDirection.right) {
           return true;
@@ -637,10 +658,14 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
 
         final isRight = dx > 0;
         final isHorizontal = dx.abs() > dy * 1.5;
-        // 只允許「從左邊緣 0.5cm 內」起手；畫面中間滑動不再觸發返回。
-        final bool eligible = _startedNearLeftEdge;
+        // Hit-test at decision time. A long-press zoom can turn the reader
+        // into a pan surface after the finger lands.
+        final bool eligible =
+            isRight &&
+            isHorizontal &&
+            (_startedNearLeftEdge || !isPointerInHorizontal(_startGlobal!));
 
-        if (isRight && isHorizontal && eligible) {
+        if (eligible) {
           _accepted = true;
           resolve(GestureDisposition.accepted);
           onStart(

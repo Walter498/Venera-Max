@@ -99,6 +99,17 @@ class _ReaderSettingsState extends State<ReaderSettings> {
 
   String _effectiveTargetLang() => _effectiveTranslationConfig().targetLang;
 
+  Map<String, String> _targetLanguageOptions() {
+    final options = <String, String>{
+      for (final entry in TranslationTargets.builtIn.entries)
+        entry.key: entry.value.label.tl,
+    };
+    for (final language in TranslationTargets.custom) {
+      options[language.code] = language.name;
+    }
+    return options;
+  }
+
   /// Summary line for the LLM-providers entry: the active provider's name (or
   /// its URL when unnamed), how many others are configured, or "Not configured".
   String _activeProviderSubtitle() {
@@ -841,7 +852,10 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                 },
               ),
               if (appdata.settings['enableReaderImageEnhance'] == true) ...[
-                _SliderSetting(
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: ImageEnhancePreview(),
+                ),
                   title: "Sharpen strength".tl,
                   settingsIndex: "readerImageEnhanceStrength",
                   interval: 0.1,
@@ -1133,6 +1147,15 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                 actionTitle: "Test".tl,
                 callback: _testTranslation,
               ),
+              _CallbackSetting(
+                title: "Custom languages".tl,
+                subtitle: "Add custom target languages".tl,
+                actionTitle: "Manage".tl,
+                callback: () async {
+                  await context.to(() => const TranslationLanguagesPage());
+                  if (mounted) setState(() {});
+                },
+              ),
               SelectSetting(
                 title: "Source language".tl,
                 settingKey: "imageTranslationSource",
@@ -1142,6 +1165,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   "en": "English".tl,
                   "ko": "Korean".tl,
                   "zh": "Chinese".tl,
+                  "zh-TW": "Traditional Chinese".tl,
                 },
                 onChanged: () {
                   setState(() {});
@@ -1156,17 +1180,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
               SelectSetting(
                 title: "Target language".tl,
                 settingKey: "imageTranslationTarget",
-                optionTranslation: {
-                  "zh": "Simplified Chinese".tl,
-                  "zh-TW": "Traditional Chinese".tl,
-                  "en": "English".tl,
-                  "ja": "Japanese".tl,
-                  "ko": "Korean".tl,
-                  "fr": "French".tl,
-                  "de": "German".tl,
-                  "es": "Spanish".tl,
-                  "ru": "Russian".tl,
-                },
+                optionTranslation: _targetLanguageOptions(),
                 onChanged: () {
                   setState(() {});
                   widget.onChanged?.call("imageTranslationTarget");

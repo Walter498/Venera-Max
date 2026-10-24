@@ -129,7 +129,7 @@ class PageTranslationPipeline {
     required String sourceLang, required String targetLang,
   }) async {
     var image = await _decode(imageBytes);
-    var paths = TranslationModels.workerPaths();
+    var paths = TranslationModels.workerPaths(sourceLang);
     var blocks = await TranslationWorker.instance.ocrPage(
       image,
       sourceLang: sourceLang,

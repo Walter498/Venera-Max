@@ -590,7 +590,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       _localComic = localComic;
       isAddToLocalFav = state.isLocalFavorite;
       history = state.history;
-      isDownloaded = true;
+      isDownloaded = localComic.chapters == null || commentsSource == null;
       detailsLoadError = null;
       var comicSource = ComicSource.find(widget.sourceKey);
       if (comicSource != null && comicSource.loadComicInfo != null) {
@@ -1067,6 +1067,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                   '${history!.time.hour.toString().padLeft(2, '0')}:${history!.time.minute.toString().padLeft(2, '0')}',
           pagesText: comic.maxPage?.toString(),
           showTitle: false,
+          showDescription: false,
           onTapAuthor: (author, namespace) {
             onTapAuthor(author, namespace);
           },

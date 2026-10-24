@@ -196,9 +196,14 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
   bool _editMode = false;
   final Set<String> _selected = {};
 
-  /// 收藏排序（原版功能：LocalSortType，7 種），持久化在 implicitData
+  /// 收藏排序：当前文件夹可覆盖全局默认排序；未设置时继承全局。
   LocalSortType get _sortType {
-    final v = appdata.implicitData['local_favorites_sort']?.toString();
+    final overrides = appdata.implicitData['local_favorites_folder_sort'];
+    final folderKey = _folder ?? '';
+    final value = overrides is Map
+        ? overrides[folderKey]?.toString()
+        : null;
+    final v = value ?? appdata.implicitData['local_favorites_sort']?.toString();
     for (final t in LocalSortType.values) {
       if (t.value == v) return t;
     }
@@ -206,7 +211,29 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
   }
 
   set _sortType(LocalSortType t) {
+    final folderKey = _folder ?? '';
+    final raw = appdata.implicitData['local_favorites_folder_sort'];
+    final overrides = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+    if (folderKey.isEmpty) {
+      appdata.implicitData['local_favorites_sort'] = t.value;
+    } else if (t == LocalSortType.defaultSort) {
+      overrides.remove(folderKey);
+    } else {
+      overrides[folderKey] = t.value;
+    }
+    if (overrides.isEmpty) {
+      appdata.implicitData.remove('local_favorites_folder_sort');
+    } else {
+      appdata.implicitData['local_favorites_folder_sort'] = overrides;
+    }
+    appdata.writeImplicitData();
+  }
+
+  void _applySortToAllFolders(LocalSortType t) {
     appdata.implicitData['local_favorites_sort'] = t.value;
+    appdata.implicitData.remove('local_favorites_folder_sort');
     appdata.writeImplicitData();
   }
 
@@ -330,6 +357,14 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
               ),
             ),
             actions: [
+              if (_folder != null)
+                TextButton(
+                  onPressed: () {
+                    setState(() => _applySortToAllFolders(current));
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text('应用到全部文件夹'),
+                ),
               FilledButton(
                 onPressed: () {
                   setState(() => _sortType = current);

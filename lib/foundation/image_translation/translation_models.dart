@@ -103,8 +103,23 @@ abstract class TranslationModels {
     ],
   );
 
-  /// English OCR (PP-OCRv3 rec).
-  static const ocrEn = ModelComponent(
+  /// Chinese OCR covering Simplified and Traditional text (PP-OCRv5 mobile).
+  static const ocrZhV5 = ModelComponent(
+    id: 'ocr_zh_v5',
+    approxSizeBytes: 16700000,
+    files: [
+      ModelFile('rec.onnx', [
+        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx',
+        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ch_PP-OCRv5_rec.onnx',
+      ]),
+      ModelFile('dict.txt', [
+        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt',
+        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ppocrv5_dict.txt',
+      ]),
+    ],
+  );
+
+
     id: 'ocr_en',
     approxSizeBytes: 9000000,
     files: [
@@ -133,7 +148,7 @@ abstract class TranslationModels {
     ],
   );
 
-  static const all = [detector, ocrJa, ocrZh, ocrEn, ocrKo];
+  static const all = [detector, ocrJa, ocrZhV5, ocrZh, ocrEn, ocrKo];
 
   static ModelComponent? find(String id) {
     for (var c in all) {
@@ -148,6 +163,7 @@ abstract class TranslationModels {
       'ja' => ocrJa,
       'ko' => ocrKo,
       'en' => ocrEn,
+      'zh-TW' => ocrZhV5,
       _ => ocrZh,
     };
   }
@@ -159,7 +175,7 @@ abstract class TranslationModels {
 
   /// Model file paths for the worker isolate, containing only what is
   /// actually installed.
-  static WorkerModelPaths workerPaths() {
+  static WorkerModelPaths workerPaths([String sourceLang = 'auto']) {
     var recModels = <String, String>{};
     var recDicts = <String, String>{};
     var recHeights = <String, int>{};
@@ -170,6 +186,11 @@ abstract class TranslationModels {
         recDicts[lang] = component.filePath('dict.txt');
         recHeights[lang] = recHeightFor(lang);
       }
+    }
+    if (ocrZhV5.isInstalled) {
+      recModels['zh-TW'] = ocrZhV5.filePath('rec.onnx');
+      recDicts['zh-TW'] = ocrZhV5.filePath('dict.txt');
+      recHeights['zh-TW'] = 48;
     }
     var hasJa = ocrJa.isInstalled;
     return WorkerModelPaths(
@@ -189,7 +210,7 @@ abstract class TranslationModels {
   static List<ModelComponent> requiredFor(String sourceLang) {
     return [
       detector,
-      if (sourceLang != 'auto') ocrFor(sourceLang),
+      if (sourceLang == 'zh-TW') ocrZhV5 else if (sourceLang != 'auto') ocrFor(sourceLang),
     ];
   }
 
@@ -205,7 +226,9 @@ abstract class TranslationModels {
   static bool _computeReady(String sourceLang) {
     if (!detector.isInstalled) return false;
     if (sourceLang == 'auto') {
-      return ocrJa.isInstalled || _recLangs.any((l) => ocrFor(l).isInstalled);
+      return ocrJa.isInstalled ||
+          ocrZhV5.isInstalled ||
+          _recLangs.any((l) => ocrFor(l).isInstalled);
     }
     return ocrFor(sourceLang).isInstalled;
   }

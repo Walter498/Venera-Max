@@ -568,7 +568,10 @@ class _WorkerState {
     }
     if (kana > 0) return 'ja';
     if (hangul > 0) return 'ko';
-    if (han > 0) return engineLang == 'ja' ? 'ja' : 'zh';
+    if (han > 0) {
+      return engineLang == 'ja' ? 'ja' :
+          engineLang == 'zh-TW' ? 'zh-TW' : 'zh';
+    }
     if (latin > 0) return 'en';
     return engineLang;
   }

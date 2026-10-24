@@ -159,7 +159,12 @@ class _ReaderGestureDetectorState
           onMouseWheel(event.scrollDelta.dy > 0);
         }
       },
-      child: widget.child,
+      // A drag on a zoomed image pans it, so iOS back swipe is limited to
+      // the screen's left edge until the image is zoomed out again.
+      child: SwipeRegionMarker(
+        active: () => reader._imageViewController?.isImageZoomed ?? false,
+        child: widget.child,
+      ),
     );
   }
 
