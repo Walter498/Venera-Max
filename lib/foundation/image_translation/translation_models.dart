@@ -118,8 +118,8 @@ abstract class TranslationModels {
       ]),
     ],
   );
-
-
+  /// English OCR (PP-OCRv3 rec).
+  static const ocrEn = ModelComponent(
     id: 'ocr_en',
     approxSizeBytes: 9000000,
     files: [

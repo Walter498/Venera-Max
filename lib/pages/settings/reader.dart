@@ -856,6 +856,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
                   child: ImageEnhancePreview(),
                 ),
+                _SliderSetting(
                   title: "Sharpen strength".tl,
                   settingsIndex: "readerImageEnhanceStrength",
                   interval: 0.1,
