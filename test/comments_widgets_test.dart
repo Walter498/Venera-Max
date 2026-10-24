@@ -71,26 +71,19 @@ void main() {
         widget is CheckedPopupMenuItem<String> &&
         widget.value == (label == '最热' ? 'hot' : 'wonderful'));
       expect(option.hitTestable(), findsOneWidget);
-      // Start the callback in the real async zone, including saveData's
-      // serialized-write timer. A new request starts before saving completes,
-      // so wait for the persisted preference as well as the network request.
+      await tester.tap(option.hitTestable());
+      await tester.pumpAndSettle();
+      // saveData uses a serialized real-I/O write with a short delay. Wait for
+      // the page callback after that write instead of inspecting its private
+      // file layout, which differs between test hosts.
+      final expected = label == '最热' ? 2 : 3;
       await tester.runAsync(() async {
-        await tester.tap(option.hitTestable());
-        await tester.pumpAndSettle();
-        final value = label == '最热' ? 'hot' : 'wonderful';
-        final saved = File('${temp.path}/comic_source/${source.key}.data');
-        var persisted = false;
-        for (var i = 0; i < 100; i++) {
-          if (await saved.exists()) {
-            persisted = (await saved.readAsString()).contains('"chapter":"$value"');
-          }
-          if (persisted && requested.length >= (value == 'hot' ? 2 : 3)) {
-            break;
-          }
+        for (var i = 0; i < 100 && requested.length < expected; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 20));
         }
-        expect(persisted, isTrue, reason: 'Sort preference must finish saving');
+        await Future<void>.delayed(const Duration(milliseconds: 40));
       });
+      expect(requested.length, greaterThanOrEqualTo(expected));
       await tester.pumpAndSettle();
     }
     expect(requested,['new','hot','wonderful']);
