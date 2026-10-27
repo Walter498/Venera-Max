@@ -54,7 +54,7 @@ void main() {
     expect(ComicSourceManager().add(source), isTrue);
     expect(source.version, '2.33.20-comments.5');
     expect(JsEngine().runCode('$root.minAppVersion'), '1.2.2');
-    expect(App.version, '2.3.7');
+    expect(App.version, '2.4.0');
     expect(JsEngine().runCode('$root.init === null'), isTrue);
     return source;
   }
@@ -84,7 +84,7 @@ void main() {
     );
     await App.initPackageVersion();
     expect(App.version, packageVersion.first);
-    expect(App.version, '2.3.7');
+    expect(App.version, '2.4.0');
     expect(App.isInitialized, wasInitialized,
         reason: 'Package metadata must not mark the full App ready');
     oldPath = App.dataPath;
@@ -134,7 +134,7 @@ void main() {
     );
     expect(ComicSource.find('lizimh'), isNull);
     expect(JsEngine().runCode('$root === undefined'), isTrue);
-    expect(App.version, '2.3.7');
+    expect(App.version, '2.4.0');
     checkHash();
   });
 

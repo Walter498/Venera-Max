@@ -1,0 +1,93 @@
+name: Android 2.4.0 universal APK
+run-name: Android 2.4.0 universal APK
+on:
+  push:
+    branches: [release/android-2.4.0]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-240-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apk:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'oracle'
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - name: Select Android signing mode
+        id: android_mode
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] &&
+             [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=test-release" >> "$GITHUB_OUTPUT"
+            echo "No Android signing secrets: producing a Release APK signed with the debug certificate."
+          fi
+      - name: Decode Android signing files
+        if: steps.android_mode.outputs.mode == 'release'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/keystore.jks
+          {
+            printf 'storeFile=keystore.jks\n'
+            printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } > android/key.properties
+      - run: flutter pub get
+      - name: Build universal release APK
+        env:
+          VENERA_TEST_SIGNING: ${{ steps.android_mode.outputs.mode == 'test-release' && '1' || '0' }}
+        run: flutter build apk --release
+      - name: Validate APK version and signature
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml)
+          version="${version%%+*}"
+          test "$version" = "2.4.0" || { echo "Unexpected version: $version"; exit 1; }
+          dir=build/app/outputs/apk/release
+          ls -l "$dir"
+          universal="$dir/VeneraX-${version}.apk"
+          test -s "$universal" || { echo "Missing universal APK"; exit 1; }
+          unzip -l "$universal" | grep -q 'AndroidManifest.xml'
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            test -s "$dir/VeneraX-${version}-${abi}.apk" || { echo "Missing $abi APK"; exit 1; }
+          done
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$signer" verify --verbose "$universal"
+          "$signer" verify --print-certs "$universal"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          "$aapt" dump badging "$universal" | grep -E "^package:|^application-label:" 
+          sha256sum "$dir"/*.apk
+          mkdir -p result
+          cp "$dir"/*.apk result/
+          (cd result && sha256sum *.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: VeneraX-2.4.0-android-apk
+          path: result/
+          if-no-files-found: warn
