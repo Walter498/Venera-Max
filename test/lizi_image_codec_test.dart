@@ -10,6 +10,11 @@ import 'package:flutter_qjs/flutter_qjs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/network/images.dart';
 
+// Call the base implementation directly: TestWidgetsFlutterBinding installs
+// a default HttpClient factory that deliberately answers every request with 400.
+// This client performs real HTTPS; no status or response body is fabricated.
+class _RealHttpOverrides extends HttpOverrides {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final evidence = <Map<String, dynamic>>[];
@@ -55,7 +60,8 @@ void main() {
         final js = FlutterQjs();
         unawaited(js.dispatch());
         JSInvokable? configFunction;
-        final client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
+        final client = _RealHttpOverrides().createHttpClient(null)
+          ..connectionTimeout = const Duration(seconds: 20);
         try {
           js.evaluate('''
             class ComicSource {
