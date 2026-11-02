@@ -298,7 +298,7 @@ class Lizimh extends ComicSource {
             if(operation!==this._authEpoch)throw Error('登录状态已变化，请重新登录');
             if(!response||response.status!==200)throw Error('登录请求失败'+(response&&response.status?'（HTTP '+response.status+'）':''));
             let json;try{json=JSON.parse(response.body);}catch(_){throw Error('登录接口未返回有效数据');}
-            const data=json&&json.data,token=this.normalizeOfficialToken(data&&data.token);
+            const data=json&&json.data,token=data&&typeof data.token==='string'?this.normalizeOfficialToken(data.token):'';
             // The host treats every non-throwing return as success. Require an
             // actual non-empty token before resolving the native form.
             if(!token||(typeof json.code==='number'&&(json.code<200||json.code>=300)))throw Error('登录未成功，请核对栗子邮箱和密码或账号状态');
@@ -311,6 +311,8 @@ class Lizimh extends ComicSource {
             // Never expose response bodies, email/password values or token.
             const text=String(e&&e.message||'');
             if(/^(已取消登录|登录状态已变化|登录未成功|登录接口未返回|登录请求失败)/.test(text))throw Error(text);
+            if(/(?:HTTP|status(?: code)?|Status Code)[:\s]+(?:400|401|403)\b/i.test(text))throw Error('登录未成功，请核对栗子邮箱和密码或账号状态');
+            if(/(?:HTTP|status(?: code)?|Status Code)[:\s]+429\b/i.test(text))throw Error('登录请求过于频繁，请稍后重试');
             throw Error('登录连接失败，请检查网络后重试');
         }finally{this._loginBusy=false;}
     }
