@@ -1,0 +1,36 @@
+name: Lizi official image codec native verification
+on:
+  push:
+    branches: [verify/lizi-official-codec-23332]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: lizi-image-codec-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          architecture: x64
+      - run: flutter pub get
+        timeout-minutes: 10
+      - run: bash tool/prepare_native_tests.sh
+        timeout-minutes: 8
+      - name: Actual native QuickJS downloader and Flutter image first frame
+        run: flutter test --no-pub --concurrency=1 --timeout=120s test/lizi_image_codec_test.dart --reporter expanded
+        timeout-minutes: 12
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lizi-native-codec-evidence
+          path: build/lizi-codec-evidence/
+          if-no-files-found: warn
