@@ -33,6 +33,8 @@ void main() {
       globalThis.Convert={encodeUtf8:s=>s,md5:s=>s,hexEncode:s=>'synthetic-signature'};
       globalThis.setTimeout=(fn,ms)=>undefined;
       globalThis.UI={showMessage(){},showDialog(){}};
+      // Do not export the setup object's functions as an unused Dart result.
+      void 0;
     ''');
     js.evaluate(await File('test/fixtures/lizimh_image_codec_release.js').readAsString());
     js.evaluate('globalThis.src=new Lizimh();void 0;');
