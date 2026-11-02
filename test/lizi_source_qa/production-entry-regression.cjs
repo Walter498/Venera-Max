@@ -1,0 +1,33 @@
+const assert = require('assert/strict');
+const {loadSource,freshState,vm}=require('./test.cjs');
+(async()=>{
+ const h=loadSource(freshState());
+ const C=vm.runInContext('LiziTencentComments',h.context);
+ const M=vm.runInContext('LiziChapterMetadata',h.context);
+ const ctx={scope:'regression',generation:1,epoch:1,bind:{tencentCommentsEnabled:true}};
+ const local={title:'Verified Work',authors:['Author'],chapters:[{id:'local91',title:'091一夜春风'}],dates:{local91:{updateTime:'2026-10-01',dateSource:'lizi'}}};
+ const remote={id:'12345',chapters:[{id:'9100',title:'94-091春风'}]};
+ const provider=new C(h.source), requests=[];
+ provider.check=()=>{};
+ provider.binding=async()=>remote;
+ provider.local=async()=>local;
+ provider.stats=async()=>null;
+ provider.crypto={sign:()=> 'fixture-signature',metadata:()=>({DEVICETYPE:'1',MODEL:'iPhone',NETWORK:'wifi'}),
+  decodeAsync:async()=>({error_code:2,data:{topic_list:[],total:0}})};
+ provider.auth=()=>({userId:'1',accessToken:'test-token'});
+ provider.api=async(c,path)=>{requests.push(path);return path.includes('comicChapterList')?{data:{chapter_list:[{chapter_id:'9100',good_count:0,update_date:'2026-10-02'}]}}:{data:[],count:0};};
+ const meta=new M(h.source);meta.provider=provider;meta.local=async()=>local;
+ provider.get=async(_ctx,url)=>{requests.push(url);return 'fixture-response'};
+ const result=await meta.run(ctx,'work',['local91']);
+ assert.equal(result.local91.likesCount,0);
+ assert.equal(result.local91.tencentUpdateTime,'2026-10-02');
+ assert.equal(result.local91.updateTime,'2026-10-01');
+ await provider.run(ctx,'work','local91',1,null,'hot');
+ assert(requests.some(x=>x.includes('/chapter_id/9100')),'chapter comment request must use #91 matched ID');
+ assert(!requests.some(x=>x.includes('/chapter_id/94')),'catalog ordinal must not become chapter ID');
+ local.chapters.push({id:'dup91',title:'091一夜春风'});requests.length=0;
+ const duplicate=await provider.run(ctx,'work','local91',1,null,'hot');
+ assert.equal(duplicate.available,false);
+ assert.equal(requests.length,0,'ambiguous chapter cannot trigger request');
+ console.log(JSON.stringify({passed:8,metadata:{lizi:result.local91.updateTime,tencent:result.local91.tencentUpdateTime,likes:result.local91.likesCount},commentChapterId:'9100',fixtureType:'screenshot titles with stubbed verified work catalog'}));
+})().catch(e=>{console.error(e);process.exitCode=1;});
