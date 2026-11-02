@@ -1,7 +1,7 @@
-name: Lizi official image codec native verification
+name: Lizi account settings and image codec native verification
 on:
   push:
-    branches: [verify/lizi-official-codec-23332]
+    branches: [verify/lizi-official-account-23333]
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,7 +26,7 @@ jobs:
       - run: bash tool/prepare_native_tests.sh
         timeout-minutes: 8
       - name: Actual native QuickJS downloader and Flutter image first frame
-        run: flutter test --no-pub --concurrency=1 --timeout=120s test/lizi_image_codec_test.dart --reporter expanded
+        run: flutter test --no-pub --concurrency=1 --timeout=120s test/lizi_account_native_test.dart test/lizi_image_codec_test.dart --reporter expanded
         timeout-minutes: 12
       - uses: actions/upload-artifact@v4
         if: always()
