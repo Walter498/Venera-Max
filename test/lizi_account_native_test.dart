@@ -22,17 +22,17 @@ void main() {
         deleteData(k){delete store[k];}
       }
       globalThis.Network={
-        get:async()=>({status:200,body:'{"status":true}'}),
+        get:async()=>{throw Error('Login must not issue a health probe');},
         sendRequest:async(method,url,headers,body,extra)=>{
           testPosts++;testBody=JSON.parse(body);
-          if(method!=='POST'||url.indexOf('/app/api/user/login?')<0||!extra.maskDataInLog)
+          if(method!=='POST'||url.indexOf('http://ai.xajtl.com/app/api/user/login?')!==0||!extra.maskDataInLog)
             throw Error('Invalid login protocol');
           return {status:200,body:JSON.stringify({code:201,data:{token:responseToken}})};
         }
       };
       globalThis.Convert={encodeUtf8:s=>s,md5:s=>s,hexEncode:s=>'synthetic-signature'};
       globalThis.setTimeout=(fn,ms)=>undefined;
-      globalThis.UI={showMessage(){},showDialog(){}};
+      globalThis.UI={showMessage(){},showDialog(){throw Error('No extra login confirmation allowed');}};
       // Do not export the setup object's functions as an unused Dart result.
       void 0;
     ''');
