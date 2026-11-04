@@ -1,5 +1,5 @@
 'use strict';
-/* Behavioural assertions for lizimh.js 2.33.34. Fixture network only. */
+/* Behavioural assertions for lizimh.js 2.33.36. Fixture network only. */
 const path = require('path');
 const fs = require('fs');
 
@@ -12,9 +12,9 @@ function run(env) {
   const src = h.source;
 
   // ---------- A. generated source identity / new init constructor ----------
-  check('A1 version is 2.33.34', () => {
+  check('A1 version is 2.33.36', () => {
     const v = src.version;
-    eq(v, '2.33.34', 'version');
+    eq(v, '2.33.36', 'version');
     return v;
   });
   check('A2 loadChapterMetadata hook present', () => {

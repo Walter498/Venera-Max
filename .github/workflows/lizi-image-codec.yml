@@ -1,7 +1,7 @@
 name: Lizi account settings and image codec native verification
 on:
   push:
-    branches: [verify/lizi-direct-login-23334]
+    branches: [verify/lizi-current-23336]
   workflow_dispatch:
 permissions:
   contents: read
