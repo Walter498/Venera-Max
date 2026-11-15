@@ -6,12 +6,18 @@ part of 'components.dart';
 /// would keep failing for the same reason.
 final _warmingCollectionCovers = <String>{};
 
-/// 「已在本合集」角標色（紫）——與收藏(綠)/稍後讀(橙)/歷史(藍)區分
+/// Marker colour for "already in a collection". Distinct from the favourite
+/// (green), read-later (orange) and history (blue) badges so four states stay
+/// tellable apart on one cover.
 const _kCollectionStatusColor = Color(0xFF7E57C2);
 
-/// 已加入合集的角標：長列表不用逐個點開確認有沒有收過。
-/// 直接監聽 store（不是 build 時的旗標）：從當前列表加進合集時，
-/// 角標會立即亮起，不需要刷新。不在任何合集時不渲染。
+/// Corner marker saying this comic already sits in at least one collection, so a
+/// long list needn't be opened item by item to avoid filing something twice.
+///
+/// Watches the store instead of taking a flag captured at build time: filing a
+/// comic from the very list showing it has to light up its marker with no
+/// reload. Renders nothing when the comic is in no collection, so callers can
+/// place it unconditionally.
 class CollectionMemberMarker extends StatelessWidget {
   const CollectionMemberMarker({
     super.key,
@@ -22,8 +28,11 @@ class CollectionMemberMarker extends StatelessWidget {
   });
 
   final String sourceKey;
+
   final String comicId;
+
   final double size;
+
   final double padding;
 
   @override
@@ -150,25 +159,12 @@ class ComicTile extends StatelessWidget {
     this.onTap,
     this.onLongPressed,
     this.heroID,
-    this.overrideDisplayMode,
-    this.chaptersText,
-    this.lastReadTimeText,
   });
 
   final Comic comic;
 
-  /// 覆寫全域的漫畫顯示模式（'brief' / 'detailed'）；null = 跟隨設定。
-  final String? overrideDisplayMode;
-
-  /// 話數文字（聚合搜索同名組用）；null = 不顯示。
-  final String? chaptersText;
-
-  /// 上次閱讀時間（收藏頁用）；null = 不顯示。
-  final String? lastReadTimeText;
-
   final bool enableLongPressed;
 
-  /// 批次選取時抑制單項選單
   final bool enableContextMenu;
 
   final String? badge;
@@ -199,11 +195,14 @@ class ComicTile extends StatelessWidget {
   bool get _isCollection =>
       ComicCollectionStore.isCollectionSourceKey(comic.sourceKey);
 
-  /// 是否顯示「已在本合集」角標（合集本身不顯示：合集不能嵌套）
+  /// Whether this tile should say that the comic is already filed into a
+  /// collection. Never for a collection itself — collections cannot nest, so
+  /// the two markers share the same corner.
   bool get _showCollectionStatus =>
       !_isCollection && appdata.settings['showCollectionStatusOnTile'] == true;
 
-  /// 是否顯示頁數（合集本身不顯示）
+  /// Whether the tile shows a page count. Never for a collection: its members
+  /// each have their own count, so a single number there would be meaningless.
   bool get _showPageCount =>
       !_isCollection && appdata.settings['showPageCountOnTile'] == true;
 
@@ -271,87 +270,189 @@ class ComicTile extends StatelessWidget {
 
   void showMenu(Offset location, BuildContext context) {
     if (!enableContextMenu) return;
-    showMenuX(App.rootContext, location, [
-      MenuEntry(
-        icon: Icons.chrome_reader_mode_outlined,
-        text: 'Details'.tl,
-        onClick: () {
-          App.mainNavigatorKey?.currentContext?.to(
-            () => ComicPage(
-              id: comic.id,
-              sourceKey: comic.sourceKey,
-              cover: comic.cover,
-              title: comic.title,
+    final type = ComicType.fromKey(comic.sourceKey);
+    final source = ComicSource.find(comic.sourceKey);
+    final history = HistoryManager().find(comic.id, type);
+    final isFavorite = LocalFavoritesManager().isExist(comic.id, type);
+    final isReadLater = ReadLaterManager().isExist(comic.id, type);
+    final progress = history == null
+        ? null
+        : 'Chapter @chapter · Page @page'.tlParams({
+            'chapter': math.max(1, history.ep),
+            'page': math.max(1, history.page),
+          });
+    final navigatorContext = App.mainNavigatorKey?.currentContext ?? context;
+    final local = const ComicStateRepository()
+        .load(comic.sourceKey, comic.id)
+        .localComic;
+    final downloaded = local != null;
+    showMenuX(
+      context,
+      location,
+      [
+        if (source?.loadComicInfo != null || local != null || _isCollection)
+          MenuEntry(
+            action: MenuAction.read,
+            role: MenuEntryRole.primary,
+            icon: Icons.menu_book_outlined,
+            text: history == null ? 'Read'.tl : 'Continue reading'.tl,
+            subtitle: progress,
+            onClick: () {
+              if (local != null) {
+                local.read();
+              } else {
+                navigatorContext.to(
+                  () => ReaderWithLoading(
+                    id: comic.id,
+                    sourceKey: comic.sourceKey,
+                  ),
+                );
+              }
+            },
+          ),
+        MenuEntry(
+          action: MenuAction.details,
+          icon: Icons.chrome_reader_mode_outlined,
+          text: 'Details'.tl,
+          onClick: () {
+            navigatorContext.to(
+              () => ComicPage(
+                id: comic.id,
+                sourceKey: comic.sourceKey,
+                cover: comic.cover,
+                title: comic.title,
+              ),
+            );
+          },
+        ),
+        MenuEntry(
+          group: MenuGroup.more,
+          icon: Icons.copy,
+          text: 'Copy Title'.tl,
+          onClick: () {
+            Clipboard.setData(ClipboardData(text: comic.title));
+            App.rootContext.showMessage(message: 'Title copied'.tl);
+          },
+        ),
+        MenuEntry(
+          action: MenuAction.favorite,
+          group: MenuGroup.organize,
+          role: MenuEntryRole.quick,
+          isSelected: isFavorite,
+          icon: isFavorite ? Icons.favorite : Icons.favorite_border,
+          text: isFavorite ? 'Add to another folder'.tl : 'Add to favorites'.tl,
+          compactText: isFavorite ? 'Favorited'.tl : 'Add to favorites'.tl,
+          onClick: () {
+            addFavorite([comic]);
+          },
+        ),
+        // A collection cannot hold another collection, so the entry is hidden
+        // rather than shown and refused.
+        if (!ComicCollectionStore.isCollectionSourceKey(comic.sourceKey))
+          MenuEntry(
+            action: MenuAction.collection,
+            group: MenuGroup.organize,
+            icon: Icons.library_books_outlined,
+            text: 'Add to collection'.tl,
+            onClick: () => showAddToCollectionDialog(context, [comic]),
+          ),
+        MenuEntry(
+          action: MenuAction.readLater,
+          group: MenuGroup.organize,
+          role: MenuEntryRole.quick,
+          isSelected: isReadLater,
+          icon: isReadLater
+              ? Icons.bookmark_remove_outlined
+              : Icons.watch_later_outlined,
+          text: isReadLater ? 'Remove from read later'.tl : 'Read later'.tl,
+          compactText: isReadLater ? 'In read later'.tl : 'Read later'.tl,
+          onClick: () async {
+            final added = await ReadLaterManager().toggle(comic);
+            App.rootContext.showMessage(
+              message: added
+                  ? 'Added to read later'.tl
+                  : 'Removed from read later'.tl,
+            );
+          },
+        ),
+        if (source != null && source.loadComicInfo != null)
+          MenuEntry(
+            action: MenuAction.download,
+            role: MenuEntryRole.quick,
+            icon: downloaded ? Icons.download_done : Icons.download_outlined,
+            text: downloaded ? 'Downloaded'.tl : 'Download'.tl,
+            isSelected: downloaded,
+            onClick: () async {
+              if (LocalManager().isDownloading(comic.id, type)) {
+                App.rootContext.showMessage(
+                  message: 'The comic is downloading'.tl,
+                );
+                return;
+              }
+              if (LocalManager().isDownloaded(comic.id, type)) {
+                App.rootContext.showMessage(
+                  message: 'The comic is downloaded'.tl,
+                );
+                return;
+              }
+              if (!await ensureDownloadStorageWritable()) return;
+              LocalManager().addTask(
+                ImagesDownloadTask(
+                  source: source,
+                  comicId: comic.id,
+                  comicTitle: comic.title,
+                  comicCover: comic.cover,
+                ),
+              );
+              App.rootContext.showMessage(message: 'Download started'.tl);
+            },
+          ),
+        // Cross-source linking and migration are meaningless for a collection: it
+        // has no upstream source, and "migrating" it would search other sources
+        // for its name and rebind it, silently discarding the grouping. Members
+        // are still individually migratable from their own tiles.
+        if (!_isCollection)
+          MenuEntry(
+            group: MenuGroup.source,
+            icon: Icons.hub_outlined,
+            text: 'Linked entries'.tl,
+            onClick: () => showRelatedSourcesDialog(context, comic),
+          ),
+        if (!_isCollection)
+          MenuEntry(
+            action: MenuAction.migrate,
+            group: MenuGroup.source,
+            icon: Icons.move_up_outlined,
+            text: 'Migrate Source'.tl,
+            onClick: () => showSourceMigrationDialog(
+              context,
+              favoriteItemFromComic(comic),
             ),
-          );
-        },
-      ),
-      MenuEntry(
-        icon: Icons.copy,
-        text: 'Copy Title'.tl,
-        onClick: () {
-          Clipboard.setData(ClipboardData(text: comic.title));
-          App.rootContext.showMessage(message: 'Title copied'.tl);
-        },
-      ),
-      MenuEntry(
-        icon: Icons.stars_outlined,
-        text: 'Add to favorites'.tl,
-        onClick: () {
-          addFavorite([comic]);
-        },
-      ),
-      // A collection cannot hold another collection, so the entry is hidden
-      // rather than shown and refused.
-      if (!ComicCollectionStore.isCollectionSourceKey(comic.sourceKey))
+          ),
         MenuEntry(
-          icon: Icons.library_books_outlined,
-          text: 'Add to collection'.tl,
-          onClick: () => showAddToCollectionDialog(context, [comic]),
+          group: MenuGroup.more,
+          icon: Icons.block,
+          text: 'Block'.tl,
+          onClick: () => block(context),
         ),
-      MenuEntry(
-        icon: ReadLaterManager().isExist(comic.id, ComicType.fromKey(comic.sourceKey))
-            ? Icons.bookmark_remove_outlined
-            : Icons.watch_later_outlined,
-        text: ReadLaterManager().isExist(comic.id, ComicType.fromKey(comic.sourceKey))
-            ? 'Remove from read later'.tl
-            : 'Read later'.tl,
-        onClick: () async {
-          final added = await ReadLaterManager().toggle(comic);
-          App.rootContext.showMessage(
-            message: added ? 'Added to read later'.tl : 'Removed from read later'.tl,
-          );
-        },
+        ...?menuOptions,
+      ],
+      title: comic.title,
+      subtitle:
+          source?.name ?? (comic.sourceKey == 'local' ? 'Local'.tl : null),
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: ColoredBox(
+          color: context.colorScheme.surfaceContainerHigh,
+          child: buildImage(context),
+        ),
       ),
-      // Cross-source linking and migration are meaningless for a collection: it
-      // has no upstream source, and "migrating" it would search other sources
-      // for its name and rebind it, silently discarding the grouping. Members
-      // are still individually migratable from their own tiles.
-      if (!_isCollection)
-        MenuEntry(
-          icon: Icons.hub_outlined,
-          text: 'Linked entries'.tl,
-          onClick: () => showRelatedSourcesDialog(context, comic),
-        ),
-      if (!_isCollection)
-        MenuEntry(
-          icon: Icons.move_up_outlined,
-          text: 'Migrate Source'.tl,
-          onClick: () =>
-              showSourceMigrationDialog(context, favoriteItemFromComic(comic)),
-        ),
-      MenuEntry(
-        icon: Icons.block,
-        text: 'Block'.tl,
-        onClick: () => block(context),
-      ),
-      ...?menuOptions,
-    ]);
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    var type = overrideDisplayMode ?? appdata.settings['comicDisplayMode'];
+    var type = appdata.settings['comicDisplayMode'];
 
     final comicType = ComicType.fromKey(comic.sourceKey);
     var isFavorite = appdata.settings['showFavoriteStatusOnTile']
@@ -433,6 +534,16 @@ class ComicTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _menuButton(BuildContext context) {
+    return IconButton(
+      tooltip: 'Actions'.tl,
+      icon: const Icon(Icons.more_horiz),
+      iconSize: 20,
+      onPressed: () => onLongPress(context),
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
     );
   }
 
@@ -680,6 +791,9 @@ class ComicTile extends StatelessWidget {
                     Expanded(
                       child: ComicDescription(
                         title: displayInfo.title.replaceAll("\n", ""),
+                        titleTrailing: App.isMobile && enableContextMenu
+                            ? _menuButton(context)
+                            : null,
                         subtitle: displayInfo.author ?? '',
                         description: displayInfo.description ?? '',
                         badge: displayInfo.sourceName ?? comic.language,
@@ -694,10 +808,9 @@ class ComicTile extends StatelessWidget {
                         updateText: displayInfo.updateTime,
                         statusText: displayInfo.status,
                         progressText: chapterProgress.currentTitle,
-                        pagesText:
-                            _showPageCount ? displayInfo.pagesText : null,
-                        chaptersText: chaptersText,
-                        lastReadTimeText: lastReadTimeText,
+                        pagesText: _showPageCount
+                            ? displayInfo.pagesText
+                            : null,
                       ),
                     ),
                   ],
@@ -782,16 +895,32 @@ class ComicTile extends StatelessWidget {
                             ? 10.0
                             : 12.0;
 
-                        if (text == null) {
-                          return const SizedBox();
-                        }
-
-                        var children = <Widget>[];
-                        var lines = text.split('\n');
+                        var lines = text == null
+                            ? <String>[]
+                            : text.split('\n');
                         lines.removeWhere((e) => e.trim().isEmpty);
                         if (lines.length > 3) {
                           lines = lines.sublist(0, 3);
                         }
+                        final pageCount = _showPageCount
+                            ? const ComicStateRepository().quickPageCountFor(
+                                comic,
+                              )
+                            : null;
+                        // Prepended after the description was already trimmed to
+                        // its 3 lines, so the count adds a line instead of
+                        // costing one. Sources that already spell the count into
+                        // the description would otherwise say it twice.
+                        if (pageCount != null &&
+                            !lines.any((e) => e.containsNumber(pageCount))) {
+                          lines.insert(0, '${pageCount}P');
+                        }
+
+                        if (lines.isEmpty) {
+                          return const SizedBox();
+                        }
+
+                        var children = <Widget>[];
                         for (var line in lines) {
                           children.add(
                             Container(
@@ -849,7 +978,7 @@ class ComicTile extends StatelessWidget {
                 child: Text(
                   comic.title.replaceAll('\n', ''),
                   maxLines: 1,
-                  overflow: TextOverflow.clip,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ),
@@ -878,730 +1007,6 @@ class ComicTile extends StatelessWidget {
       },
     );
   }
-}
-
-/// Splits a comic title into the fragments offered as keyword choices, cutting
-/// on commas and bracketed groups.
-List<String> _splitText(String text) {
-  var words = <String>[];
-  var buffer = StringBuffer();
-  var inBracket = false;
-  String? prevBracket;
-  for (var i = 0; i < text.length; i++) {
-    var c = text[i];
-    if (c == '[' || c == '(') {
-      if (inBracket) {
-        buffer.write(c);
-      } else {
-        if (buffer.isNotEmpty) {
-          words.add(buffer.toString().trim());
-          buffer.clear();
-        }
-        inBracket = true;
-        prevBracket = c;
-      }
-    } else if (c == ']' || c == ')') {
-      if (prevBracket == '[' && c == ']' || prevBracket == '(' && c == ')') {
-        if (buffer.isNotEmpty) {
-          words.add(buffer.toString().trim());
-          buffer.clear();
-        }
-        inBracket = false;
-      } else {
-        buffer.write(c);
-      }
-    } else if (c == ',') {
-      if (inBracket) {
-        buffer.write(c);
-      } else {
-        words.add(buffer.toString().trim());
-        buffer.clear();
-      }
-    } else {
-      buffer.write(c);
-    }
-  }
-  if (buffer.isNotEmpty) {
-    words.add(buffer.toString().trim());
-  }
-  words.removeWhere((element) => element == "");
-  return words.toSet().toList();
-}
-
-/// Lets the user turn a comic's own words and tags into blocklist entries.
-///
-/// Title fragments go to the keyword list (substring-matched against
-/// title/subtitle/description) and tags go to the tag list, so a tag pick can
-/// never accidentally hide comics whose *title* happens to contain that word.
-/// Shared by the list long-press menu and the comic detail page, where the full
-/// tag set is always available.
-void showBlockDialog({
-  required String title,
-  String? subtitle,
-  required List<String> tags,
-  VoidCallback? onBlocked,
-}) {
-  var words = [
-    ..._splitText(title),
-    if (subtitle != null && subtitle.isNotEmpty) subtitle,
-  ];
-  var selectedWords = <String>[];
-  var selectedTags = <String>[];
-  showDialog(
-    context: App.rootContext,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          Widget section(
-            String title,
-            List<String> items,
-            List<String> picked, {
-            bool translate = false,
-          }) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: ts.s12.bold),
-                const SizedBox(height: 8),
-                Wrap(
-                  runSpacing: 8,
-                  spacing: 8,
-                  children: [
-                    for (var item in items)
-                      OptionChip(
-                        // Only tags have translations; a title fragment must be
-                        // shown as-is. Picking a tag stores its value half (the
-                        // part after the namespace), so the entry also matches
-                        // comics that carry the tag without a namespace.
-                        text: translate
-                            ? item
-                                .split(':')
-                                .last
-                                .translateTagIfNeed
-                            : item,
-                        isSelected: picked.contains(item),
-                        onTap: () {
-                          setState(() {
-                            if (!picked.remove(item)) {
-                              picked.add(item);
-                            }
-                          });
-                        },
-                      ),
-                  ],
-                ),
-              ],
-            );
-          }
-
-          return ContentDialog(
-            title: 'Block'.tl,
-            content: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: math.min(400, context.height - 136),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (words.isNotEmpty)
-                      section('Keyword'.tl, words, selectedWords),
-                    if (words.isNotEmpty && tags.isNotEmpty)
-                      const SizedBox(height: 16),
-                    if (tags.isNotEmpty)
-                      section('Tags'.tl, tags, selectedTags, translate: true),
-                    if (words.isEmpty && tags.isEmpty)
-                      Text('No tags available'.tl),
-                  ],
-                ),
-              ).paddingHorizontal(16),
-            ),
-            actions: [
-              Button.filled(
-                onPressed: () {
-                  context.pop();
-                  if (selectedWords.isEmpty && selectedTags.isEmpty) {
-                    return;
-                  }
-                  for (var word in selectedWords) {
-                    if (!appdata.settings['blockedWords'].contains(word)) {
-                      appdata.settings['blockedWords'].add(word);
-                    }
-                  }
-                  for (var tag in selectedTags) {
-                    // Store the value half: detail pages hand over
-                    // `namespace:value` tags, but list items often carry the
-                    // bare value, and the entry has to match both.
-                    var entry = tag.contains(':')
-                        ? tag.split(':').sublist(1).join(':')
-                        : tag;
-                    if (entry.isEmpty) continue;
-                    if (!appdata.settings['blockedTags'].contains(entry)) {
-                      appdata.settings['blockedTags'].add(entry);
-                    }
-                  }
-                  appdata.saveData();
-                  App.rootContext.showMessage(message: 'Blocked'.tl);
-                  onBlocked?.call();
-                },
-                child: Text('Block'.tl),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
-
-class ComicDescription extends StatelessWidget {
-  const ComicDescription({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.description,
-    required this.enableTranslate,
-    this.badge,
-    this.maxLines = 2,
-    this.tags,
-    this.rating,
-    this.updateText,
-    this.statusText,
-    this.progressText,
-    this.pagesText,
-    this.chaptersText,
-    this.lastReadTimeText,
-    this.showTitle = true,
-    this.showDescription = true,
-    this.onTapAuthor,
-    this.onTapTag,
-    this.enableLongPressCopy = false,
-  });
-
-  final String title;
-  final String subtitle;
-  final String description;
-  final String? badge;
-  final List<String>? tags;
-  final int maxLines;
-  final bool enableTranslate;
-  final double? rating;
-  final String? updateText;
-  final String? statusText;
-  final String? progressText;
-  final String? pagesText;
-  final String? chaptersText;
-  final String? lastReadTimeText;
-  final bool showTitle;
-  final bool showDescription;
-  final void Function(String author, String? namespace)? onTapAuthor;
-  final void Function(String tag, String namespace)? onTapTag;
-
-  /// Whether long-pressing an info/tag value copies it to the clipboard.
-  /// Enabled on the comic detail page; disabled on list tiles so a long press
-  /// over the tag area triggers the tile's own context menu instead (issue #79).
-  final bool enableLongPressCopy;
-
-  @override
-  Widget build(BuildContext context) {
-    final descriptionParts = _descriptionParts();
-    final source = _clean(badge) ?? _derivedSource(descriptionParts);
-    final update = _clean(updateText) ?? _updateTextFromTags();
-    final progress = _clean(progressText);
-    final authorItems = _authorItems();
-    final authors = authorItems.isEmpty
-        ? null
-        : authorItems.map((e) => e.label).join(", ");
-    final tagItems = _tagItems();
-    final tagText = _tagText(tagItems);
-    final status = _clean(statusText) ?? _statusText();
-    final pages = _clean(pagesText) ?? _pagesText();
-    final fallbackDescription = _fallbackDescription(
-      update,
-      progress,
-      source,
-      descriptionParts,
-    );
-    final rows = <Widget>[
-      if (authors != null && onTapAuthor != null)
-        _actionRow(
-          context,
-          "Authors".tl,
-          authorItems
-              .map(
-                (item) => _InfoAction(
-                  text: item.label,
-                  onTap: () => onTapAuthor!(item.value, item.namespace),
-                ),
-              )
-              .toList(),
-          Colors.lightBlue,
-        )
-      else if (authors != null)
-        _infoRow(context, "Authors".tl, authors, Colors.lightBlue),
-      // 頁數排在更新/來源前：高度預算只留前幾行，頁數是讀者最常篩的
-      if (pages != null) _infoRow(context, "Pages".tl, pages, Colors.teal),
-      if (update != null) _infoRow(context, "Update".tl, update, Colors.cyan),
-      if (chaptersText != null)
-        _infoRow(context, '話數', chaptersText!, Colors.amber),
-      if (lastReadTimeText != null)
-        _infoRow(context, '上次閱讀', lastReadTimeText!, Colors.deepPurple),
-      if (source != null) _infoRow(context, "Source".tl, source, Colors.cyan),
-      if (tagItems.isNotEmpty && onTapTag != null)
-        _actionRow(
-          context,
-          "Tags".tl,
-          tagItems
-              .map(
-                (item) => _InfoAction(
-                  text: item.label,
-                  onTap: () => onTapTag!(item.value, item.namespace ?? ''),
-                ),
-              )
-              .toList(),
-          Colors.pinkAccent,
-        )
-      else if (tagText != null)
-        _infoRow(context, "Tags".tl, tagText, Colors.pinkAccent),
-      if (status != null) _infoRow(context, "Status".tl, status, Colors.purple),
-      if (progress != null)
-        _infoRow(context, "Progress".tl, progress, Colors.green),
-      if (showDescription && fallbackDescription != null)
-        _infoRow(context, "Description".tl, fallbackDescription, Colors.orange),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final visibleRows = _visibleRowCount(
-          constraints.maxHeight,
-          rating != null,
-        );
-        return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            if (showTitle) ...[
-              Text(
-                title.trim(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
-                maxLines: rows.isEmpty ? maxLines : 1,
-                overflow: TextOverflow.ellipsis,
-                softWrap: true,
-              ),
-              const SizedBox(height: 4),
-            ],
-            if (rating != null) ...[
-              StarRating(value: rating!, size: 15),
-              const SizedBox(height: 2),
-            ],
-            if (rows.isNotEmpty)
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: rows.take(visibleRows).toList(),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  int _visibleRowCount(double maxHeight, bool hasRating) {
-    if (maxHeight.isInfinite) {
-      return hasRating ? 4 : 5;
-    }
-    final reservedHeight = (showTitle ? 24 : 0) + (hasRating ? 20 : 0);
-    final count = ((maxHeight - reservedHeight) / 21).floor();
-    return math.max(1, math.min(5, count));
-  }
-
-  void _copy(BuildContext context, String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    context.showMessage(message: "Copied".tl);
-  }
-
-  Widget _infoRow(
-    BuildContext context,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            height: 18,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              color: color.toOpacity(0.18),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: context.colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: () {
-              final valueText = Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: context.colorScheme.onSurfaceVariant,
-                ),
-              );
-              if (!enableLongPressCopy) {
-                return valueText;
-              }
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onLongPress: () => _copy(context, value),
-                child: valueText,
-              );
-            }(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionRow(
-    BuildContext context,
-    String label,
-    List<_InfoAction> actions,
-    Color color,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 18,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              color: color.toOpacity(0.18),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: context.colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Wrap(
-              spacing: 0,
-              runSpacing: 2,
-              children: [
-                for (var i = 0; i < actions.length; i++) ...[
-                  InkWell(
-                    borderRadius: BorderRadius.circular(4),
-                    onTap: actions[i].onTap,
-                    onLongPress: enableLongPressCopy
-                        ? () => _copy(context, actions[i].text)
-                        : null,
-                    child: Text(
-                      actions[i].text,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.colorScheme.primary,
-                      ),
-                    ).paddingHorizontal(2),
-                  ),
-                  if (i != actions.length - 1)
-                    Text(
-                      " / ",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String? _clean(String? value) {
-    final result = value?.replaceAll("\n", " ").trim();
-    return result == null ||
-            result.isEmpty ||
-            result == "Unknown" ||
-            result.startsWith("Unknown:")
-        ? null
-        : result;
-  }
-
-  String? _tagText(List<_DescriptionTag> rawTags) {
-    if (rawTags.isEmpty) {
-      return null;
-    }
-    return rawTags.map((tag) => tag.label).join(" / ");
-  }
-
-  List<_DescriptionTag> _tagItems() {
-    final rawTags = tags
-        ?.map((e) => e.replaceAll("\n", " ").trim())
-        .where(
-          (e) =>
-              e.removeAllBlank != "" &&
-              !_isMetadataTag(e) &&
-              _clean(e.split(':').last) != null,
-        )
-        .toList();
-    if (rawTags == null || rawTags.isEmpty) {
-      return const [];
-    }
-    final enableTranslate =
-        App.locale.languageCode == 'zh' && this.enableTranslate;
-    return rawTags.map((tag) {
-      final index = tag.indexOf(':');
-      final namespace = index == -1 ? null : tag.substring(0, index);
-      final value = index == -1 ? tag : tag.substring(index + 1);
-      return _DescriptionTag(
-        namespace: namespace,
-        value: value,
-        label: enableTranslate
-            ? TagsTranslation.translateTag(tag)
-            : tag.split(':').last,
-      );
-    }).toList();
-  }
-
-  List<_DescriptionTag> _authorItems() {
-    // Only structured author metadata identifies an author. A subtitle can be
-    // a status, language or arbitrary description, and commas can be in names.
-    return _tagItemsWithNamespace(_authorNamespaces);
-  }
-
-  String? _statusText() {
-    return _tagsWithNamespace(_statusNamespaces).firstOrNull;
-  }
-
-  /// 來自 `pages:` 風格標籤的頁數（有些源不用 Comic.maxPage 回報）
-  String? _pagesText() {
-    return _tagsWithNamespace(_pagesNamespaces).firstOrNull;
-  }
-
-  String? _updateTextFromTags() {
-    return _tagsWithNamespace(
-      _updateNamespaces,
-    ).where(_looksLikeDate).firstOrNull;
-  }
-
-  List<String> _tagsWithNamespace(Set<String> namespaces) {
-    return _tagItemsWithNamespace(namespaces).map((e) => e.label).toList();
-  }
-
-  List<_DescriptionTag> _tagItemsWithNamespace(Set<String> namespaces) {
-    return tags
-            ?.where((e) => e.contains(':'))
-            .map((e) {
-              final index = e.indexOf(':');
-              final namespace = _normalizeNamespace(e.substring(0, index));
-              final rawValue = e.substring(index + 1);
-              final value = _authorNamespaces.contains(namespace)
-                  ? (rawValue.trim().isEmpty ? null : rawValue)
-                  : _clean(rawValue);
-              if (value == null || !namespaces.contains(namespace)) {
-                return null;
-              }
-              return _DescriptionTag(
-                namespace: e.substring(0, index),
-                value: value,
-                label: enableTranslate && App.locale.languageCode == 'zh'
-                    ? TagsTranslation.translateTag(e)
-                    : value,
-              );
-            })
-            .whereType<_DescriptionTag>()
-            .toList() ??
-        const [];
-  }
-
-  bool _isMetadataTag(String tag) {
-    if (!tag.contains(':')) {
-      final value = _clean(tag);
-      return value == null || _looksLikeDate(value) || _looksLikeStatus(value);
-    }
-    final index = tag.indexOf(':');
-    final namespace = _normalizeNamespace(tag.substring(0, index));
-    final value = _clean(tag.substring(index + 1));
-    return _metadataNamespaces.contains(namespace) ||
-        value == null ||
-        _looksLikeDate(value) ||
-        _looksLikeStatus(value);
-  }
-
-  String _normalizeNamespace(String value) {
-    return value.trim().toLowerCase().replaceAll(' ', '');
-  }
-
-  static const _authorNamespaces = {
-    'author',
-    'artist',
-    'authors',
-    'artists',
-    'creator',
-    '原作',
-    '作者',
-    '作家',
-    '作画',
-    '作畫',
-    '漫畫',
-    '漫画',
-    '著者',
-    '绘师',
-    '繪師',
-  };
-
-  static const _statusNamespaces = {
-    'status',
-    'state',
-    'serialization',
-    '連載',
-    '连载',
-    '狀態',
-    '状态',
-  };
-
-  static const _updateNamespaces = {
-    'date',
-    'lastupdate',
-    'time',
-    'update',
-    'updated',
-    '更新',
-    '最後更新',
-    '最后更新',
-    '時間',
-    '时间',
-    '日期',
-  };
-
-  static const _pagesNamespaces = {'page', 'pages', '頁數', '页数'};
-
-  static const _metadataNamespaces = {
-    ..._authorNamespaces,
-    ..._statusNamespaces,
-    ..._updateNamespaces,
-    ..._pagesNamespaces,
-    'source',
-    'uploader',
-    '來源',
-    '来源',
-    '上傳者',
-    '上传者',
-  };
-
-  String? _derivedSource(List<String> parts) {
-    if (parts.length != 2 || !_looksLikeDate(parts.first)) {
-      return null;
-    }
-    return _clean(parts.last);
-  }
-
-  String? _fallbackDescription(
-    String? update,
-    String? progress,
-    String? source,
-    List<String> parts,
-  ) {
-    final value = _clean(description);
-    if (value == null || value == update || value == progress) {
-      return null;
-    }
-    if (_isMetadataDescription(parts, source)) {
-      return null;
-    }
-    return value.replaceAll("|", " / ");
-  }
-
-  List<String> _descriptionParts() {
-    return description
-        .split("|")
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-  }
-
-  bool _looksLikeDate(String value) {
-    return RegExp(r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}").hasMatch(value) ||
-        RegExp(r"^\d{4}").hasMatch(value);
-  }
-
-  bool _looksLikeStatus(String value) {
-    final normalized = value.trim().toLowerCase();
-    return const {
-      'completed',
-      'complete',
-      'ongoing',
-      'serializing',
-      '連載',
-      '連載中',
-      '连载',
-      '连载中',
-      '完結',
-      '完结',
-      '已完結',
-      '已完结',
-      '休載',
-      '休载',
-    }.contains(normalized);
-  }
-
-  bool _isMetadataDescription(List<String> parts, String? source) {
-    if (parts.length != 2 || !_looksLikeDate(parts.first)) {
-      return false;
-    }
-    final descriptionSource = _clean(parts.last);
-    return source == null ||
-        descriptionSource == null ||
-        descriptionSource == source;
-  }
-}
-
-class _DescriptionTag {
-  const _DescriptionTag({
-    required this.value,
-    required this.label,
-    this.namespace,
-  });
-
-  final String? namespace;
-  final String value;
-  final String label;
-}
-
-class _InfoAction {
-  const _InfoAction({required this.text, required this.onTap});
-
-  final String text;
-  final VoidCallback onTap;
 }
 
 class _ReadingHistoryPainter extends CustomPainter {
@@ -1679,1677 +1084,5 @@ class _ReadingHistoryPainter extends CustomPainter {
     return oldDelegate is! _ReadingHistoryPainter ||
         oldDelegate.page != page ||
         oldDelegate.maxPage != maxPage;
-  }
-}
-
-class SliverGridComics extends StatefulWidget {
-  const SliverGridComics({
-    super.key,
-    required this.comics,
-    this.onLastItemBuild,
-    this.badgeBuilder,
-    this.menuBuilder,
-    this.onTap,
-    this.onTapWithIndex,
-    this.onLongPressed,
-    this.onLongPressedWithIndex,
-    this.selections,
-    this.enableHero = true,
-    this.enableContextMenu = true,
-    this.swipeActionBuilder,
-    this.forceBriefMode = false,
-    this.forceDetailedMode = false,
-    this.forceColumns,
-    this.chapterCountBuilder,
-    this.lastReadTimeBuilder,
-    this.detailedItemHeight,
-  });
-
-  final List<Comic> comics;
-
-  final Map<Comic, bool>? selections;
-
-  final void Function()? onLastItemBuild;
-
-  final String? Function(Comic)? badgeBuilder;
-
-  final List<MenuEntry> Function(Comic)? menuBuilder;
-
-  final void Function(Comic, int heroID)? onTap;
-
-  final void Function(Comic, int heroID, int index)? onTapWithIndex;
-
-  final void Function(Comic, int heroID)? onLongPressed;
-
-  final void Function(Comic, int heroID, int index)? onLongPressedWithIndex;
-
-  final bool enableHero;
-
-  /// 批次選取時抑制單項選單
-  final bool enableContextMenu;
-
-  /// When set, each tile becomes swipeable on mobile. The builder returns the
-  /// panes (start = right swipe, end = left swipe) for a given comic, or null
-  /// to leave that comic non-swipeable. See [SwipeActionTile].
-  final SwipePanes Function(Comic)? swipeActionBuilder;
-
-  /// 強制用「簡潔模式」的三列網格（首頁的 3x2 / 3x3 版面需要），
-  /// 不受使用者「漫畫顯示模式」設定影響。
-  final bool forceBriefMode;
-
-  /// 強制用「詳細模式」的直落列表（聚合搜索結果需要），
-  /// 不受使用者「漫畫顯示模式」設定影響。
-  final bool forceDetailedMode;
-
-  /// 強制列數（首頁 4x2 版面用）；null = 按寬度自適應。
-  final int? forceColumns;
-
-  /// 每張卡的話數文字（聚合搜索同名組用）；null = 不顯示。
-  final String? Function(Comic)? chapterCountBuilder;
-
-  /// 每張卡的上次閱讀時間（收藏頁用）；null = 不顯示。
-  final String? Function(Comic)? lastReadTimeBuilder;
-
-  /// 詳細模式卡片高度（收藏頁加高用）；null = 預設。
-  final double? detailedItemHeight;
-
-  @override
-  State<SliverGridComics> createState() => _SliverGridComicsState();
-}
-
-class _SliverGridComicsState extends State<SliverGridComics> {
-  List<Comic> comics = [];
-  List<int> heroIDs = [];
-
-  static int _nextHeroID = 0;
-
-  void generateHeroID() {
-    heroIDs.clear();
-    for (var i = 0; i < comics.length; i++) {
-      heroIDs.add(_nextHeroID++);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant SliverGridComics oldWidget) {
-    if (!comics.isEqualTo(widget.comics)) {
-      comics.clear();
-      for (var comic in widget.comics) {
-        if (isBlocked(comic) == null) {
-          comics.add(comic);
-        }
-      }
-      generateHeroID();
-    }
-    super.didUpdateWidget(oldWidget);
-  }
-
-  @override
-  void initState() {
-    for (var comic in widget.comics) {
-      if (isBlocked(comic) == null) {
-        comics.add(comic);
-      }
-    }
-    generateHeroID();
-    HistoryManager().addListener(update);
-    LocalFavoritesManager().addListener(update);
-    ReadLaterManager().addListener(update);
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    HistoryManager().removeListener(update);
-    LocalFavoritesManager().removeListener(update);
-    ReadLaterManager().removeListener(update);
-    super.dispose();
-  }
-
-  void update() {
-    setState(() {
-      comics.clear();
-      for (var comic in widget.comics) {
-        if (isBlocked(comic) == null) {
-          comics.add(comic);
-        }
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _SliverGridComics(
-      comics: comics,
-      forceBriefMode: widget.forceBriefMode,
-      forceDetailedMode: widget.forceDetailedMode,
-      forceColumns: widget.forceColumns,
-      chapterCountBuilder: widget.chapterCountBuilder,
-      lastReadTimeBuilder: widget.lastReadTimeBuilder,
-      detailedItemHeight: widget.detailedItemHeight,
-      heroIDs: heroIDs,
-      enableHero: widget.enableHero,
-      enableContextMenu: widget.enableContextMenu,
-      selection: widget.selections,
-      onLastItemBuild: widget.onLastItemBuild,
-      badgeBuilder: widget.badgeBuilder,
-      menuBuilder: widget.menuBuilder,
-      onTap: widget.onTap,
-      onTapWithIndex: widget.onTapWithIndex,
-      onLongPressed: widget.onLongPressed,
-      onLongPressedWithIndex: widget.onLongPressedWithIndex,
-      swipeActionBuilder: widget.swipeActionBuilder,
-    );
-  }
-}
-
-class _SliverGridComics extends StatelessWidget {
-  /// 強制三列簡潔網格（首頁 3x2 / 3x3 版面用）。
-  final bool forceBriefMode;
-
-  /// 強制詳細（直落列表）模式（聚合搜索結果用）。
-  final bool forceDetailedMode;
-
-  /// 每張卡的話數文字（聚合搜索同名組用）；null = 不顯示。
-  final String? Function(Comic)? chapterCountBuilder;
-
-  /// 每張卡的上次閱讀時間（收藏頁用）；null = 不顯示。
-  final String? Function(Comic)? lastReadTimeBuilder;
-
-  /// 詳細模式卡片高度（收藏頁加高用）；null = 預設。
-  final double? detailedItemHeight;
-
-  /// 強制列數（首頁 4 列版面用）；null = 自適應。
-  final int? forceColumns;
-
-  const _SliverGridComics({
-    required this.comics,
-    this.forceBriefMode = false,
-    this.forceDetailedMode = false,
-    this.forceColumns,
-    this.chapterCountBuilder,
-    this.lastReadTimeBuilder,
-    this.detailedItemHeight,
-    required this.heroIDs,
-    this.enableHero = true,
-    this.enableContextMenu = true,
-    this.onLastItemBuild,
-    this.badgeBuilder,
-    this.menuBuilder,
-    this.onTap,
-    this.onTapWithIndex,
-    this.onLongPressed,
-    this.onLongPressedWithIndex,
-    this.selection,
-    this.swipeActionBuilder,
-  });
-
-  final List<Comic> comics;
-
-  final List<int> heroIDs;
-
-  final bool enableHero;
-
-  final bool enableContextMenu;
-
-  final Map<Comic, bool>? selection;
-
-  final void Function()? onLastItemBuild;
-
-  final String? Function(Comic)? badgeBuilder;
-
-  final List<MenuEntry> Function(Comic)? menuBuilder;
-
-  final void Function(Comic, int heroID)? onTap;
-
-  final void Function(Comic, int heroID, int index)? onTapWithIndex;
-
-  final void Function(Comic, int heroID)? onLongPressed;
-
-  final void Function(Comic, int heroID, int index)? onLongPressedWithIndex;
-
-  final SwipePanes Function(Comic)? swipeActionBuilder;
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverGrid(
-      delegate: SliverChildBuilderDelegate((context, index) {
-        if (index == comics.length - 1) {
-          onLastItemBuild?.call();
-        }
-        var badge = badgeBuilder?.call(comics[index]);
-        var isSelected = selection == null
-            ? false
-            : selection![comics[index]] ?? false;
-        var comic = ComicTile(
-          comic: comics[index],
-          enableContextMenu: enableContextMenu,
-          badge: badge,
-          chaptersText: chapterCountBuilder?.call(comics[index]),
-          lastReadTimeText: lastReadTimeBuilder?.call(comics[index]),
-          menuOptions: menuBuilder?.call(comics[index]),
-          onTap: onTapWithIndex != null
-              ? () => onTapWithIndex!(comics[index], heroIDs[index], index)
-              : onTap != null
-              ? () => onTap!(comics[index], heroIDs[index])
-              : null,
-          onLongPressed: onLongPressedWithIndex != null
-              ? () => onLongPressedWithIndex!(
-                  comics[index],
-                  heroIDs[index],
-                  index,
-                )
-              : onLongPressed != null
-              ? () => onLongPressed!(comics[index], heroIDs[index])
-              : null,
-          heroID: enableHero ? heroIDs[index] : null,
-          overrideDisplayMode: forceBriefMode
-              ? 'brief'
-              : (forceDetailedMode ? 'detailed' : null),
-        );
-        Widget tile = comic;
-        if (selection != null) {
-          tile = AnimatedContainer(
-            key: ValueKey(comics[index].id),
-            duration: const Duration(milliseconds: 150),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? Theme.of(
-                      context,
-                    ).colorScheme.secondaryContainer.toOpacity(0.72)
-                  : null,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(4),
-            child: comic,
-          );
-        }
-        if (swipeActionBuilder != null && App.isMobile) {
-          final current = comics[index];
-          final panes = swipeActionBuilder!(current);
-          if (panes.start != null || panes.end != null) {
-            tile = SwipeActionTile(
-              key: ValueKey('swipe-${current.sourceKey}-${current.id}'),
-              startPane: panes.start,
-              endPane: panes.end,
-              child: tile,
-            );
-          }
-        }
-        return tile;
-      }, childCount: comics.length),
-      gridDelegate: SliverGridDelegateWithComics(
-        overrideBrief:
-            forceBriefMode ? true : (forceDetailedMode ? false : null),
-        forceColumns: forceColumns,
-        detailedItemHeight: detailedItemHeight,
-      ),
-    );
-  }
-}
-
-/// return the first blocked keyword, or null if not blocked
-String? isBlocked(Comic item) {
-  for (var word in appdata.settings['blockedWords']) {
-    if (item.title.contains(word)) {
-      return word;
-    }
-    if (item.subtitle?.contains(word) ?? false) {
-      return word;
-    }
-    if (item.description.contains(word)) {
-      return word;
-    }
-    for (var tag in item.tags ?? <String>[]) {
-      if (tag == word) {
-        return word;
-      }
-      if (tag.contains(':')) {
-        tag = tag.split(':')[1];
-        if (tag == word) {
-          return word;
-        }
-      }
-    }
-  }
-  return blockedTagOf(item.tags);
-}
-
-/// The first entry of the tag blocklist matched by [tags], or null.
-///
-/// Unlike the title word list, matching is a substring test and also runs on the
-/// localized tag text, since users type what they see on screen. A bare entry is
-/// compared against the value half of `namespace:value`, which is the form the
-/// block dialog stores; an entry typed with a namespace is compared whole, for
-/// users who want to pin a rule to one namespace.
-String? blockedTagOf(List<String>? tags) {
-  if (tags == null || tags.isEmpty) return null;
-  var blocked = appdata.settings['blockedTags'];
-  if (blocked is! List || blocked.isEmpty) return null;
-  // Comparable forms of each tag, built once instead of per blocklist entry.
-  var whole = <String>[]; // raw tag, for namespace-qualified entries
-  var plain = <String>[]; // value half + localized text, for bare entries
-  for (var tag in tags) {
-    if (tag.isEmpty) continue;
-    whole.add(tag.toLowerCase());
-    var value = tag.contains(':') ? tag.split(':').sublist(1).join(':') : tag;
-    plain.add(value.toLowerCase());
-    var localized = TagsTranslation.translateTag(tag).toLowerCase();
-    if (localized != value.toLowerCase()) {
-      plain.add(localized);
-    }
-  }
-  for (var entry in blocked) {
-    if (entry is! String || entry.isEmpty) continue;
-    var needle = entry.toLowerCase();
-    for (var candidate in entry.contains(':') ? whole : plain) {
-      if (candidate.contains(needle)) {
-        return entry;
-      }
-    }
-  }
-  return null;
-}
-
-class ComicList extends StatefulWidget {
-  const ComicList({
-    super.key,
-    this.loadPage,
-    this.loadNext,
-    this.loadWithFilters,
-    this.leadingSliver,
-    this.trailingSliver,
-    this.errorLeading,
-    this.menuBuilder,
-    this.controller,
-    this.refreshHandlerCallback,
-    this.selectionHandlerCallback,
-    this.onSelectionStateChanged,
-    this.enablePageStorage = false,
-    this.enableSelection = false,
-    this.scrollbar = true,
-    this.scrollbarTopPadding = 0,
-    this.filterTags = const <String>{},
-    this.emptyFilterText,
-    this.emptyText,
-    this.onResultCount,
-    this.onAvailableTags,
-  });
-
-  final Future<Res<List<Comic>>> Function(int page)? loadPage;
-
-  final Future<Res<List<Comic>>> Function(String? next)? loadNext;
-
-  /// Source-native search/category filter request. When set, paging uses it
-  /// instead of the plain loadPage path.
-  final Future<Res<List<Comic>>> Function(int page)? loadWithFilters;
-
-  final Widget? leadingSliver;
-
-  final Widget? trailingSliver;
-
-  final Widget? errorLeading;
-
-  final List<MenuEntry> Function(Comic)? menuBuilder;
-
-  final ScrollController? controller;
-
-  final void Function(VoidCallback c)? refreshHandlerCallback;
-
-  /// Receives a callback the host can invoke to enter multi-select mode (e.g.
-  /// from a toolbar button), since long-press isn't discoverable for everyone.
-  /// Only meaningful together with [enableSelection].
-  final void Function(VoidCallback enterSelection)? selectionHandlerCallback;
-
-  /// Fires with the new selecting state whenever multi-select is entered or
-  /// exited. Hosts with their own app bar use it to hide that bar while the
-  /// grid shows its selection bar, avoiding two stacked bars.
-  final void Function(bool selecting)? onSelectionStateChanged;
-
-  final bool enablePageStorage;
-
-  /// When true, comics can be multi-selected (via the long-press menu or the
-  /// host's [selectionHandlerCallback] button) to batch-favorite them; on
-  /// mobile, a left-swipe quick-favorites a single comic to the configured
-  /// Quick Favorite folder. Off by default so other ComicList pages are
-  /// unaffected.
-  final bool enableSelection;
-
-  /// Whether to overlay a draggable [AppScrollBar] for fast scrolling. On by
-  /// default since every ComicList is a top-level comic grid.
-  final bool scrollbar;
-
-  /// Top inset for the scrollbar thumb so it clears a top app bar (e.g. a
-  /// pinned [Appbar] when [Scaffold.extendBodyBehindAppBar] is used).
-  final double scrollbarTopPadding;
-
-  /// Generic local tag filter. It is source-agnostic and only uses tags the
-  /// source actually returned; missing tags never count as a match.
-  final Set<String> filterTags;
-
-  /// Shown when [filterTags] is set but no loaded comic matches, so an
-  /// impossible constraint reads as "no match" instead of an unchanged list.
-  final String? emptyFilterText;
-
-  /// Message shown when a successfully loaded page has no comics.
-  final String? emptyText;
-
-  /// Reports server total and currently loaded item count after each page.
-  final void Function(int? total, int loaded)? onResultCount;
-
-  final ValueChanged<Set<String>>? onAvailableTags;
-
-  @override
-  State<ComicList> createState() => ComicListState();
-}
-
-class ComicListState extends State<ComicList> {
-  int? _maxPage;
-  int? _total;
-
-  final Map<int, List<Comic>> _data = {};
-
-  int _page = 1;
-
-  String? _error;
-
-  final Map<int, bool> _loading = {};
-
-  String? _nextUrl;
-
-  late bool enablePageStorage = widget.enablePageStorage;
-
-  // ---- Multi-select (only active when widget.enableSelection) ----
-  bool _selecting = false;
-  final Map<Comic, bool> _selected = {};
-
-  /// Comics currently loaded: the current page in paging mode, every loaded
-  /// page in continuous mode. "Select all" is necessarily limited to these —
-  /// results on not-yet-loaded pages can't be selected without fetching them.
-  List<Comic> get _loadedComics {
-    final mode = appdata.settings['comicListDisplayMode'];
-    if (mode == 'paging') return _data[_page] ?? const [];
-    return _data.values.expand((e) => e).toList();
-  }
-
-  void _enterSelect(Comic c) {
-    setState(() {
-      _selecting = true;
-      _selected[c] = true;
-    });
-    widget.onSelectionStateChanged?.call(true);
-  }
-
-  void _toggleSelect(Comic c) {
-    setState(() {
-      // remove() returns null when the key was absent → it wasn't selected.
-      if (_selected.remove(c) == null) {
-        _selected[c] = true;
-      }
-    });
-  }
-
-  void _exitSelect() {
-    setState(() {
-      _selecting = false;
-      _selected.clear();
-    });
-    widget.onSelectionStateChanged?.call(false);
-  }
-
-  /// Enter selection mode without pre-selecting any comic — used by the host's
-  /// toolbar button (long-press isn't discoverable for everyone).
-  void _enterSelectMode() {
-    if (_selecting) return;
-    setState(() => _selecting = true);
-    widget.onSelectionStateChanged?.call(true);
-  }
-
-  /// Quick-favorite [comic] to the configured Quick Favorite folder
-  /// (Settings → Local Favorites → Quick Favorite). Falls back to the folder
-  /// picker when it isn't set or the folder no longer exists.
-  void _quickFavorite(Comic comic) {
-    final folder = appdata.settings['quickFavorite'];
-    if (folder is! String ||
-        folder.isEmpty ||
-        !LocalFavoritesManager().folderNames.contains(folder)) {
-      addFavorite([comic]);
-      return;
-    }
-    final ok = LocalFavoritesManager().addComic(
-      folder,
-      favoriteItemFromComic(comic),
-    );
-    App.rootContext.showMessage(
-      message: ok ? "Added to favorites".tl : "Already in favorites".tl,
-    );
-  }
-
-  /// Remove [comic] from every favorite folder it belongs to.
-  void _removeAllFavorites(Comic comic) => _removeAllFavoritesOf([comic]);
-
-  /// Remove each of [comics] from every favorite folder it belongs to.
-  void _removeAllFavoritesOf(List<Comic> comics) {
-    LocalFavoritesManager().batchDeleteComicsInAllFolders([
-      for (final c in comics) ComicID(ComicType.fromKey(c.sourceKey), c.id),
-    ]);
-    App.rootContext.showMessage(message: "Removed from favorites".tl);
-  }
-
-  /// Swipe panes for a grid tile. Mobile only (gated in SliverGridComics).
-  ///
-  /// Left swipe reveals "Add to collection" then "Add to favorites" (orange,
-  /// at the trailing edge); a large left swipe quick-favorites to the
-  /// configured folder without a tap. When the comic is already favorited, a
-  /// right swipe reveals a red "Cancel favorite" that clears every folder, and
-  /// a large right swipe does it without a tap. Neither full swipe removes the
-  /// tile — these lists aren't the item's home.
-  SwipePanes _favoriteSwipePanes(Comic comic) {
-    final favorited = LocalFavoritesManager().isExist(
-      comic.id,
-      ComicType.fromKey(comic.sourceKey),
-    );
-    final canCollect =
-        !ComicCollectionStore.isCollectionSourceKey(comic.sourceKey);
-    return (
-      start: favorited
-          ? SwipePane(
-              extentRatio: 0.3,
-              dismissOnFullSwipe: true,
-              keepItemOnFullSwipe: true,
-              // Clear gap below so resting to reveal the button doesn't trip
-              // the quick-cancel.
-              dismissThreshold: 0.7,
-              onFullSwipe: () => _removeAllFavorites(comic),
-              actions: [
-                SwipeAction(
-                  icon: Icons.heart_broken_outlined,
-                  label: "Cancel favorite".tl,
-                  onPressed: () => _removeAllFavorites(comic),
-                  backgroundColor: const Color(0xFFE53935),
-                  foregroundColor: Colors.white,
-                ),
-              ],
-            )
-          : null,
-      end: SwipePane(
-        extentRatio: canCollect ? 0.5 : 0.3,
-        dismissOnFullSwipe: true,
-        keepItemOnFullSwipe: true,
-        dismissThreshold: 0.7,
-        onFullSwipe: () => _quickFavorite(comic),
-        actions: [
-          // Collection sits on the leading side; a collection can't nest.
-          if (canCollect)
-            SwipeAction(
-              icon: Icons.library_books_outlined,
-              label: "Add to collection".tl,
-              onPressed: () => showAddToCollectionDialog(context, [comic]),
-              backgroundColor: context.colorScheme.secondaryContainer,
-              foregroundColor: context.colorScheme.onSecondaryContainer,
-            ),
-          // Favorite sits at the trailing edge, in the common orange.
-          SwipeAction(
-            icon: Icons.favorite_outline,
-            label: "Add to favorites".tl,
-            onPressed: () => addFavorite([comic]),
-            backgroundColor: const Color(0xFFFF9800),
-            foregroundColor: Colors.white,
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<MenuEntry> _menuBuilderWithSelect(Comic c) {
-    return [
-      MenuEntry(
-        icon: Icons.checklist,
-        text: "Multi-Select".tl,
-        onClick: () => _enterSelect(c),
-      ),
-      ...?widget.menuBuilder?.call(c),
-    ];
-  }
-
-  /// Overflow menu for the multi-select bar: batch favorite, file into a
-  /// collection, or clear from all folders. Each action no-ops on an empty
-  /// selection.
-  Widget _buildSelectMenu() {
-    return MenuButton(
-      entries: [
-        MenuEntry(
-          icon: Icons.favorite_outline,
-          text: "Add to favorites".tl,
-          onClick: () {
-            if (_selected.isEmpty) return;
-            addFavorite(_selected.keys.toList());
-            _exitSelect();
-          },
-        ),
-        // The batch path is the main way a collection gets built: pick the
-        // three volumes of one story, then file them together in one step.
-        MenuEntry(
-          icon: Icons.library_books_outlined,
-          text: "Add to collection".tl,
-          onClick: () {
-            if (_selected.isEmpty) return;
-            showAddToCollectionDialog(context, _selected.keys.toList());
-            _exitSelect();
-          },
-        ),
-        // Undo a mis-tapped batch favorite: clear the selected comics from
-        // every folder in one step.
-        MenuEntry(
-          icon: Icons.heart_broken_outlined,
-          text: "Cancel favorite".tl,
-          onClick: () {
-            if (_selected.isEmpty) return;
-            _removeAllFavoritesOf(_selected.keys.toList());
-            _exitSelect();
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSelectAppbar() {
-    return SliverAppbar(
-      leading: Tooltip(
-        message: "Cancel".tl,
-        child: IconButton(icon: const Icon(Icons.close), onPressed: _exitSelect),
-      ),
-      title: Text(_selected.length.toString()),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.select_all),
-          tooltip: "Select All".tl,
-          onPressed: () => setState(() {
-            for (final c in _loadedComics) {
-              _selected[c] = true;
-            }
-          }),
-        ),
-        IconButton(
-          icon: const Icon(Icons.deselect),
-          tooltip: "Deselect".tl,
-          onPressed: _selected.isEmpty
-              ? null
-              : () => setState(() => _selected.clear()),
-        ),
-        // Favorite / collection / unfavorite live in an overflow menu, like
-        // the other multi-select pages, keeping the bar uncluttered.
-        _buildSelectMenu(),
-      ],
-    );
-  }
-
-  /// SliverGridComics configured for the current (normal / selecting) mode.
-  Widget _buildGrid(List<Comic> comics, {void Function()? onLastItemBuild}) {
-    final available = <String>{
-      for (final comic in comics)
-        for (final tag in ComicTagEnricher.instance.tagsFor(comic))
-          if (tag.trim().isNotEmpty) tag.trim(),
-    };
-    for (final comic in comics) {
-      unawaited(ComicTagEnricher.instance.enrich(comic).then((_) {
-        if (widget.onAvailableTags != null) {
-          widget.onAvailableTags!(ComicTagEnricher.instance.tagsFor(comic));
-        }
-      }));
-    }
-    if (widget.onAvailableTags != null) {
-      Future.microtask(() => widget.onAvailableTags!(available));
-    }
-    if (comics.isEmpty && widget.emptyText != null) {
-      return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Center(child: Text(widget.emptyText!, textAlign: TextAlign.center)),
-        ),
-      );
-    }
-    final filtered = widget.filterTags.isEmpty
-        ? comics
-        : [
-            for (final comic in comics)
-              if (widget.filterTags.every((wanted) =>
-                  ComicTagEnricher.instance.tagsFor(comic).any((tag) =>
-                      categoryTagMatches(tag, wanted))))
-                comic,
-          ];
-    if (widget.filterTags.isNotEmpty && filtered.isEmpty && comics.isNotEmpty) {
-      return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Center(
-            child: Text(
-              widget.emptyFilterText ?? 'No result matches all selected tags'.tl,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
-    }
-    return SliverGridComics(
-      comics: filtered,
-      onLastItemBuild: onLastItemBuild,
-      menuBuilder: _selecting
-          ? null
-          : (widget.enableSelection
-                ? _menuBuilderWithSelect
-                : widget.menuBuilder),
-      selections: _selecting ? _selected : null,
-      onTapWithIndex:
-          _selecting ? (comic, heroID, index) => _toggleSelect(comic) : null,
-      swipeActionBuilder:
-          (widget.enableSelection && !_selecting && App.isMobile)
-          ? _favoriteSwipePanes
-          : null,
-    );
-  }
-
-  Map<String, dynamic> get state => {
-    'maxPage': _maxPage,
-    'data': _data,
-    'page': _page,
-    'error': _error,
-    'loading': _loading,
-    'nextUrl': _nextUrl,
-  };
-
-  void restoreState(dynamic rawState) {
-    if (!enablePageStorage || rawState is! Map) {
-      return;
-    }
-    // PageStorage can contain state written by an older widget that reused the
-    // same key (including a scroll offset double). Treat every field as
-    // untrusted and discard the whole snapshot unless its shape is valid.
-    final state = Map<Object?, Object?>.from(rawState);
-    final rawData = state['data'];
-    final rawLoading = state['loading'];
-    final rawPage = state['page'];
-    if (rawData is! Map || rawLoading is! Map || rawPage is! int) {
-      return;
-    }
-    _maxPage = state['maxPage'] is int ? state['maxPage'] as int : null;
-    _data.clear();
-    for (final entry in rawData.entries) {
-      if (entry.key is int && entry.value is List) {
-        final comics = entry.value.whereType<Comic>().toList();
-        if (comics.length == entry.value.length) {
-          _data[entry.key as int] = comics;
-        }
-      }
-    }
-    _page = rawPage;
-    _error = state['error'] is String ? state['error'] as String : null;
-    _loading.clear();
-    for (final entry in rawLoading.entries) {
-      if (entry.key is int && entry.value is bool) {
-        _loading[entry.key as int] = entry.value as bool;
-      }
-    }
-    _nextUrl = state['nextUrl']?.toString();
-  }
-
-  void storeState() {
-    if (enablePageStorage) {
-      PageStorage.of(context).writeState(context, state);
-    }
-  }
-
-  void refresh() {
-    _data.clear();
-    _page = 1;
-    _maxPage = null;
-    _error = null;
-    _nextUrl = null;
-    _loading.clear();
-    storeState();
-    setState(() {});
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    restoreState(PageStorage.of(context).readState(context));
-    widget.refreshHandlerCallback?.call(refresh);
-    widget.selectionHandlerCallback?.call(_enterSelectMode);
-  }
-
-  void remove(Comic c) {
-    if (_data[_page] == null || !_data[_page]!.remove(c)) {
-      for (var page in _data.values) {
-        if (page.remove(c)) {
-          break;
-        }
-      }
-    }
-    setState(() {});
-  }
-
-  Widget _buildPageSelector() {
-    return Row(
-      children: [
-        FilledButton(
-          onPressed: _page > 1
-              ? () {
-                  setState(() {
-                    _error = null;
-                    _page--;
-                  });
-                }
-              : null,
-          child: Text("Back".tl),
-        ).fixWidth(84),
-        Expanded(
-          child: Center(
-            child: Material(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () {
-                  String value = '';
-                  showDialog(
-                    context: App.rootContext,
-                    builder: (context) {
-                      return ContentDialog(
-                        title: "Jump to page".tl,
-                        content: TextField(
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(labelText: "Page".tl),
-                          inputFormatters: <TextInputFormatter>[
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          onChanged: (v) {
-                            value = v;
-                          },
-                        ).paddingHorizontal(16),
-                        actions: [
-                          Button.filled(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              var page = int.tryParse(value);
-                              if (page == null) {
-                                context.showMessage(message: "Invalid page".tl);
-                              } else {
-                                if (page > 0 &&
-                                    (_maxPage == null || page <= _maxPage!)) {
-                                  setState(() {
-                                    _error = null;
-                                    _page = page;
-                                  });
-                                } else {
-                                  context.showMessage(
-                                    message: "Invalid page".tl,
-                                  );
-                                }
-                              }
-                            },
-                            child: Text("Jump".tl),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  child: Text("Page $_page / ${_maxPage ?? '?'}"),
-                ),
-              ),
-            ),
-          ),
-        ),
-        FilledButton(
-          onPressed: _page < (_maxPage ?? (_page + 1))
-              ? () {
-                  setState(() {
-                    _error = null;
-                    _page++;
-                  });
-                }
-              : null,
-          child: Text("Next".tl),
-        ).fixWidth(84),
-      ],
-    ).paddingVertical(8).paddingHorizontal(16);
-  }
-
-  Widget _buildSliverPageSelector() {
-    return SliverToBoxAdapter(child: _buildPageSelector());
-  }
-
-  Future<void> _loadPage(int page) async {
-    if (widget.loadPage == null &&
-        widget.loadWithFilters == null &&
-        widget.loadNext == null) {
-      _error = "No comic list loader configured";
-      Future.microtask(() {
-        setState(() {});
-      });
-    }
-    if (_data[page] != null || _loading[page] == true) {
-      return;
-    }
-    _loading[page] = true;
-    try {
-      if (widget.loadWithFilters != null) {
-        var res = await widget.loadWithFilters!(page);
-        if (!mounted) return;
-        if (res.success) {
-          setState(() {
-            _data[page] = res.data;
-            if (res.subData != null && res.subData is int) {
-              _maxPage = res.subData;
-            }
-          });
-          _mirrorComicsToDomain(res.data);
-          _total = res.total;
-          widget.onResultCount?.call(
-            _total,
-            _data.values.expand((items) => items).length,
-          );
-        } else {
-          setState(() => _error = res.errorMessage ?? "Unknown error".tl);
-        }
-      } else if (widget.loadPage != null) {
-        var res = await widget.loadPage!(page);
-        if (!mounted) return;
-        if (res.success) {
-          if (res.data.isEmpty) {
-            setState(() {
-              _data[page] = const [];
-              _maxPage ??= page;
-            });
-          } else {
-            setState(() {
-              _data[page] = res.data;
-              if (res.subData != null && res.subData is int) {
-                _maxPage = res.subData;
-              }
-            });
-            _mirrorComicsToDomain(res.data);
-            _total = res.total;
-            widget.onResultCount?.call(
-              _total,
-              _data.values.expand((items) => items).length,
-            );
-          }
-        } else {
-          setState(() {
-            _error = res.errorMessage ?? "Unknown error".tl;
-          });
-        }
-      } else {
-        try {
-          while (_data[page] == null) {
-            await _fetchNext();
-          }
-          if (mounted) {
-            setState(() {});
-          }
-        } catch (e) {
-          if (mounted) {
-            setState(() {
-              _error = e.toString();
-            });
-          }
-        }
-      }
-    } finally {
-      _loading[page] = false;
-      storeState();
-    }
-  }
-
-  Future<void> _fetchNext() async {
-    var res = await widget.loadNext!(_nextUrl);
-    _data[_data.length + 1] = res.data;
-    if (res.subData == null) {
-      _maxPage = _data.length;
-    } else {
-      _nextUrl = res.subData;
-    }
-  }
-
-  void _mirrorComicsToDomain(List<Comic> comics) {
-    Future.microtask(() {
-      final repo = const ComicStateRepository();
-      for (final comic in comics) {
-        try {
-          repo.mirrorComic(comic);
-        } catch (_) {}
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var type = appdata.settings['comicListDisplayMode'];
-    Widget child = type == 'paging'
-        ? buildPagingMode()
-        : buildContinuousMode();
-    if (widget.enableSelection) {
-      // While selecting, the system back gesture / button cancels selection
-      // instead of leaving the page.
-      child = PopScope(
-        canPop: !_selecting,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop && _selecting) _exitSelect();
-        },
-        child: child,
-      );
-    }
-    return child;
-  }
-
-  Widget buildPagingMode() {
-    if (_error != null) {
-      return Column(
-        children: [
-          if (widget.errorLeading != null) widget.errorLeading!,
-          _buildPageSelector(),
-          Expanded(
-            child: NetworkError(
-              withAppbar: false,
-              message: _error!,
-              retry: () {
-                setState(() {
-                  _error = null;
-                });
-              },
-            ),
-          ),
-        ],
-      );
-    }
-    if (_data[_page] == null) {
-      _loadPage(_page);
-      return Column(
-        children: [
-          if (widget.errorLeading != null) widget.errorLeading!,
-          const Expanded(child: Center(child: CircularProgressIndicator())),
-        ],
-      );
-    }
-    return SmoothCustomScrollView(
-      key: enablePageStorage ? PageStorageKey('scroll$_page') : null,
-      controller: widget.controller,
-      scrollbar: widget.scrollbar,
-      scrollbarTopPadding: widget.scrollbarTopPadding,
-      slivers: [
-        if (_selecting)
-          _buildSelectAppbar()
-        else if (widget.leadingSliver != null)
-          widget.leadingSliver!,
-        if (_maxPage != 1) _buildSliverPageSelector(),
-        _buildGrid(_data[_page] ?? const []),
-        if (_data[_page]!.length > 6 && _maxPage != 1)
-          _buildSliverPageSelector(),
-        if (widget.trailingSliver != null) widget.trailingSliver!,
-      ],
-    );
-  }
-
-  Widget buildContinuousMode() {
-    if (_error != null && _data.isEmpty) {
-      return Column(
-        children: [
-          if (widget.errorLeading != null) widget.errorLeading!,
-          _buildPageSelector(),
-          Expanded(
-            child: NetworkError(
-              withAppbar: false,
-              message: _error!,
-              retry: () {
-                setState(() {
-                  _error = null;
-                });
-              },
-            ),
-          ),
-        ],
-      );
-    }
-    if (_data[1] == null) {
-      _loadPage(1);
-      return Column(
-        children: [
-          if (widget.errorLeading != null) widget.errorLeading!,
-          const Expanded(child: Center(child: CircularProgressIndicator())),
-        ],
-      );
-    }
-    return SmoothCustomScrollView(
-      key: enablePageStorage ? PageStorageKey('scroll$_page') : null,
-      controller: widget.controller,
-      scrollbar: widget.scrollbar,
-      scrollbarTopPadding: widget.scrollbarTopPadding,
-      slivers: [
-        if (_selecting)
-          _buildSelectAppbar()
-        else if (widget.leadingSliver != null)
-          widget.leadingSliver!,
-        _buildGrid(
-          _data.values.expand((element) => element).toList(),
-          onLastItemBuild: () {
-            if (_error == null &&
-                (_maxPage == null || _data.length < _maxPage!)) {
-              _loadPage(_data.length + 1);
-            }
-          },
-        ),
-        if (_error != null)
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.error_outline),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(_error!, maxLines: 3)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _error = null;
-                      });
-                    },
-                    child: Text("Retry".tl),
-                  ),
-                ),
-              ],
-            ).paddingHorizontal(16).paddingVertical(8),
-          )
-        else if (_maxPage == null || _data.length < _maxPage!)
-          const SliverListLoadingIndicator(),
-        if (widget.trailingSliver != null) widget.trailingSliver!,
-      ],
-    );
-  }
-}
-
-class StarRating extends StatelessWidget {
-  const StarRating({
-    super.key,
-    required this.value,
-    this.onTap,
-    this.size = 20,
-  });
-
-  final double value; // 0-5
-
-  final VoidCallback? onTap;
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    var interval = size * 0.1;
-    var value = this.value;
-    if (value.isNaN) {
-      value = 0;
-    }
-    var child = SizedBox(
-      height: size,
-      width: size * 5 + interval * 4,
-      child: Row(
-        children: [
-          for (var i = 0; i < 5; i++)
-            _Star(
-              value: (value - i).clamp(0.0, 1.0),
-              size: size,
-            ).paddingRight(i == 4 ? 0 : interval),
-        ],
-      ),
-    );
-    return onTap == null ? child : GestureDetector(onTap: onTap, child: child);
-  }
-}
-
-class _Star extends StatelessWidget {
-  const _Star({required this.value, required this.size});
-
-  final double value; // 0-1
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        children: [
-          Icon(
-            Icons.star_outline,
-            size: size,
-            color: context.colorScheme.secondary,
-          ),
-          ClipRect(
-            clipper: _StarClipper(value),
-            child: Icon(
-              Icons.star,
-              size: size,
-              color: context.colorScheme.secondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StarClipper extends CustomClipper<Rect> {
-  final double value;
-
-  _StarClipper(this.value);
-
-  @override
-  Rect getClip(Size size) {
-    return Rect.fromLTWH(0, 0, size.width * value, size.height);
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Rect> oldClipper) {
-    return oldClipper is! _StarClipper || oldClipper.value != value;
-  }
-}
-
-class RatingWidget extends StatefulWidget {
-  /// star number
-  final int count;
-
-  /// Max score
-  final double maxRating;
-
-  /// Current score value
-  final double value;
-
-  /// Star size
-  final double size;
-
-  /// Space between the stars
-  final double padding;
-
-  /// Whether the score can be modified by sliding
-  final bool selectable;
-
-  /// Callbacks when ratings change
-  final ValueChanged<double> onRatingUpdate;
-
-  const RatingWidget({
-    super.key,
-    this.maxRating = 10.0,
-    this.count = 5,
-    this.value = 10.0,
-    this.size = 20,
-    required this.padding,
-    this.selectable = false,
-    required this.onRatingUpdate,
-  });
-
-  @override
-  State<RatingWidget> createState() => _RatingWidgetState();
-}
-
-class _RatingWidgetState extends State<RatingWidget> {
-  double value = 10;
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (PointerDownEvent event) {
-        double x = event.localPosition.dx;
-        if (x < 0) x = 0;
-        pointValue(x);
-      },
-      onPointerMove: (PointerMoveEvent event) {
-        double x = event.localPosition.dx;
-        if (x < 0) x = 0;
-        pointValue(x);
-      },
-      onPointerUp: (_) {},
-      behavior: HitTestBehavior.deferToChild,
-      child: buildRowRating(),
-    );
-  }
-
-  pointValue(double dx) {
-    if (!widget.selectable) {
-      return;
-    }
-    if (dx >=
-        widget.size * widget.count + widget.padding * (widget.count - 1)) {
-      value = widget.maxRating;
-    } else {
-      for (double i = 1; i < widget.count + 1; i++) {
-        if (dx > widget.size * i + widget.padding * (i - 1) &&
-            dx < widget.size * i + widget.padding * i) {
-          value = i * (widget.maxRating / widget.count);
-          break;
-        } else if (dx > widget.size * (i - 1) + widget.padding * (i - 1) &&
-            dx < widget.size * i + widget.padding * i) {
-          value =
-              (dx - widget.padding * (i - 1)) /
-              (widget.size * widget.count) *
-              widget.maxRating;
-          break;
-        }
-      }
-    }
-    if (value % 1 >= 0.5) {
-      value = value ~/ 1 + 1;
-    } else {
-      value = (value ~/ 1).toDouble();
-    }
-    if (value < 0) {
-      value = 0;
-    } else if (value > 10) {
-      value = 10;
-    }
-    setState(() {
-      widget.onRatingUpdate(value);
-    });
-  }
-
-  int fullStars() {
-    return (value / (widget.maxRating / widget.count)).floor();
-  }
-
-  double star() {
-    if (widget.count / fullStars() == widget.maxRating / value) {
-      return 0;
-    }
-    return (value % (widget.maxRating / widget.count)) /
-        (widget.maxRating / widget.count);
-  }
-
-  List<Widget> buildRow() {
-    int full = fullStars();
-    List<Widget> children = [];
-    for (int i = 0; i < full; i++) {
-      children.add(
-        Icon(
-          Icons.star,
-          size: widget.size,
-          color: context.colorScheme.secondary,
-        ),
-      );
-      if (i < widget.count - 1) {
-        children.add(SizedBox(width: widget.padding));
-      }
-    }
-    if (full < widget.count) {
-      children.add(
-        ClipRect(
-          clipper: _SMClipper(rating: star() * widget.size),
-          child: Icon(
-            Icons.star,
-            size: widget.size,
-            color: context.colorScheme.secondary,
-          ),
-        ),
-      );
-    }
-
-    return children;
-  }
-
-  List<Widget> buildNormalRow() {
-    List<Widget> children = [];
-    for (int i = 0; i < widget.count; i++) {
-      children.add(
-        Icon(
-          Icons.star_border,
-          size: widget.size,
-          color: context.colorScheme.secondary,
-        ),
-      );
-      if (i < widget.count - 1) {
-        children.add(SizedBox(width: widget.padding));
-      }
-    }
-    return children;
-  }
-
-  Widget buildRowRating() {
-    return Stack(
-      children: <Widget>[
-        Row(children: buildNormalRow()),
-        Row(children: buildRow()),
-      ],
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    value = widget.value;
-  }
-}
-
-class _SMClipper extends CustomClipper<Rect> {
-  final double rating;
-
-  _SMClipper({required this.rating});
-
-  @override
-  Rect getClip(Size size) {
-    return Rect.fromLTRB(0.0, 0.0, rating, size.height);
-  }
-
-  @override
-  bool shouldReclip(_SMClipper oldClipper) {
-    return rating != oldClipper.rating;
-  }
-}
-
-class SimpleComicTile extends StatelessWidget {
-  const SimpleComicTile({
-    super.key,
-    required this.comic,
-    this.onTap,
-    this.withTitle = false,
-    this.heroID,
-    this.showFavorite = false,
-    this.width = 98,
-    this.height = 136,
-  });
-
-  final Comic comic;
-
-  final void Function()? onTap;
-
-  final bool withTitle;
-
-  final Object? heroID;
-
-  final bool showFavorite;
-
-  /// Optional dimensions for responsive surfaces such as the home feed. The
-  /// established 98x136 size remains the default for all other callers.
-  final double width;
-
-  final double height;
-
-  Widget _buildCover() {
-    var image = findImageProvider(comic);
-    if (image == null) return const SizedBox();
-    return AnimatedImage(
-      image: image,
-      width: double.infinity,
-      height: double.infinity,
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.medium,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Widget cover = _buildCover();
-    // A collection's cover arrives asynchronously the first time its members
-    // load, so this tile has to rebuild when the store fills it in.
-    if (ComicCollectionStore.isCollectionSourceKey(comic.sourceKey)) {
-      cover = ListenableBuilder(
-        listenable: ComicCollectionStore.changes,
-        builder: (context, _) => _buildCover(),
-      );
-    }
-
-    if (showFavorite) {
-      final comicType = ComicType.fromKey(comic.sourceKey);
-      final showFav = appdata.settings['showFavoriteStatusOnTile'] &&
-          LocalFavoritesManager().isExist(comic.id, comicType);
-      final showReadLater = appdata.settings['showReadLaterStatusOnTile'] &&
-          ReadLaterManager().isExist(comic.id, comicType);
-      if (showFav || showReadLater) {
-        cover = Stack(
-          fit: StackFit.expand,
-          children: [
-            cover,
-            Positioned(
-              left: 0,
-              top: 0,
-              child: Row(
-                children: [
-                  if (showFav)
-                    Container(
-                      height: 24,
-                      width: 24,
-                      color: Colors.green,
-                      child: const Icon(
-                        Icons.bookmark_rounded,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                    ),
-                  if (showReadLater)
-                    Container(
-                      height: 24,
-                      width: 24,
-                      color: Colors.orange,
-                      child: const Icon(
-                        Icons.watch_later_rounded,
-                        size: 15,
-                        color: Colors.white,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        );
-      }
-    }
-
-    // Same marker as the list tiles, but top-RIGHT: the favourite and
-    // read-later badges already own the top-left corner of this tile.
-    if (ComicCollectionStore.isCollectionSourceKey(comic.sourceKey)) {
-      cover = Stack(
-        fit: StackFit.expand,
-        children: [
-          cover,
-          Positioned(
-            right: 3,
-            top: 3,
-            child: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: Colors.black.toOpacity(0.55),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(
-                Icons.library_books_outlined,
-                size: 12,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      );
-
-    } else if (appdata.settings['showCollectionStatusOnTile'] == true) {
-      // 「已在本合集」紫角標（簡潔卡）
-      cover = Stack(
-        fit: StackFit.expand,
-        children: [
-          cover,
-          Positioned(
-            right: 3,
-            top: 3,
-            child: CollectionMemberMarker(
-              sourceKey: comic.sourceKey,
-              comicId: comic.id,
-              size: 12,
-            ),
-          ),
-        ],
-      );
-    }
-
-    Widget child = Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Theme.of(context).colorScheme.secondaryContainer,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: cover,
-    );
-
-    if (heroID != null) {
-      child = Hero(tag: "cover$heroID", child: child);
-    }
-
-    child = AnimatedTapRegion(
-      borderRadius: 8,
-      onTap:
-          onTap ??
-          () {
-            context.to(
-              () => ComicPage(
-                id: comic.id,
-                sourceKey: comic.sourceKey,
-                cover: comic.cover,
-                title: comic.title,
-                heroID: heroID,
-              ),
-            );
-          },
-      child: child,
-    );
-
-    if (withTitle) {
-      child = Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          child,
-          const SizedBox(height: 4),
-          SizedBox(
-            width: width - 6,
-            child: Center(
-              child: Text(
-                comic.title.replaceAll('\n', ''),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return child;
   }
 }

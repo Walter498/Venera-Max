@@ -22,8 +22,13 @@ double get commentsFontSize {
 /// This widget intelligently decides whether to use simple text or rich formatting
 /// based on the content. It supports HTML tags and auto-linking of URLs.
 class CommentContent extends StatelessWidget {
-  const CommentContent({super.key, required this.text, this.fontSize,
-    this.selectable = true});
+  const CommentContent({
+    super.key,
+    required this.text,
+    this.fontSize,
+    this.selectable = true,
+    this.onTap,
+  });
 
   /// Full pages retain selection; chapter previews use natural, non-scrollable text.
   final bool selectable;
@@ -34,16 +39,27 @@ class CommentContent extends StatelessWidget {
   /// [DefaultTextStyle] (used by compact previews that must not scale).
   final double? fontSize;
 
+  /// A single tap on the text that is not on a link. The selectable text
+  /// takes such taps, so whatever is underneath never sees them.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     if (!text.contains('<') && !text.contains('http')) {
       final style = fontSize == null ? null : TextStyle(fontSize: fontSize);
       return selectable
-          ? SelectableText(text, style: style)
-          : Text(text, style: style, softWrap: true, overflow: TextOverflow.clip);
+          ? SelectableText(text, style: style, onTap: onTap)
+          : GestureDetector(
+              onTap: onTap,
+              child: Text(text, style: style, softWrap: true, overflow: TextOverflow.clip),
+            );
     } else {
-      return RichCommentContent(text: text, fontSize: fontSize,
-        selectable: selectable);
+      return RichCommentContent(
+        text: text,
+        fontSize: fontSize,
+        selectable: selectable,
+        onTap: onTap,
+      );
     }
   }
 }
@@ -147,6 +163,7 @@ class RichCommentContent extends StatefulWidget {
     this.showImages = true,
     this.fontSize,
     this.selectable = true,
+    this.onTap,
   });
 
   final String text;
@@ -157,6 +174,9 @@ class RichCommentContent extends StatefulWidget {
   /// Explicit font size for the comment body. When null, inherits the ambient
   /// [DefaultTextStyle] (used by compact previews that must not scale).
   final double? fontSize;
+
+  /// See [CommentContent.onTap].
+  final VoidCallback? onTap;
 
   @override
   State<RichCommentContent> createState() => _RichCommentContentState();
@@ -327,8 +347,11 @@ class _RichCommentContentState extends State<RichCommentContent> {
     // Text.rich shares the exact parser/spans and links, but does not create
     // SelectableText's internal EditableText/Scrollable, even at zero extent.
     Widget content = widget.selectable
-        ? SelectableText.rich(span)
-        : Text.rich(span, softWrap: true, overflow: TextOverflow.clip);
+        ? SelectableText.rich(span, onTap: widget.onTap)
+        : GestureDetector(
+            onTap: widget.onTap,
+            child: Text.rich(span, softWrap: true, overflow: TextOverflow.clip),
+          );
     if (images.isNotEmpty && widget.showImages) {
       content = Column(
         mainAxisSize: MainAxisSize.min,

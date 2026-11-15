@@ -17,6 +17,8 @@ library;
 enum GuideAnchor {
   translation('ai-translation'),
   translationSetup('translation-setup'),
+  translationTarget('translation-target'),
+  translationSource('translation-source'),
   translationScript('translation-script'),
   translationEnable('translation-enable'),
   translationReading('translation-reading'),
@@ -29,6 +31,8 @@ enum GuideAnchor {
   collectionLayout('collection-layout'),
   collectionEdit('collection-edit'),
   collectionLimits('collection-limits'),
+  autoPageTurning('auto-page-turning'),
+  eink('eink'),
   gestures('gestures');
 
   const GuideAnchor(this.id);

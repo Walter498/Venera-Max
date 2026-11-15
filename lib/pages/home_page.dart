@@ -12,8 +12,6 @@ import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/home_layout.dart';
-import 'package:venera/pages/home_source_feed.dart';
-import 'package:venera/pages/rank_updates_page.dart';
 import 'package:venera/foundation/image_translation/translation_service.dart';
 import 'package:venera/foundation/image_translation/translation_store.dart';
 import 'package:venera/foundation/read_later.dart';
@@ -38,8 +36,6 @@ import 'package:venera/utils/import_comic.dart';
 import 'package:venera/utils/tags_translation.dart';
 import 'package:venera/utils/translations.dart';
 
-import 'home_source_feed.dart';
-
 import 'local_comics_page.dart';
 
 Size _homeComicTileSize(BuildContext context) {
@@ -51,19 +47,6 @@ Size _homeComicTileSize(BuildContext context) {
       : 98.0;
   return Size(tileWidth, tileWidth * 136 / 98);
 }
-
-/// 把合集當成一部「漫畫」來渲染（首頁合集區塊用漫畫卡片呈現）
-Comic _collectionAsComic(ComicCollection collection) => Comic(
-  collection.displayName,
-  collection.displayCover,
-  collection.id,
-  null,
-  const ['Collection'],
-  '@n comics'.tlParams({'n': collection.members.length}),
-  collection.sourceKey,
-  null,
-  null,
-);
 
 TextStyle _homeSectionTitleStyle(BuildContext context) {
   return Theme.of(
@@ -87,6 +70,18 @@ Widget _homeChevron(BuildContext context) {
     ),
   );
 }
+
+Comic _collectionAsComic(ComicCollection collection) => Comic(
+  collection.displayName,
+  collection.displayCover,
+  collection.id,
+  null,
+  const ['Collection'],
+  '@n comics'.tlParams({'n': collection.members.length}),
+  collection.sourceKey,
+  null,
+  null,
+);
 
 class _HomeSectionSurface extends StatelessWidget {
   const _HomeSectionSurface({required this.child});
@@ -221,7 +216,6 @@ class _HomePageState extends State<HomePage> {
   /// preserves the per-section [State] (these widgets hold data and listeners).
   Widget _sectionWidget(String id) {
     return switch (id) {
-      'sourceHome' => const HomeSourceFeed(key: ValueKey('sourceHome')),
       'history' => const _History(key: ValueKey('history')),
       'readLater' => const _ReadLater(key: ValueKey('readLater')),
       'translatedComics' => const _TranslatedComics(
@@ -270,79 +264,15 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  /// 首頁頁籤（0 首頁 / 1 更新 / 2 排行）——同層切換，不跳頁
-  int homeTab = 0;
-
-  /// 三個頁籤（在搜尋框上面，用戶指定位置）
-  Widget _buildHomeTabs() {
-    Widget tab(String text, int index) {
-      final active = homeTab == index;
-      return InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => setState(() => homeTab = index),
-        child: Container(
-          margin: const EdgeInsets.only(right: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: active ? context.colorScheme.primaryContainer : null,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active
-                  ? context.colorScheme.onPrimaryContainer
-                  : context.colorScheme.onSurface,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 38,
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
-          tab('首頁', 0),
-          tab('更新', 1),
-          tab('排行', 2),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     var slivers = <Widget>[
       SliverPadding(padding: EdgeInsets.only(top: context.padding.top)),
-      // 三個頁籤移到搜尋框上面（用戶指定）
-      SliverToBoxAdapter(child: _buildHomeTabs()),
       _SearchBar(
         editing: editMode,
         onEdit: editMode ? _exitEditMode : _enterEditMode,
       ),
     ];
-
-    // 更新 / 排行：內聯視圖（跟首頁同層，不跳頁）
-    if (!editMode && homeTab != 0) {
-      slivers.add(
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          sliver: SliverToBoxAdapter(
-            child: homeTab == 1
-                ? const HomeUpdatesView(key: ValueKey('updates'))
-                : const HomeRankView(key: ValueKey('rank')),
-          ),
-        ),
-      );
-      slivers.add(
-        SliverPadding(padding: EdgeInsets.only(top: context.padding.bottom)),
-      );
-      return SmoothCustomScrollView(slivers: slivers);
-    }
     if (editMode) {
       slivers.add(
         _HomeEditBanner(onDone: _exitEditMode, onReset: _resetLayout),
@@ -606,7 +536,7 @@ class _SyncButtonState extends State<_SyncButton> with WidgetsBindingObserver {
       // a cheap readDir and only pulls when the server holds newer data; the
       // per-device tier governs uploads only (those settle points live inside
       // DataSync's own lifecycle observer).
-      if (!DataSync().isConfigured) return;
+      if (!DataSync().isConfigured || DataSync().initialRestoreDeferred) return;
       if (DateTime.now().difference(lastCheck) > const Duration(minutes: 10)) {
         lastCheck = DateTime.now();
         DataSync().downloadData();
@@ -1262,10 +1192,48 @@ class _ImportComicsWidgetState extends State<ImportComicsWidget> {
 
   bool cancelled = false;
 
+  ImportComicProgress? progress;
+
   @override
   void dispose() {
     loading = false;
     super.dispose();
+  }
+
+  void _onProgress(ImportComicProgress value) {
+    BackgroundKeepAlive.instance.update(
+      BackgroundKeepAlive.tagComicImport,
+      formatTaskStatus(title: value.message, detail: value.current),
+    );
+    if (mounted) setState(() => progress = value);
+  }
+
+  Widget _buildProgress() {
+    final current = progress;
+    if (current == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(current.message, style: ts.s16),
+        const SizedBox(height: 12),
+        LinearProgressIndicator(
+          value: current.value,
+          backgroundColor: context.colorScheme.surfaceContainer,
+        ),
+        if (current.current != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            current.current!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: ts.s14.withColor(context.colorScheme.outline),
+          ),
+        ],
+      ],
+    ).paddingHorizontal(16);
   }
 
   @override
@@ -1287,11 +1255,7 @@ class _ImportComicsWidgetState extends State<ImportComicsWidget> {
       dismissible: !loading,
       title: "Import Comics".tl,
       content: loading
-          ? SizedBox(
-              width: 600,
-              height: height,
-              child: const Center(child: CircularProgressIndicator()),
-            )
+          ? SizedBox(width: 600, height: height, child: _buildProgress())
           : RadioGroup<int>(
               groupValue: type,
               onChanged: (value) {
@@ -1384,16 +1348,18 @@ class _ImportComicsWidgetState extends State<ImportComicsWidget> {
 
     setState(() {
       loading = true;
+      progress = null;
     });
     // Keep the process alive across backgrounding while a comic import runs
     // (Android only; no-op elsewhere). Started here, on the foreground tap, so
     // the foreground service isn't subject to background-start restrictions.
     // Empty status => the native service shows its localized default body under
-    // the localized "Importing comics" title; this flow has no per-item progress.
+    // the localized "Importing comics" title until the import reports progress.
     BackgroundKeepAlive.instance.update(BackgroundKeepAlive.tagComicImport, '');
     var importer = ImportComic(
       selectedFolder: selectedFolder,
       copyToLocal: copyToLocalFolder,
+      onProgress: _onProgress,
     );
     bool result;
     try {
@@ -1570,6 +1536,10 @@ class _Collections extends StatefulWidget {
 }
 
 class _CollectionsState extends State<_Collections> {
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
+  }
+
   void _onCollectionsChanged() {
     if (mounted) setState(() {});
   }
@@ -1586,10 +1556,6 @@ class _CollectionsState extends State<_Collections> {
     appdata.settings.removeListener(_onSettingsChanged);
     ComicCollectionStore.changes.removeListener(_onCollectionsChanged);
     super.dispose();
-  }
-
-  void _onSettingsChanged() {
-    if (mounted) setState(() {});
   }
 
   @override
@@ -1626,7 +1592,6 @@ class _CollectionsState extends State<_Collections> {
                 ),
               ).paddingHorizontal(16),
             ),
-            // 合集改用漫畫卡片呈現（跟其他漫畫卡片視覺統一）
             if (shown.isNotEmpty)
               SizedBox(
                 height: _homeComicTileSize(context).height + 4,
@@ -1641,8 +1606,7 @@ class _CollectionsState extends State<_Collections> {
                       heroID: heroID,
                       width: _homeComicTileSize(context).width,
                       height: _homeComicTileSize(context).height,
-                      onTap: () =>
-                          App.mainNavigatorKey?.currentContext?.to(
+                      onTap: () => App.mainNavigatorKey?.currentContext?.to(
                         () => ComicPage(
                           id: collection.id,
                           sourceKey: collection.sourceKey,
@@ -1660,8 +1624,6 @@ class _CollectionsState extends State<_Collections> {
       ),
     );
   }
-
-
 }
 
 class _ComicSourceWidget extends StatefulWidget {

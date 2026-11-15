@@ -14,6 +14,7 @@ import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/read_later.dart';
 import 'package:venera/foundation/log.dart';
+import 'package:venera/foundation/onboarding.dart';
 import 'package:venera/foundation/res.dart';
 import 'package:venera/network/app_dio_io.dart';
 import 'package:venera/foundation/local.dart';
@@ -21,6 +22,7 @@ import 'package:venera/foundation/sqlite_connection.dart';
 import 'package:venera/init.dart' show deferredInitCompleter;
 import 'package:venera/utils/data.dart';
 import 'package:venera/utils/sync_protocol.dart';
+import 'package:venera/utils/sync_skip.dart' show translationResultsField;
 import 'package:venera/utils/venera_comics.dart';
 import 'package:venera/utils/webdav_upload.dart';
 import 'package:webdav_client/webdav_client.dart' hide File;
@@ -35,6 +37,7 @@ export 'package:venera/utils/sync_protocol.dart';
 
 class DataSync with ChangeNotifier, WidgetsBindingObserver {
   DataSync._() {
+    if (App.isBackgroundTask) return;
     // Downloads run in EVERY sync tier (the probe is a cheap readDir and only
     // pulls when the server genuinely holds newer data); the per-device
     // [syncMode] governs upload automation only.
@@ -104,6 +107,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
       );
       return;
     }
+    if (OnboardingStore.instance.blocksAutomaticTasks || initialRestoreDeferred) return;
     var result = await downloadData();
     // Startup settle (#114): pay an account the previous run left open (a
     // killed process, or an iOS session that never got a background settle).
@@ -115,6 +119,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
   }
 
   static String _platformTag() {
+    if (App.isOhos) return 'ohos';
     if (Platform.isIOS) return 'ios';
     if (Platform.isAndroid) return 'android';
     if (Platform.isWindows) return 'win';
@@ -221,20 +226,27 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
             : null,
       );
 
-  void setSyncMode(WebdavSyncMode mode) {
+  Future<void> setSyncMode(WebdavSyncMode mode, {bool settle = true}) {
     appdata.implicitData[_syncModeKey] = mode.name;
     // Keep the legacy boolean coherent: QR config payloads and downgraded
     // installs still read it.
     appdata.implicitData['webdavAutoSync'] = mode != WebdavSyncMode.manual;
-    appdata.writeImplicitData();
+    final saved = appdata.writeImplicitData();
     if (mode != WebdavSyncMode.dataSaver) {
       _pendingSettleTimer?.cancel();
       _pendingSettleTimer = null;
     }
     // Entering an automatic tier with an open account settles it now — this
     // also covers dataSaver→realtime, where no timer would ever fire again.
-    settlePendingChanges();
+    if (settle) {
+      settlePendingChanges();
+    } else {
+      // Saving a connection starts one explicit initial sync instead.
+      _pendingAutoUpload?.cancel();
+      _pendingAutoUpload = null;
+    }
     notifyListeners();
+    return saved;
   }
 
   /// True when local changes exist that no successful upload has covered yet.
@@ -313,6 +325,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
   /// before the initial sync completed, or while an upload is already in
   /// flight (it carries the account).
   Future<void> settlePendingChanges() async {
+    if (OnboardingStore.instance.blocksAutomaticTasks || initialRestoreDeferred) return;
     if (syncMode == WebdavSyncMode.manual) return;
     if (!hasPendingChanges) return;
     if (!isConfigured) return;
@@ -335,8 +348,16 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
   /// import, headless CLI) do not come through here — they call
   /// [uploadData] with `force: true` directly.
   void requestAutoUpload() {
+    if (OnboardingStore.instance.blocksAutomaticTasks || initialRestoreDeferred) return;
     if (!isConfigured) return;
     if (_isApplyingBackup) return;
+    if (App.isBackgroundTask) {
+      if (!hasPendingChanges) {
+        appdata.implicitData[_pendingChangesKey] = true;
+        appdata.writeImplicitData();
+      }
+      return;
+    }
     switch (syncMode) {
       case WebdavSyncMode.realtime:
         _pendingAutoUpload?.cancel();
@@ -356,6 +377,13 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
 
   void onDataChanged() {
     requestAutoUpload();
+  }
+
+  /// Stored translations changed on this device. Translation writes don't
+  /// notify per page (a chapter would upload once per page group), so callers
+  /// report finished work here instead.
+  void onTranslationsChanged() {
+    if (_syncTranslations()) requestAutoUpload();
   }
 
   bool _handleWindowClose() {
@@ -519,18 +547,27 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
     return false;
   }
 
+  bool get initialRestoreDeferred =>
+      appdata.implicitData['webdavSetupRestorePending'] == true;
+
   bool _hasCompletedInitialSync() {
-    if (appdata.implicitData['hasCompletedInitialSync'] == true) return true;
-    if (_dataVersion() > 0) {
-      _markInitialSyncCompleted();
-      return true;
-    }
-    return false;
+    if (initialRestoreDeferred) return false;
+    return appdata.implicitData['hasCompletedInitialSync'] == true ||
+        _dataVersion() > 0;
   }
 
-  void _markInitialSyncCompleted() {
+  Future<void> _markInitialSyncCompleted() async {
+    final pending = initialRestoreDeferred;
+    final completed = appdata.implicitData['hasCompletedInitialSync'];
+    appdata.implicitData.remove('webdavSetupRestorePending');
     appdata.implicitData['hasCompletedInitialSync'] = true;
-    appdata.writeImplicitData();
+    try {
+      await appdata.writeImplicitData();
+    } catch (_) {
+      if (pending) appdata.implicitData['webdavSetupRestorePending'] = true;
+      appdata.implicitData['hasCompletedInitialSync'] = completed;
+      rethrow;
+    }
   }
 
   bool _isFavoriteDbValid() {
@@ -619,6 +656,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
     bool force = false,
     bool allowCatchUpDownload = true,
   }) async {
+    if (force) BackgroundKeepAlive.instance.allowTransferBackground();
     // No usable WebDAV config → nothing to sync. saveData() funnels every
     // settings/search-history change through here (plus comic-source saves,
     // imports, ...), so without bailing out up front an empty or malformed
@@ -659,7 +697,8 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
     try {
       taskManager.updateTask(task.id, currentPhase: 'Validating', progress: 0.0);
 
-      if (!_hasCompletedInitialSync()) {
+      // Explicit publishing of restored local data may replace a deferred pull.
+      if (!_hasCompletedInitialSync() && !(force && _dataVersion() > 0)) {
         _lastError = 'Please complete initial sync download first';
         _addSyncLog('upload', null, false, 'Blocked: initial sync not completed');
         taskManager.failTask(task.id, 'Initial sync not completed');
@@ -773,6 +812,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
         data = await exportAppData(
           sync: true,
           includeLocalComics: _syncLocalComics(),
+          includeTranslations: _syncTranslations(),
         );
 
         final fileSize = await data.length();
@@ -821,12 +861,17 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
         _setPendingPublish(filename, fileSize);
         try {
           final remotePath = serverAbsoluteWebdavPath(filename);
-          final usedBufferedFallback = await uploadWithWebdav404Fallback(
-            streamUpload: () => client.writeFromFile(data!.path, remotePath),
-            // Some WebDAV providers return 404 for streamed PUTs while the
-            // same authenticated root accepts the former byte upload (#214).
-            bufferedUpload: () async =>
-                client.write(remotePath, await data!.readAsBytes()),
+          final usedBufferedFallback = await BackgroundKeepAlive.instance.runTransfer(
+            formatTaskStatus(title: 'Uploading data'.tl, detail: filename),
+            (progress) => uploadWithWebdav404Fallback(
+              streamUpload: () => writeFileStreamed(
+                client, data!, remotePath, onProgress: progress,
+              ),
+              // Some providers only accept the former buffered PUT (#214).
+              bufferedUpload: () async => client.write(
+                remotePath, await data!.readAsBytes(), onProgress: progress,
+              ),
+            ),
           );
           if (usedBufferedFallback) {
             Log.warning(
@@ -852,6 +897,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
         // The backup is on the server — only now adopt the version locally.
         appdata.settings['dataVersion'] = nextVersion;
         await appdata.saveData(false);
+        if (initialRestoreDeferred) await _markInitialSyncCompleted();
         _clearPendingPublish();
         // The published snapshot covers every change up to the export —
         // settle the deferred-tier account (no-op unless it was open and
@@ -904,7 +950,8 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
     }
   }
 
-  Future<Res<bool>> downloadData() async {
+  /// Explicit restores may select an older snapshot without publishing it.
+  Future<Res<bool>> downloadData({bool userRestore = false}) async {
     // Never apply a backup while heavy init is still bringing up the very
     // stores importAppData restores into — that race was the iOS startup
     // crash loop back when the import swapped files under live handles. The
@@ -993,7 +1040,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
           // blocked every upload ("complete initial sync first"), which meant
           // the server stayed empty forever. An empty server IS a completed
           // initial sync: this device holds the fleet's only data.
-          _markInitialSyncCompleted();
+          await _markInitialSyncCompleted();
           Log.info("Data Sync", 'No backups on server; initial sync complete');
           taskManager.completeTask(task.id);
           return const Res(true);
@@ -1022,7 +1069,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
             }
             _clearPendingPublish();
             if (!_hasCompletedInitialSync()) {
-              _markInitialSyncCompleted();
+              await _markInitialSyncCompleted();
             }
             Log.info(
               "Data Sync",
@@ -1037,10 +1084,10 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
         }
         var remoteVersion = _versionOfFileName(file.name!);
         var currentVersion = _dataVersion();
-        if (remoteVersion <= currentVersion) {
+        if (!userRestore && remoteVersion <= currentVersion) {
           Log.info("Data Sync", 'No new data to download');
           if (!_hasCompletedInitialSync()) {
-            _markInitialSyncCompleted();
+            await _markInitialSyncCompleted();
           }
           taskManager.completeTask(task.id, fileName: file.name);
           return const Res(true);
@@ -1062,7 +1109,12 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
         Log.info("Data Sync", "Downloading data from WebDAV server");
         var localFile = File(FilePath.join(App.cachePath, file.name!));
         try {
-          await client.read2File(file.name!, localFile.path);
+          await BackgroundKeepAlive.instance.runTransfer(
+            formatTaskStatus(title: 'Downloading data'.tl, detail: file.name),
+            (progress) => client.read2File(
+              file.name!, localFile.path, onProgress: progress,
+            ),
+          );
 
           taskManager.updateTask(task.id, currentPhase: 'Applying', progress: 0.6);
 
@@ -1089,22 +1141,24 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
             () => importAppData(
               localFile,
               checkVersion: false,
-              restoreLocalComics: _syncLocalComics(),
+              restoreLocalComics: userRestore || _syncLocalComics(),
+              mergeTranslations: userRestore || _syncTranslations(),
+              userRestore: userRestore,
             ),
           );
-          if (!_hasCompletedInitialSync()) {
-            _markInitialSyncCompleted();
-          }
-          _addSyncLog('download', file.name, true, null);
-          taskManager.completeTask(task.id, fileName: file.name);
           // Align the local version with the backup we just imported. Without
           // this, the downloading device keeps its old (lower) dataVersion and
           // can later be treated as "newer" than the remote, reversing the sync
           // direction and overwriting good data with the stale local copy.
-          if (remoteVersion > _dataVersion()) {
+          if (userRestore || remoteVersion > _dataVersion()) {
             appdata.settings['dataVersion'] = remoteVersion;
             await appdata.saveData(false);
           }
+          if (!_hasCompletedInitialSync()) {
+            await _markInitialSyncCompleted();
+          }
+          _addSyncLog('download', file.name, true, null);
+          taskManager.completeTask(task.id, fileName: file.name);
 
           // The backup replaced settings in place; rebuild the UI so imported
           // appearance changes (e.g. a non-default theme color) take effect now
@@ -1133,6 +1187,8 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
   }
 
   Future<Res<bool>> syncData() async {
+    if (initialRestoreDeferred) return downloadData(userRestore: true);
+    BackgroundKeepAlive.instance.allowTransferBackground();
     var config = _validateConfig();
     if (config == null || config.isEmpty) {
       return uploadData();
@@ -1147,7 +1203,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
       if (file == null) {
         // Empty server: this device's data is the fleet's only copy. Mark
         // initial sync complete so the first publish isn't gated, then upload.
-        _markInitialSyncCompleted();
+        await _markInitialSyncCompleted();
         return uploadData();
       }
       if (_versionOfFileName(file.name!) > _dataVersion()) {
@@ -1166,10 +1222,13 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
     }
   }
 
-  Future<Res<List<RemoteBackupInfo>>> listRemoteBackups() async {
-    var config = _validateConfig();
+  Future<Res<List<RemoteBackupInfo>>> listRemoteBackups({List<String>? configuration}) async {
+    var config = configuration ?? _validateConfig();
     if (config == null) return const Res.error('Invalid WebDAV configuration');
     if (config.isEmpty) return const Res.error('WebDAV not configured');
+    if (config.length != 3 || config.any((value) => value.trim().isEmpty)) {
+      return const Res.error('Invalid WebDAV configuration');
+    }
     String url = config[0];
     String user = config[1];
     String pass = config[2];
@@ -1219,6 +1278,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
   }
 
   Future<Res<bool>> downloadSpecificBackup(String fileName) async {
+    BackgroundKeepAlive.instance.allowTransferBackground();
     if (_haveWaitingTask) return const Res(true);
     // Waits for image sync too — the apply below swaps the very SQLite files
     // image sync reads/writes.
@@ -1227,6 +1287,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
       await Future.delayed(const Duration(milliseconds: 100));
     }
     _haveWaitingTask = false;
+    final initialRestore = initialRestoreDeferred;
     _isDownloading = true;
     _lastError = null;
     notifyListeners();
@@ -1247,13 +1308,20 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
       try {
         var localFile = File(FilePath.join(App.cachePath, fileName));
         try {
-          await client.read2File(fileName, localFile.path);
+          await BackgroundKeepAlive.instance.runTransfer(
+            formatTaskStatus(title: 'Downloading data'.tl, detail: fileName),
+            (progress) => client.read2File(
+              fileName, localFile.path, onProgress: progress,
+            ),
+          );
           // Suppress the echo upload the manager re-inits would fire.
           await applyBackup(
             () => importAppData(
               localFile,
               checkVersion: false,
-              restoreLocalComics: _syncLocalComics(),
+              restoreLocalComics: initialRestore || _syncLocalComics(),
+              mergeTranslations: initialRestore || _syncTranslations(),
+              userRestore: true,
             ),
           );
         } finally {
@@ -1272,13 +1340,17 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
         // so a force upload here lands above everything on the server.)
         App.forceRebuild();
 
-        if (!_hasCompletedInitialSync()) _markInitialSyncCompleted();
+        if (initialRestore) {
+          appdata.settings['dataVersion'] = _versionOfFileName(fileName);
+          await appdata.saveData(false);
+        }
+        if (!_hasCompletedInitialSync()) await _markInitialSyncCompleted();
         _addSyncLog('download', fileName, true, null);
 
         // Release the download lock before the publish upload; uploadData
         // busy-waits on it otherwise.
         _isDownloading = false;
-        unawaited(uploadData(force: true));
+        if (!initialRestore) unawaited(uploadData(force: true));
 
         // Mirror downloadData: the backup only restores base app data. If the
         // user has image-pack sync enabled locally, download the comic image
@@ -1308,6 +1380,11 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
   static bool _syncLocalComics() =>
       appdata.settings['syncLocalComics'] != false;
 
+  /// Whether stored translations ride this device's sync. Off when the user
+  /// keeps them on this device via the skip-sync picker.
+  static bool _syncTranslations() =>
+      !appdata.isSyncSkipped(translationResultsField);
+
   bool _shouldSyncImages() {
     // Image packs are keyed to the local-comic manifest (local.db): a device
     // opted out of manifest sync (#145) has no entries to match packs against,
@@ -1320,6 +1397,7 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
   Timer? _imageSyncTimer;
 
   void _scheduleImageSync() {
+    if (OnboardingStore.instance.blocksAutomaticTasks || initialRestoreDeferred) return;
     if (!_shouldSyncImages()) return;
     _imageSyncTimer?.cancel();
     _imageSyncTimer = Timer(const Duration(seconds: 30), () {
@@ -1425,7 +1503,12 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
         file = await exportVeneraComics([comic], includeImages: true);
         // Streamed: image packs are whole comic archives (often hundreds of
         // MB) — buffering one in RAM via readAsBytes was an OOM in waiting.
-        await client.writeFromFile(file.path, '/venera-comics/$fileName');
+        await BackgroundKeepAlive.instance.runTransfer(
+          formatTaskStatus(title: 'Syncing images'.tl, detail: comic.title),
+          (progress) => writeFileStreamed(
+            client, file!, '/venera-comics/$fileName', onProgress: progress,
+          ),
+        );
         Log.info("Image Sync", "Uploaded: ${comic.title}");
       } catch (e, s) {
         failures++;
@@ -1474,8 +1557,12 @@ class DataSync with ChangeNotifier, WidgetsBindingObserver {
 
       var localFile = File(FilePath.join(App.cachePath, fileName));
       try {
-        await client.read2File(
-          '/venera-comics/$fileName', localFile.path);
+        await BackgroundKeepAlive.instance.runTransfer(
+          formatTaskStatus(title: 'Syncing images'.tl, detail: comic.title),
+          (progress) => client.read2File(
+            '/venera-comics/$fileName', localFile.path, onProgress: progress,
+          ),
+        );
         await importVeneraComics(localFile);
         Log.info("Image Sync", "Downloaded: ${comic.title}");
       } catch (e, s) {

@@ -200,6 +200,24 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
   }
 }
 
+/// Keeps taps on and around a comment control, including a disabled one, from
+/// reaching the page under it.
+class _ChapterCommentsControl extends StatelessWidget {
+  const _ChapterCommentsControl({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: () {},
+      child: child,
+    );
+  }
+}
+
 class _ChapterCommentTile extends StatefulWidget {
   const _ChapterCommentTile({
     super.key,
@@ -219,6 +237,9 @@ class _ChapterCommentTile extends StatefulWidget {
   final bool showAvatar;
   final bool showActions;
   final String? provider;
+
+  /// Set inside the reader: a tap on the comment text is a tap on the page.
+  final VoidCallback? onContentTap;
 
   @override
   State<_ChapterCommentTile> createState() => _ChapterCommentTileState();
@@ -469,6 +490,13 @@ class _ProviderChapterFeed extends CommentsController {
     _ownerListener = listener;
     super.addListener(listener);
   }
+
+  final bool scrollWithReader;
+  final Widget? chapterNavigation;
+
+  /// A tap, at its global position, on the page rather than on one of its
+  /// controls: the input box, the buttons, loading more comments.
+  final void Function(Offset position)? onPageTap;
 
   @override
   void addListener(VoidCallback listener) {

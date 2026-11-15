@@ -4,10 +4,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/background_keepalive.dart';
+import 'package:venera/foundation/image_translation/model_file_download.dart';
+import 'package:venera/foundation/image_translation/translation_sources.dart';
 import 'package:venera/foundation/image_translation/translation_worker.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/network/app_dio_io.dart';
 import 'package:venera/utils/io.dart';
+import 'package:venera/utils/translations.dart';
 
 /// A single downloadable file of a model component. [urls] is a fallback
 /// chain: mirrors are tried in order, so a blocked host does not make the
@@ -29,6 +33,7 @@ class ModelComponent {
     required this.id,
     required this.files,
     required this.approxSizeBytes,
+    this.marker = false,
   });
 
   final String id;
@@ -37,8 +42,13 @@ class ModelComponent {
   /// Rough total download size, for display before downloading.
   final int approxSizeBytes;
 
-  String get directory =>
-      FilePath.join(App.dataPath, 'translation_models', id);
+  /// User-supplied models count as installed only after a check run wrote
+  /// [markerName], so a file that downloaded but cannot be used never does.
+  final bool marker;
+
+  static const markerName = 'verified';
+
+  String get directory => FilePath.join(App.dataPath, 'translation_models', id);
 
   bool get isInstalled {
     for (var file in files) {
@@ -47,7 +57,7 @@ class ModelComponent {
         return false;
       }
     }
-    return true;
+    return !marker || File(FilePath.join(directory, markerName)).existsSync();
   }
 
   String filePath(String name) => FilePath.join(directory, name);
@@ -148,6 +158,24 @@ abstract class TranslationModels {
     ],
   );
 
+  /// Chinese OCR covering Simplified and Traditional (PP-OCRv5 mobile rec,
+  /// 18k characters). The v4 dictionary lacks ~3.8k Traditional characters
+  /// (說/讓/從/幾 ...), which then come out as wrong look-alikes.
+  static const ocrZhV5 = ModelComponent(
+    id: 'ocr_zh_v5',
+    approxSizeBytes: 16700000,
+    files: [
+      ModelFile('rec.onnx', [
+        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx',
+        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ch_PP-OCRv5_rec.onnx',
+      ]),
+      ModelFile('dict.txt', [
+        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt',
+        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ch_PP-OCRv5_dict.txt',
+      ]),
+    ],
+  );
+
   static const all = [detector, ocrJa, ocrZhV5, ocrZh, ocrEn, ocrKo];
 
   static ModelComponent? find(String id) {
@@ -157,35 +185,41 @@ abstract class TranslationModels {
     return null;
   }
 
-  /// The OCR component required for a source language.
-  static ModelComponent ocrFor(String sourceLang) {
-    return switch (sourceLang) {
-      'ja' => ocrJa,
-      'ko' => ocrKo,
-      'en' => ocrEn,
-      'zh-TW' => ocrZhV5,
-      _ => ocrZh,
-    };
+  /// Line-recognition engines (CTC models) by worker engine key. 'ja'
+  /// (manga-ocr) is handled separately by the worker.
+  static const _builtInRec = <String, (ModelComponent, String, int)>{
+    'zh5': (ocrZhV5, 'zh', 48),
+    'zh': (ocrZh, 'zh', 48),
+    'en': (ocrEn, 'en', 48),
+    'ko': (ocrKo, 'ko', 32),
+  };
+
+  /// The detector in use: the user's own once it passed its check, otherwise
+  /// the built-in one.
+  static ModelComponent get activeDetector {
+    var custom = TranslationSources.detector?.component;
+    return custom != null && custom.isInstalled ? custom : detector;
   }
 
-  static const _recLangs = ['zh', 'en', 'ko'];
-
-  /// Rec input heights: 48 for the v3/v4 models, 32 for the older Korean one.
-  static int recHeightFor(String lang) => lang == 'ko' ? 32 : 48;
-
   /// Model file paths for the worker isolate, containing only what is
-  /// actually installed.
+  /// actually installed, plus the engines to try for [sourceLang].
   static WorkerModelPaths workerPaths([String sourceLang = 'auto']) {
     var recModels = <String, String>{};
     var recDicts = <String, String>{};
     var recHeights = <String, int>{};
-    for (var lang in _recLangs) {
-      var component = ocrFor(lang);
-      if (component.isInstalled) {
-        recModels[lang] = component.filePath('rec.onnx');
-        recDicts[lang] = component.filePath('dict.txt');
-        recHeights[lang] = recHeightFor(lang);
-      }
+    var recLanguages = <String, String>{};
+    void add(String engine, ModelComponent component, String lang, int h) {
+      if (!component.isInstalled) return;
+      recModels[engine] = component.filePath('rec.onnx');
+      recDicts[engine] = component.filePath('dict.txt');
+      recHeights[engine] = h;
+      recLanguages[engine] = lang;
+    }
+
+    _builtInRec.forEach((engine, e) => add(engine, e.$1, e.$2, e.$3));
+    var custom = TranslationSources.find(sourceLang);
+    if (custom != null) {
+      add(custom.engine, custom.component, custom.code, custom.inputHeight);
     }
     if (ocrZhV5.isInstalled) {
       recModels['zh-TW'] = ocrZhV5.filePath('rec.onnx');
@@ -194,23 +228,34 @@ abstract class TranslationModels {
     }
     var hasJa = ocrJa.isInstalled;
     return WorkerModelPaths(
-      detector: detector.filePath('det.onnx'),
+      detector: activeDetector.filePath('det.onnx'),
       jaEncoder: hasJa ? ocrJa.filePath('encoder.onnx') : null,
       jaDecoder: hasJa ? ocrJa.filePath('decoder.onnx') : null,
       jaVocab: hasJa ? ocrJa.filePath('vocab.txt') : null,
       recModels: recModels,
       recDicts: recDicts,
       recHeights: recHeights,
+      recLanguages: recLanguages,
+      engines: resolveOcrEngines(
+        sourceLang,
+        installed: {...recModels.keys, if (hasJa) 'ja'},
+        customEngine: custom?.engine,
+      ),
     );
   }
 
-  /// Components required for the current settings, for the model management
-  /// UI. With 'auto' any one OCR component suffices, so only the detector is
-  /// strictly required.
+  /// Components to flag "required" in the model management UI. With 'auto'
+  /// any one OCR component suffices, so only the detector is required.
   static List<ModelComponent> requiredFor(String sourceLang) {
+    var custom = TranslationSources.find(sourceLang);
     return [
-      detector,
-      if (sourceLang == 'zh-TW') ocrZhV5 else if (sourceLang != 'auto') ocrFor(sourceLang),
+      activeDetector,
+      if (custom != null) custom.component,
+      if (sourceLang == 'ja') ocrJa,
+      if (sourceLang == 'zh-TW') ocrZhV5,
+      if (sourceLang == 'zh') ocrZh.isInstalled ? ocrZh : ocrZhV5,
+      if (sourceLang == 'en') ocrEn,
+      if (sourceLang == 'ko') ocrKo,
     ];
   }
 
@@ -224,18 +269,63 @@ abstract class TranslationModels {
   }
 
   static bool _computeReady(String sourceLang) {
-    if (!detector.isInstalled) return false;
-    if (sourceLang == 'auto') {
-      return ocrJa.isInstalled ||
-          ocrZhV5.isInstalled ||
-          _recLangs.any((l) => ocrFor(l).isInstalled);
-    }
-    return ocrFor(sourceLang).isInstalled;
+    if (!activeDetector.isInstalled) return false;
+    return switch (sourceLang) {
+      'auto' =>
+        ocrJa.isInstalled || _builtInRec.values.any((e) => e.$1.isInstalled),
+      'ja' => ocrJa.isInstalled,
+      // v4 misreads Traditional text, so an explicit choice needs v5.
+      'zh-TW' => ocrZhV5.isInstalled,
+      'zh' => ocrZhV5.isInstalled || ocrZh.isInstalled,
+      'en' => ocrEn.isInstalled,
+      'ko' => ocrKo.isInstalled,
+      _ => TranslationSources.find(sourceLang)?.component.isInstalled ?? false,
+    };
   }
 
   static final _readyCache = <String, bool>{};
 
   static void invalidateReadyCache() => _readyCache.clear();
+}
+
+/// Ordered recognition engines for [sourceLang], limited to [installed].
+/// v5 reads both Chinese scripts at least as well as v4, so it replaces v4
+/// whenever present. 'auto' lists line engines only; the worker places 'ja'
+/// by text direction.
+List<String> resolveOcrEngines(
+  String sourceLang, {
+  required Set<String> installed,
+  String? customEngine,
+}) {
+  var order = switch (sourceLang) {
+    'auto' => const ['zh5', 'zh', 'en', 'ko'],
+    'ja' => const ['ja'],
+    // A comic auto-locked to Traditional still reads with v4 if that is all
+    // that is installed.
+    'zh' || 'zh-TW' => const ['zh5', 'zh'],
+    'en' => const ['en'],
+    'ko' => const ['ko'],
+    _ => [if (customEngine != null) customEngine],
+  };
+  var result = order.where(installed.contains).toList();
+  if (result.contains('zh5')) result.remove('zh');
+  return result;
+}
+
+/// User-facing reason a downloaded model was rejected.
+String describeModelCheck(ModelCheckException e) {
+  return switch (e.failure) {
+    ModelCheckFailure.cannotRun =>
+      "The model could not run. Check that it is an ONNX file and the input height matches."
+          .tl,
+    ModelCheckFailure.notRecognizer =>
+      "This is not a text recognition model (PP-OCR rec).".tl,
+    ModelCheckFailure.notDetector =>
+      "This is not a text detection model (PP-OCR det).".tl,
+    ModelCheckFailure.dictionaryMismatch =>
+      "The dictionary does not match the model: the model has @classes classes, the dictionary @entries lines."
+          .tlParams({'classes': e.classes, 'entries': e.entries}),
+  };
 }
 
 class ModelDownloadState {
@@ -254,6 +344,8 @@ class TranslationModelStore with ChangeNotifier {
 
   final _states = <String, ModelDownloadState>{};
   final _cancelTokens = <String, CancelToken>{};
+  final _downloads = <String, Completer<void>>{};
+  final _deleting = <String>{};
 
   ModelDownloadState stateOf(ModelComponent component) {
     return _states.putIfAbsent(component.id, () => ModelDownloadState());
@@ -284,9 +376,47 @@ class TranslationModelStore with ChangeNotifier {
     )..httpClientAdapter = createAppHttpClientAdapter();
   }
 
-  Future<void> download(ModelComponent component) async {
+  /// Download size of [url] without fetching it: a one-byte range request
+  /// (some hosts omit Content-Length on HEAD), then Content-Length. Null when
+  /// the host reports neither.
+  Future<int?> probeSize(String url) async {
+    var dio = _createDio();
+    try {
+      var response = await dio.get<ResponseBody>(
+        url.replaceFirst('{hf}', hfEndpoint),
+        options: Options(
+          headers: {'Range': 'bytes=0-0'},
+          responseType: ResponseType.stream,
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      );
+      var range = response.headers.value('content-range');
+      var total = range == null ? null : int.tryParse(range.split('/').last);
+      total ??= int.tryParse(response.headers.value('content-length') ?? '');
+      // A host ignoring Range answers 200 with the whole file; the body is
+      // never read and the forced close below drops it.
+      if (total == null || (range == null && response.statusCode != 200)) {
+        return null;
+      }
+      return total;
+    } catch (e) {
+      Log.warning('Translation Models', 'Size probe failed for $url: $e');
+      return null;
+    } finally {
+      dio.close(force: true);
+    }
+  }
+
+  /// Downloads [component]. [verify] runs once every file is present; a
+  /// rejected model is deleted again and the reason shown as the error.
+  Future<void> download(
+    ModelComponent component, {
+    Future<void> Function()? verify,
+  }) async {
     var state = stateOf(component);
-    if (state.downloading || component.isInstalled) {
+    if (state.downloading ||
+        _deleting.contains(component.id) ||
+        component.isInstalled) {
       return;
     }
     state
@@ -298,6 +428,10 @@ class TranslationModelStore with ChangeNotifier {
     notifyListeners();
     var cancelToken = CancelToken();
     _cancelTokens[component.id] = cancelToken;
+    final completed = Completer<void>();
+    _downloads[component.id] = completed;
+    BackgroundKeepAlive.instance.allowTransferBackground();
+    _refreshKeepAlive();
     var dio = _createDio();
     try {
       Directory(component.directory).createSync(recursive: true);
@@ -307,40 +441,44 @@ class TranslationModelStore with ChangeNotifier {
       for (var file in component.files) {
         var target = File(component.filePath(file.name));
         if (target.existsSync() && target.lengthSync() > 0) {
+          finishedBytes += target.lengthSync();
           continue;
         }
-        var temp = File('${target.path}.part');
         Object? lastError;
         var ok = false;
         for (var url in file.urls) {
           url = url.replaceFirst('{hf}', hfEndpoint);
           try {
-            await dio.download(
-              url,
-              temp.path,
-              cancelToken: cancelToken,
-              onReceiveProgress: (count, total) {
-                state.receivedBytes = finishedBytes + count;
-                var estimated = component.approxSizeBytes;
-                state.progress = (state.receivedBytes / estimated).clamp(
-                  0.0,
-                  1.0,
-                );
-                notifyListeners();
-              },
+            await BackgroundKeepAlive.instance.runTransfer(
+              '${"Translation model".tl}: ${component.id}',
+              (onProgress) => downloadModelFile(
+                dio: dio,
+                url: url,
+                target: target,
+                cancelToken: cancelToken,
+                onProgress: (count, total) {
+                  onProgress(count, total);
+                  state.receivedBytes = finishedBytes + count;
+                  var estimated = component.approxSizeBytes;
+                  if (estimated <= 0) estimated = finishedBytes + total;
+                  state.progress = estimated <= 0
+                      ? 0
+                      : (state.receivedBytes / estimated).clamp(0.0, 1.0);
+                  _refreshKeepAlive();
+                  notifyListeners();
+                },
+              ),
             );
-            temp.renameSync(target.path);
             ok = true;
             break;
           } catch (e) {
-            temp.deleteIgnoreError();
             if (cancelToken.isCancelled) {
               rethrow;
             }
             lastError = e;
             Log.warning(
               'Translation Models',
-              'Download failed from $url, trying next mirror: $e',
+              'Model file download failed; trying the next configured source.',
             );
           }
         }
@@ -349,16 +487,42 @@ class TranslationModelStore with ChangeNotifier {
         }
         finishedBytes += target.lengthSync();
       }
+      if (verify != null) {
+        try {
+          await verify();
+        } catch (_) {
+          // Gone so a retry downloads fresh files instead of re-checking bad
+          // ones.
+          await Directory(
+            component.directory,
+          ).deleteIgnoreError(recursive: true);
+          rethrow;
+        }
+      }
+      if (component.marker) {
+        File(
+          component.filePath(ModelComponent.markerName),
+        ).writeAsStringSync('');
+      }
       state.progress = 1;
     } catch (e) {
       if (!cancelToken.isCancelled) {
-        state.error = e.toString();
-        Log.error('Translation Models', 'Failed to download ${component.id}', e);
+        state.error = e is ModelCheckException
+            ? describeModelCheck(e)
+            : e.toString();
+        Log.error(
+          'Translation Models',
+          'Failed to download ${component.id}',
+          e,
+        );
       }
     } finally {
       dio.close();
       _cancelTokens.remove(component.id);
       state.downloading = false;
+      _downloads.remove(component.id);
+      completed.complete();
+      _refreshKeepAlive();
       TranslationModels.invalidateReadyCache();
       notifyListeners();
     }
@@ -368,15 +532,38 @@ class TranslationModelStore with ChangeNotifier {
     _cancelTokens[component.id]?.cancel();
   }
 
-  Future<void> delete(ModelComponent component) async {
-    cancelDownload(component);
-    var dir = Directory(component.directory);
-    if (dir.existsSync()) {
-      await dir.deleteIgnoreError(recursive: true);
+  void _refreshKeepAlive() {
+    // OHOS transfer grants are acquired around each file's network operation.
+    if (!App.isAndroid) return;
+    final active = _states.values.where((state) => state.downloading).toList();
+    if (active.isEmpty) {
+      BackgroundKeepAlive.instance.remove(BackgroundKeepAlive.tagModelDownload);
+      return;
     }
-    _states.remove(component.id);
-    TranslationModels.invalidateReadyCache();
-    notifyListeners();
+    final progress =
+        active.fold<double>(0, (sum, state) => sum + state.progress) /
+        active.length;
+    BackgroundKeepAlive.instance.update(
+      BackgroundKeepAlive.tagModelDownload,
+      '${"Translation model".tl}: ${active.length} · ${(progress * 100).toInt()}%',
+    );
+  }
+
+  Future<void> delete(ModelComponent component) async {
+    if (!_deleting.add(component.id)) return;
+    try {
+      cancelDownload(component);
+      await _downloads[component.id]?.future;
+      var dir = Directory(component.directory);
+      if (dir.existsSync()) {
+        await dir.deleteIgnoreError(recursive: true);
+      }
+      _states.remove(component.id);
+      TranslationModels.invalidateReadyCache();
+      notifyListeners();
+    } finally {
+      _deleting.remove(component.id);
+    }
   }
 
   /// Total disk usage of installed model files.

@@ -35,39 +35,13 @@ class EnhancedComicImage extends StatefulWidget {
   const EnhancedComicImage({
     super.key,
     required this.image,
-    this.debugImageLabel,
-    this.width,
-    this.height,
-    this.scale = 1.0,
-    this.color,
-    this.opacity,
-    this.colorBlendMode,
-    this.fit,
-    this.alignment = Alignment.center,
-    this.repeat = ImageRepeat.noRepeat,
-    this.centerSlice,
-    this.matchTextDirection = false,
-    this.invertColors = false,
-    this.isAntiAlias = false,
-    this.filterQuality = FilterQuality.medium,
+    required this.builder,
   });
 
   final ui.Image image;
-  final String? debugImageLabel;
-  final double? width;
-  final double? height;
-  final double scale;
-  final Color? color;
-  final Animation<double>? opacity;
-  final BlendMode? colorBlendMode;
-  final BoxFit? fit;
-  final AlignmentGeometry alignment;
-  final ImageRepeat repeat;
-  final Rect? centerSlice;
-  final bool matchTextDirection;
-  final bool invertColors;
-  final bool isAntiAlias;
-  final FilterQuality filterQuality;
+
+  /// Paints the enhanced image, or [image] itself until that is ready.
+  final Widget Function(ui.Image image) builder;
 
   @override
   State<EnhancedComicImage> createState() => _EnhancedComicImageState();
@@ -241,25 +215,7 @@ class _EnhancedComicImageState extends State<EnhancedComicImage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return RawImage(
-      image: _enhanced ?? widget.image,
-      debugImageLabel: widget.debugImageLabel,
-      width: widget.width,
-      height: widget.height,
-      scale: widget.scale,
-      color: widget.color,
-      opacity: widget.opacity,
-      colorBlendMode: widget.colorBlendMode,
-      fit: widget.fit,
-      alignment: widget.alignment,
-      repeat: widget.repeat,
-      centerSlice: widget.centerSlice,
-      matchTextDirection: widget.matchTextDirection,
-      invertColors: widget.invertColors,
-      isAntiAlias: widget.isAntiAlias,
-      filterQuality: widget.filterQuality,
-    );
-  }
+  Widget build(BuildContext context) =>
+      widget.builder(_enhanced ?? widget.image);
 }
 

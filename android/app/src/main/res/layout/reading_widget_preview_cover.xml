@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/reading_widget_background"
+        android:orientation="vertical"
+        android:padding="12dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/reading_widget_icon_background"
+                android:importantForAccessibility="no"
+                android:padding="5dp"
+                android:src="@drawable/reading_widget_history" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="1"
+                android:text="@string/app_name"
+                android:textColor="@color/reading_widget_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/reading_widget_preview_covers"
+                android:textColor="@color/reading_widget_accent"
+                android:textSize="10sp" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_horizontal"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="68dp"
+                android:layout_height="match_parent"
+                android:background="@drawable/reading_widget_cover_background"
+                android:clipToOutline="true"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/reading_widget_placeholder" />
+            <ImageView
+                android:layout_width="68dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/reading_widget_cover_background"
+                android:clipToOutline="true"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/reading_widget_placeholder" />
+        </LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/reading_widget_continue"
+            android:textColor="@color/reading_widget_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+        <ProgressBar
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_marginTop="6dp"
+            android:importantForAccessibility="no"
+            android:indeterminate="false"
+            android:max="100"
+            android:progress="45"
+            android:progressBackgroundTint="@color/reading_widget_track"
+            android:progressTint="@color/reading_widget_accent"
+            android:progressDrawable="@drawable/reading_widget_progress" />
+    </LinearLayout>
+</FrameLayout>

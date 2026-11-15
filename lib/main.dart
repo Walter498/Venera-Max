@@ -7,19 +7,25 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/pages/auth_page.dart';
-import 'package:venera/pages/disclaimer.dart';
-import 'package:venera/pages/main_page.dart';
+import 'package:venera/pages/startup_page.dart';
 import 'package:venera/utils/io.dart';
+import 'package:venera/utils/translations.dart';
 import 'package:window_manager/window_manager.dart';
+import 'components/app_slider_theme.dart';
 import 'components/components.dart';
 import 'components/window_frame.dart';
 import 'foundation/app.dart';
 import 'foundation/appdata.dart';
 import 'foundation/launcher_icon.dart';
+import 'foundation/ohos_follow_worker.dart';
 import 'foundation/download_keepalive.dart';
+import 'foundation/shortcuts.dart';
 import 'foundation/tray.dart';
 import 'headless.dart';
 import 'init.dart';
+
+@pragma('vm:entry-point')
+void followUpdatesBackgroundMain(List<String> args) => runOhosFollowWorker(args);
 
 void main(List<String> args) {
   if (args.contains('--headless')) {
@@ -30,10 +36,29 @@ void main(List<String> args) {
   overrideIO(() {
     runZonedGuarded(() async {
       WidgetsFlutterBinding.ensureInitialized();
-      await init();
+      try {
+        await init();
+      } on PlatformException catch (error) {
+        if (error.code != 'FOLLOW_SCHEDULE_UNAVAILABLE') rethrow;
+        await AppTranslation.init();
+        // This screen must not initialize or read shared application stores.
+        runApp(MaterialApp(
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          home: Scaffold(body: SafeArea(child: Center(child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('Unable to access app data. Close and reopen VeneraX to retry.'.tl),
+              TextButton(onPressed: SystemNavigator.pop, child: Text('Close'.tl)),
+            ]),
+          )))),
+        ));
+        return;
+      }
       runApp(const MyApp());
       if (App.isDesktop) {
         await windowManager.ensureInitialized();
+        AppShortcuts.install();
         windowManager.waitUntilReadyToShow().then((_) async {
           await windowManager.setTitleBarStyle(
             TitleBarStyle.hidden,
@@ -54,6 +79,7 @@ void main(List<String> args) {
 
           WindowPlacement.loop();
           await TrayController.instance.init();
+          await GlobalHotkeys.sync();
           // WM_SETICON is per-process; re-apply the stored icon each launch so
           // the window/taskbar icon follows the user's choice (issue #134).
           await LauncherIconService.applyForStartup();
@@ -78,17 +104,30 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     App.registerForceRebuild(forceRebuild);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     WidgetsBinding.instance.addObserver(this);
+    syncOhosStartupTheme();
     syncReaderNightModeWithSystem(rebuild: false);
-    initDeferred().then((_) {
-      checkUpdates();
-      if (mounted) setState(() {});
-    });
     super.initState();
   }
 
-  bool isAuthPageActive = false;
-
   OverlayEntry? hideContentOverlay;
+  String? _ohosThemeMode;
+
+  void syncOhosStartupTheme() {
+    if (!App.isOhos) return;
+    final mode = switch (appdata.settings['theme_mode']) {
+      'light' => 'light',
+      'dark' => 'dark',
+      _ => 'system',
+    };
+    if (_ohosThemeMode == mode) return;
+    _ohosThemeMode = mode;
+    unawaited(const MethodChannel('venera/method_channel')
+        .invokeMethod<void>('setThemeMode', mode)
+        .catchError((Object error) {
+      if (_ohosThemeMode == mode) _ohosThemeMode = null;
+      Log.warning('Theme', 'Unable to synchronize the startup theme.');
+    }));
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -101,6 +140,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // below, which skips everything when app-lock is off.
     if (state != AppLifecycleState.resumed) {
       Log.flush();
+      if (App.isOhos && App.local.isInitialized) {
+        unawaited(App.local.saveCurrentDownloadingTasks());
+      }
     }
     if (!App.isMobile || !appdata.settings['authorizationRequired']) {
       return;
@@ -124,14 +166,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       hideContentOverlay = null;
     }
     if (state == AppLifecycleState.hidden &&
-        !isAuthPageActive &&
+        !AuthPage.isActive &&
         !IO.isSelectingFiles) {
-      isAuthPageActive = true;
+      AuthPage.isActive = true;
       App.rootContext.to(
         () => AuthPage(
           onSuccessfulAuth: () {
             App.rootContext.pop();
-            isAuthPageActive = false;
+            AuthPage.isActive = false;
           },
         ),
       );
@@ -161,13 +203,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       return;
     }
     appdata.settings['readerNightMode'] = isDark;
-    appdata.saveData();
+    appdata.saveData(deferredInitCompleter.isCompleted);
     if (rebuild) {
       App.forceRebuild();
     }
   }
 
   void forceRebuild() {
+    syncOhosStartupTheme();
     void rebuild(Element el) {
       el.markNeedsBuild();
       el.visitChildren(rebuild);
@@ -212,40 +255,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         'sans-serif'
       ];
     }
-    // Liquid Glass（液態玻璃，iOS 26 風格）開關：設定 → 外觀 → 界面風格
-    final isGlass = appdata.settings['ui_style'] == 'glass';
+    final colors = SeedColorScheme.fromSeeds(
+      primaryKey: primary,
+      secondaryKey: secondary,
+      tertiaryKey: tertiary,
+      brightness: brightness,
+      tones: FlexTones.vividBackground(brightness),
+    );
     return ThemeData(
-      colorScheme: SeedColorScheme.fromSeeds(
-        primaryKey: primary,
-        secondaryKey: secondary,
-        tertiaryKey: tertiary,
-        brightness: brightness,
-        tones: FlexTones.vividBackground(brightness),
-      ),
-      // 玻璃風格：更大圓角 + 去陰影（通透感）
-      cardTheme: isGlass
-          ? CardThemeData(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            )
-          : null,
-      dialogTheme: isGlass
-          ? DialogThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(26),
-              ),
-            )
-          : null,
-      bottomSheetTheme: isGlass
-          ? const BottomSheetThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(26)),
-              ),
-            )
-          : null,
+      colorScheme: colors,
+      sliderTheme: appSliderTheme(colors),
       fontFamily: font,
       fontFamilyFallback: fallback,
       // ExpansionTile shows top/bottom divider lines when expanded by default.
@@ -271,23 +290,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    Widget home;
-    if (!deferredInitCompleter.isCompleted) {
-      home = const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    } else if (appdata.settings['requireDisclaimerConsent'] == true &&
-        appdata.settings['disclaimerConsented'] != true) {
-      home = const DisclaimerConsentPage();
-    } else if (appdata.settings['authorizationRequired']) {
-      home = AuthPage(
-        onSuccessfulAuth: () {
-          App.rootContext.toReplacement(() => const MainPage());
-        },
-      );
-    } else {
-      home = const MainPage();
-    }
     return DynamicColorBuilder(builder: (light, dark) {
       Color? primary, secondary, tertiary;
       if (appdata.settings['color'] != 'system' ||
@@ -301,7 +303,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
       return MaterialApp(
         title: "VeneraX",
-        home: home,
+        home: const StartupPage(),
         debugShowCheckedModeBanner: false,
         theme: getTheme(primary, secondary, tertiary, Brightness.light),
         navigatorKey: App.rootNavigatorKey,

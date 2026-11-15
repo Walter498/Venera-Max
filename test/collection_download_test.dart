@@ -35,11 +35,7 @@ void main() {
     await LocalManager().saveCurrentDownloadingTasks();
     await appdata.saveData(false);
     App.dataPath = originalDataPath;
-    // Cleanup only: a concurrent test may already have removed this directory,
-    // and that must never turn a passing suite into a failure.
-    try {
-      await directory.delete(recursive: true);
-    } catch (_) {}
+    await directory.delete(recursive: true);
   });
 
   tearDown(() {

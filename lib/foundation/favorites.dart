@@ -17,7 +17,10 @@ import 'app.dart';
 import 'comic_source/comic_source.dart';
 import 'comic_state_repository.dart';
 import 'comic_type.dart';
+import 'favorite_folder_tree.dart';
 import 'favorites_meta.dart';
+
+export 'favorite_folder_tree.dart';
 
 String _getTimeString(DateTime time) {
   return time.toIso8601String().replaceFirst("T", " ").substring(0, 19);
@@ -337,12 +340,33 @@ class LocalFavoritesManager with ChangeNotifier {
     'sqlite_sequence',
   };
 
+  /// Folder nesting (child → parent). Not in [_nonFavoriteTables]: a folder
+  /// some old version let the user name "folder_tree" must stay visible, so
+  /// the table is told apart by its columns and nesting is turned off when the
+  /// name is taken.
+  static const _folderTreeTable = 'folder_tree';
+
+  /// Names a new folder can't take.
+  static bool isReservedFolderName(String name) {
+    final lower = name.toLowerCase();
+    return lower.startsWith('sqlite_') ||
+        lower == _folderTreeTable ||
+        _nonFavoriteTables.contains(lower);
+  }
+
   late CommonDatabase _db;
   late String _dbPath;
 
   bool isInitialized = false;
 
   late Map<String, int> counts;
+
+  bool _folderTreeUsable = false;
+
+  /// False only when an old folder occupies the layout table's name.
+  bool get supportsFolderNesting => _folderTreeUsable;
+
+  FavoriteFolderTree? _folderTree;
 
   var _hashedIds = <int, int>{};
 
@@ -356,21 +380,10 @@ class LocalFavoritesManager with ChangeNotifier {
 
   Future<void> init() async {
     counts = {};
+    _folderTree = null;
     _dbPath = "${App.dataPath}/local_favorite.db";
     _db = DatabaseGateway.instance.openManaged(_dbPath);
-    _db.execute("""
-      create table if not exists folder_order (
-        folder_name text primary key,
-        order_value int
-      );
-    """);
-    _db.execute("""
-      create table if not exists folder_sync (
-        folder_name text primary key,
-        source_key text,
-        source_folder text
-      );
-    """);
+    _ensureBookkeepingTables();
     await appdata.ensureInit();
     var folderNames = _getFolderNamesWithDB();
     for (var folder in folderNames) {
@@ -395,6 +408,7 @@ class LocalFavoritesManager with ChangeNotifier {
     for (var folder in folderNames) {
       counts[folder] = count(folder);
     }
+    if (App.isBackgroundTask) return;
     _initHashedIds(folderNames, _dbPath).then((value) {
       _hashedIds = value;
       notifyListeners();
@@ -407,34 +421,32 @@ class LocalFavoritesManager with ChangeNotifier {
   /// background-isolate reader can hold the old file during the swap.
   /// Callers wanting the #106 semantics must snapshot/merge follow-update
   /// bookkeeping around this call ([snapshotUpdateInfo] / [mergeUpdateInfo]).
+  ///
+  /// A backup from a version without nesting has no layout table; importing
+  /// it keeps this device's nesting for the folders it still has, rather than
+  /// flattening every folder.
   Future<void> restoreFrom(String sourcePath) async {
     if (!isInitialized) {
       throw StateError(
         "LocalFavoritesManager is not initialized; cannot restore",
       );
     }
+    final localLinks = _readFolderLinks();
     DatabaseGateway.instance.closeManaged(_dbPath);
     try {
       restoreDatabaseFiles({_dbPath: sourcePath});
     } finally {
       _db = DatabaseGateway.instance.openManaged(_dbPath);
+      _folderTree = null;
     }
+    final importedHasLayout = _isFolderTreeTable();
     // Re-run the schema upkeep init() performs: the imported file may come
     // from an older version or lack the bookkeeping tables entirely.
-    _db.execute("""
-      create table if not exists folder_order (
-        folder_name text primary key,
-        order_value int
-      );
-    """);
-    _db.execute("""
-      create table if not exists folder_sync (
-        folder_name text primary key,
-        source_key text,
-        source_folder text
-      );
-    """);
+    _ensureBookkeepingTables();
     var names = _getFolderNamesWithDB();
+    if (!importedHasLayout) {
+      _restoreFolderLinks(localLinks, names.toSet());
+    }
     for (var folder in names) {
       _ensureFavoriteFolderSchema(folder);
     }
@@ -450,6 +462,85 @@ class LocalFavoritesManager with ChangeNotifier {
     counts = {};
     initCounts();
     notifyListeners();
+  }
+
+  void _ensureBookkeepingTables() {
+    _db.execute("""
+      create table if not exists folder_order (
+        folder_name text primary key,
+        order_value int
+      );
+    """);
+    _db.execute("""
+      create table if not exists folder_sync (
+        folder_name text primary key,
+        source_key text,
+        source_folder text
+      );
+    """);
+    _db.execute("""
+      create table if not exists $_folderTreeTable (
+        folder_name text primary key,
+        parent text
+      );
+    """);
+    _folderTreeUsable = _isFolderTreeTable();
+  }
+
+  bool _isFolderTreeTable() =>
+      _columnsOf(_db, _folderTreeTable).containsAll({'folder_name', 'parent'});
+
+  /// Child → parent links as stored; resolving them is [FavoriteFolderTree]'s
+  /// job.
+  Map<String, String> _readFolderLinks() {
+    if (!_folderTreeUsable) return {};
+    var links = <String, String>{};
+    for (var row in _db.select(
+      "select folder_name, parent from $_folderTreeTable;",
+    )) {
+      var folder = row['folder_name'];
+      var parent = row['parent'];
+      if (folder is String && parent is String) {
+        links[folder] = parent;
+      }
+    }
+    return links;
+  }
+
+  /// Puts back the links whose folder and parent both survived an import.
+  void _restoreFolderLinks(Map<String, String> links, Set<String> folders) {
+    if (!_folderTreeUsable || links.isEmpty) return;
+    _db.execute("BEGIN TRANSACTION");
+    try {
+      for (var e in links.entries) {
+        if (folders.contains(e.key) && folders.contains(e.value)) {
+          _db.execute(
+            "insert or replace into $_folderTreeTable (folder_name, parent) "
+            "values (?, ?);",
+            [e.key, e.value],
+          );
+        }
+      }
+    } catch (e) {
+      // Losing the links only flattens the folders; the import itself stands.
+      Log.error("Restore Folder Layout", e.toString());
+      _db.execute("ROLLBACK");
+      return;
+    }
+    _db.execute("COMMIT");
+  }
+
+  /// Rewrites folder_order as the pre-order of [children], so versions
+  /// without nesting list every folder right after its parent.
+  void _writeFolderOrder(Map<String?, List<String>> children) {
+    final ordered = FavoriteFolderTree.flatten(children);
+    for (var i = 0; i < ordered.length; i++) {
+      _db.execute(
+        "insert or replace into folder_order (folder_name, order_value) "
+        "values (?, ?);",
+        [ordered[i], i],
+      );
+    }
   }
 
   void refreshHashedIds() {
@@ -486,9 +577,16 @@ class LocalFavoritesManager with ChangeNotifier {
   ) {
     var hashedIds = <int, int>{};
     for (var folder in folders) {
-      var rows = db.select("""
-        select id, type from "$folder";
-      """);
+      ResultSet rows;
+      try {
+        rows = db.select("""
+          select id, type from "$folder";
+        """);
+      } on SqliteException {
+        // Deleted or renamed after this read was queued, possibly while it
+        // runs; the refresh that change triggers covers it.
+        continue;
+      }
       for (var row in rows) {
         var id = row["id"] as String;
         var type = row["type"] as int;
@@ -585,7 +683,7 @@ class LocalFavoritesManager with ChangeNotifier {
         comic.name,
         comic.author,
         comic.type.value,
-        comic.tags.join(","),
+        jsonEncode(comic.tags),
         comic.coverPath,
         comic.time,
         translatedTags,
@@ -760,16 +858,75 @@ class LocalFavoritesManager with ChangeNotifier {
     return folders;
   }
 
-  void updateOrder(List<String> folders) {
-    for (int i = 0; i < folders.length; i++) {
-      _db.execute(
-        """
-        insert or replace into folder_order (folder_name, order_value)
-        values (?, ?);
-      """,
-        [folders[i], i],
-      );
+  /// Folders and their nesting, rebuilt only when the folder set or layout
+  /// changes. Building it runs a schema check per folder.
+  FavoriteFolderTree get folderTree {
+    if (!isInitialized) return FavoriteFolderTree.empty;
+    return _folderTree ??= FavoriteFolderTree.build(
+      _getFolderNamesWithDB(),
+      _readFolderLinks(),
+    );
+  }
+
+  /// Puts [folder] under [parent] (null for the top level), as its last
+  /// subfolder.
+  void moveFolder(String folder, String? parent) {
+    var tree = folderTree;
+    if (!_folderTreeUsable) {
+      throw StateError("Folder nesting is unavailable");
     }
+    if (!tree.canMove(folder, parent)) {
+      throw ArgumentError("Cannot move '$folder' into '$parent'");
+    }
+    if (tree.parentOf(folder) == parent) return;
+    var children = tree.childLists();
+    children[tree.parentOf(folder)]!.remove(folder);
+    (children[parent] ??= []).add(folder);
+    _db.execute("BEGIN TRANSACTION");
+    try {
+      if (parent == null) {
+        _db.execute(
+          "delete from $_folderTreeTable where folder_name == ?;",
+          [folder],
+        );
+      } else {
+        _db.execute(
+          "insert or replace into $_folderTreeTable (folder_name, parent) "
+          "values (?, ?);",
+          [folder, parent],
+        );
+      }
+      _writeFolderOrder(children);
+    } catch (e) {
+      _db.execute("ROLLBACK");
+      rethrow;
+    }
+    _db.execute("COMMIT");
+    _folderTree = null;
+    notifyListeners();
+  }
+
+  /// Sets the order of [parent]'s subfolders (null for the top level). Names
+  /// that are no longer subfolders are skipped and missing ones kept at the
+  /// end, so a list read before a sync still applies.
+  void reorderFolders(String? parent, List<String> order) {
+    var tree = folderTree;
+    var current = tree.childrenOf(parent);
+    var next = [
+      for (var f in order)
+        if (current.contains(f)) f,
+    ];
+    next = {...next, ...current}.toList();
+    var children = tree.childLists()..[parent] = next;
+    _db.execute("BEGIN TRANSACTION");
+    try {
+      _writeFolderOrder(children);
+    } catch (e) {
+      _db.execute("ROLLBACK");
+      rethrow;
+    }
+    _db.execute("COMMIT");
+    _folderTree = null;
     notifyListeners();
   }
 
@@ -781,19 +938,20 @@ class LocalFavoritesManager with ChangeNotifier {
     """).first["c"];
   }
 
+  /// Every folder, each followed by its subfolders. A fresh list per call;
+  /// callers may modify it.
+  ///
   /// Empty while the store is down (init not run yet, or failed): reading
   /// through the `late` handle here used to throw LateInitializationError
   /// inside widget builds during degraded sessions, corrupting the element
   /// tree. Callers treat "no folders" as the safe degraded answer.
-  List<String> get folderNames =>
-      isInitialized ? _getFolderNamesWithDB() : const <String>[];
+  List<String> get folderNames => [...folderTree.ordered];
 
-  /// Folder names straight from the in-memory [counts] map — no queries, no
-  /// schema upkeep. [folderNames] re-reads sqlite_master AND runs
-  /// [_ensureFavoriteFolderSchema] per folder on every call, which is far too
-  /// expensive for paths that run per comic card or per frame (#263). Order is
-  /// insertion order rather than the user's display order, so use this only
-  /// where membership is what matters, not presentation.
+  /// Folder names straight from the in-memory [counts] map, without copying
+  /// a list per call as [folderNames] does — meant for paths that run per
+  /// comic card or per frame (#263). Order is insertion order rather than the
+  /// user's display order, so use this only where membership is what matters,
+  /// not presentation.
   Iterable<String> get folderNamesCached =>
       isInitialized ? counts.keys : const <String>[];
 
@@ -847,9 +1005,12 @@ class LocalFavoritesManager with ChangeNotifier {
     return _getFolderComicsAsync(folder, _dbPath);
   }
 
-  List<FavoriteItem> getAllComics() {
+  List<FavoriteItem> getAllComics() => getComicsIn(folderNames);
+
+  /// Comics of [folders], each listed once.
+  List<FavoriteItem> getComicsIn(List<String> folders) {
     var res = <FavoriteItem>{};
-    for (final folder in folderNames) {
+    for (final folder in folders) {
       var comics = _db.select("""
         select * from "$folder";
       """);
@@ -874,28 +1035,62 @@ class LocalFavoritesManager with ChangeNotifier {
   ) {
     var res = <FavoriteItem>{};
     for (final folder in folders) {
-      var comics = db.select("""
-        select * from "$folder";
-      """);
+      ResultSet comics;
+      try {
+        comics = db.select("""
+          select * from "$folder";
+        """);
+      } on SqliteException {
+        // Deleted or renamed after this read was queued; failing here would
+        // leave the page waiting on a load that never finishes.
+        continue;
+      }
       res.addAll(comics.map((element) => FavoriteItem.fromRow(element)));
     }
     return res.toList();
   }
 
   /// Start a new isolate to get all the comics
-  Future<List<FavoriteItem>> getAllComicsAsync() {
-    return _getAllComicsAsync(folderNames, _dbPath);
+  Future<List<FavoriteItem>> getAllComicsAsync() =>
+      getComicsInAsync(folderNames);
+
+  Future<List<FavoriteItem>> getComicsInAsync(List<String> folders) {
+    return _getAllComicsAsync(folders, _dbPath);
+  }
+
+  /// The comic shown first in [folder], used as its cover.
+  FavoriteItem? firstComic(String folder) {
+    if (!existsFolder(folder)) return null;
+    var rows = _db.select("""
+      select * from "$folder"
+      order by display_order
+      limit 1;
+    """);
+    return rows.isEmpty ? null : FavoriteItem.fromRow(rows.first);
   }
 
   void addTagTo(String folder, String id, String tag) {
-    _db.execute(
-      """
-      update "$folder"
-      set tags = '$tag,' || tags
-      where id == ?
-    """,
-      [id],
-    );
+    _db.execute('BEGIN TRANSACTION');
+    try {
+      final rows = _db.select(
+        'select type, tags from "$folder" where id == ?;',
+        [id],
+      );
+      for (final row in rows) {
+        _db.execute(
+          'update "$folder" set tags = ? where id == ? and type == ?;',
+          [
+            jsonEncode([tag, ...FavoriteItem._parseTagsColumn(row['tags'])]),
+            id,
+            row['type'],
+          ],
+        );
+      }
+      _db.execute('COMMIT');
+    } catch (_) {
+      _db.execute('ROLLBACK');
+      rethrow;
+    }
     notifyListeners();
   }
 
@@ -916,7 +1111,7 @@ class LocalFavoritesManager with ChangeNotifier {
   }
 
   bool existsFolder(String name) {
-    return folderNames.contains(name);
+    return folderTree.contains(name);
   }
 
   /// create a folder
@@ -932,7 +1127,7 @@ class LocalFavoritesManager with ChangeNotifier {
         throw "name is empty!";
       }
     }
-    if (existsFolder(name)) {
+    if (existsFolder(name) || isReservedFolderName(name)) {
       if (renameWhenInvalidName) {
         var prevName = name;
         int i = 0;
@@ -945,6 +1140,25 @@ class LocalFavoritesManager with ChangeNotifier {
       }
     }
     _createLocalFolderTable(name);
+    if (_folderTreeUsable) {
+      // Links left by a folder that had this name (deleted or renamed by a
+      // version without nesting) must not hand the new folder a parent or
+      // subfolders.
+      _db.execute(
+        "delete from $_folderTreeTable where folder_name == ? or parent == ?;",
+        [name, name],
+      );
+    }
+    // Appended after every existing folder; without a row the folder would
+    // sort with order 0 among folders the user had arranged.
+    _db.execute(
+      """
+      insert or replace into folder_order (folder_name, order_value)
+      values (?, (select coalesce(max(order_value), -1) + 1 from folder_order));
+    """,
+      [name],
+    );
+    _folderTree = null;
     counts[name] = 0;
     notifyListeners();
     return name;
@@ -1251,20 +1465,21 @@ class LocalFavoritesManager with ChangeNotifier {
   }
 
   /// Move the given items into [targetFolder] from wherever they currently
-  /// live. Used by the "All folders" aggregated view: each item is inserted
-  /// into [targetFolder] and then removed from every other folder. This
-  /// removes the item from all of its source folders, consolidating it into
-  /// the target.
+  /// live. Used by the aggregated views: each item is inserted into
+  /// [targetFolder] and then removed from every other folder, or only from
+  /// [fromFolders] when given (a folder viewed with its subfolders).
   void batchMoveFavoritesToFolder(
     String targetFolder,
-    List<FavoriteItem> items,
-  ) {
+    List<FavoriteItem> items, {
+    List<String>? fromFolders,
+  }) {
     if (!existsFolder(targetFolder)) {
       throw Exception("Target folder does not exist");
     }
     _db.execute("BEGIN TRANSACTION");
     try {
-      var allFolders = _getFolderNamesWithDB();
+      var allFolders = fromFolders?.where(existsFolder).toList() ??
+          _getFolderNamesWithDB();
       var displayOrder = maxValue(targetFolder) + 1;
       for (var item in items) {
         var exists = _db.select(
@@ -1302,21 +1517,64 @@ class LocalFavoritesManager with ChangeNotifier {
     notifyListeners();
   }
 
-  /// delete a folder
-  void deleteFolder(String name) {
-    _db.execute("""
-      drop table "$name";
-    """);
-    _db.execute(
-      """
-      delete from folder_order
-      where folder_name == ?;
-    """,
-      [name],
-    );
-    counts.remove(name);
+  /// Deletes [name]. Its subfolders move up a level, or are deleted with it
+  /// when [withSubfolders] is set. Returns every folder deleted.
+  List<String> deleteFolder(String name, {bool withSubfolders = false}) {
+    var tree = folderTree;
+    var deleted = [
+      name,
+      if (withSubfolders) ...tree.descendantsOf(name),
+    ];
+    _db.execute("BEGIN TRANSACTION");
+    try {
+      for (var folder in deleted) {
+        _db.execute('drop table "$folder";');
+        _db.execute(
+          "delete from folder_order where folder_name == ?;",
+          [folder],
+        );
+        // Otherwise a later folder of this name would inherit the link.
+        _db.execute(
+          "delete from folder_sync where folder_name == ?;",
+          [folder],
+        );
+        if (_folderTreeUsable) {
+          _db.execute(
+            "delete from $_folderTreeTable where folder_name == ?;",
+            [folder],
+          );
+        }
+      }
+      if (_folderTreeUsable && !withSubfolders) {
+        // Promoted children keep their place: folder_order already lists
+        // them right after the folder that is going away.
+        var parent = tree.parentOf(name);
+        if (parent == null) {
+          _db.execute(
+            "delete from $_folderTreeTable where parent == ?;",
+            [name],
+          );
+        } else {
+          _db.execute(
+            "update $_folderTreeTable set parent = ? where parent == ?;",
+            [parent, name],
+          );
+        }
+      }
+    } catch (e) {
+      _db.execute("ROLLBACK");
+      rethrow;
+    }
+    _db.execute("COMMIT");
+    // Deleting an old folder that held the layout table's name frees it.
+    if (!_folderTreeUsable) _ensureBookkeepingTables();
+    _folderTree = null;
+    for (var folder in deleted) {
+      counts.remove(folder);
+    }
     refreshHashedIds();
     notifyListeners();
+    return deleted;
   }
 
   void deleteComicWithId(String folder, String id, ComicType type) {
@@ -1367,9 +1625,14 @@ class LocalFavoritesManager with ChangeNotifier {
     notifyListeners();
   }
 
-  void batchDeleteComicsInAllFolders(List<ComicID> comics) {
+  /// Removes [comics] from every folder, or only from [inFolders] when given.
+  void batchDeleteComicsInAllFolders(
+    List<ComicID> comics, {
+    List<String>? inFolders,
+  }) {
     _db.execute("BEGIN TRANSACTION");
-    var folderNames = _getFolderNamesWithDB();
+    var folderNames = inFolders?.where(existsFolder).toList() ??
+        _getFolderNamesWithDB();
     try {
       for (var comic in comics) {
         LocalFavoriteImageProvider.delete(comic.id, comic.type.value);
@@ -1390,9 +1653,12 @@ class LocalFavoritesManager with ChangeNotifier {
     }
     initCounts();
     _db.execute("COMMIT");
-    for (var comic in comics) {
-      var hash = comic.id.hashCode ^ comic.type.value;
-      _hashedIds.remove(hash);
+    // With a scope the comic may remain elsewhere; initCounts re-reads the ids.
+    if (inFolders == null) {
+      for (var comic in comics) {
+        var hash = comic.id.hashCode ^ comic.type.value;
+        _hashedIds.remove(hash);
+      }
     }
     notifyListeners();
   }
@@ -1446,32 +1712,63 @@ class LocalFavoritesManager with ChangeNotifier {
   }
 
   void rename(String before, String after) {
-    if (existsFolder(after)) {
+    if (existsFolder(after) || isReservedFolderName(after)) {
       throw "Name already exists!";
     }
     if (after.contains('"')) {
       throw "Invalid name";
     }
-    _db.execute("""
-      ALTER TABLE "$before"
-      RENAME TO "$after";
-    """);
-    _db.execute(
-      """
-      update folder_order
-      set folder_name = ?
-      where folder_name == ?;
-    """,
-      [after, before],
-    );
-    _db.execute(
-      """
-      update folder_sync
-      set folder_name = ?
-      where folder_name == ?;
-    """,
-      [after, before],
-    );
+    _db.execute("BEGIN TRANSACTION");
+    try {
+      var table = before;
+      if (before.toLowerCase() == after.toLowerCase()) {
+        // Table names ignore letter case, so SQLite refuses a rename that only
+        // changes it; going through another name gets there.
+        table = "$before\u0001renaming";
+        _db.execute('ALTER TABLE "$before" RENAME TO "$table";');
+      }
+      _db.execute("""
+        ALTER TABLE "$table"
+        RENAME TO "$after";
+      """);
+      _db.execute(
+        """
+        update folder_order
+        set folder_name = ?
+        where folder_name == ?;
+      """,
+        [after, before],
+      );
+      _db.execute(
+        """
+        update folder_sync
+        set folder_name = ?
+        where folder_name == ?;
+      """,
+        [after, before],
+      );
+      if (_folderTreeUsable) {
+        // Same cleanup as createFolder: stale links naming [after] go first.
+        _db.execute(
+          "delete from $_folderTreeTable where folder_name == ? or parent == ?;",
+          [after, after],
+        );
+        _db.execute(
+          "update $_folderTreeTable set folder_name = ? where folder_name == ?;",
+          [after, before],
+        );
+        _db.execute(
+          "update $_folderTreeTable set parent = ? where parent == ?;",
+          [after, before],
+        );
+      }
+    } catch (e) {
+      _db.execute("ROLLBACK");
+      rethrow;
+    }
+    _db.execute("COMMIT");
+    if (!_folderTreeUsable) _ensureBookkeepingTables();
+    _folderTree = null;
     counts[after] = counts[before] ?? 0;
     counts.remove(before);
     notifyListeners();
@@ -1639,7 +1936,7 @@ class LocalFavoritesManager with ChangeNotifier {
         set tags = ?
         where id == ?;
       """,
-      [tags.join(","), id],
+      [jsonEncode(tags), id],
     );
     notifyListeners();
   }
@@ -1665,7 +1962,7 @@ class LocalFavoritesManager with ChangeNotifier {
         comic.name,
         comic.author,
         comic.coverPath,
-        comic.tags.join(","),
+        jsonEncode(comic.tags),
         comic.id,
         comic.type.value,
       ],
@@ -1691,13 +1988,16 @@ class LocalFavoritesManager with ChangeNotifier {
     });
   }
 
-  void fromJson(String json) {
+  /// Imports a folder written by [folderToJson] under [parent] (null for the
+  /// top level) and returns its name. Old exports carry no nesting, so the
+  /// format is unchanged.
+  String fromJson(String json, {String? parent}) {
     var data = jsonDecode(json);
     var folder = data["name"];
     if (folder == null || folder is! String) {
       throw "Invalid data";
     }
-    if (existsFolder(folder)) {
+    if (existsFolder(folder) || isReservedFolderName(folder)) {
       int i = 0;
       while (existsFolder("$folder($i)")) {
         i++;
@@ -1705,6 +2005,9 @@ class LocalFavoritesManager with ChangeNotifier {
       folder = "$folder($i)";
     }
     createFolder(folder);
+    if (parent != null && _folderTreeUsable && existsFolder(parent)) {
+      moveFolder(folder, parent);
+    }
     for (var comic in data["comics"]) {
       try {
         addComic(folder, FavoriteItem.fromJson(comic));
@@ -1712,6 +2015,7 @@ class LocalFavoritesManager with ChangeNotifier {
         Log.error("Import Data", e.toString());
       }
     }
+    return folder;
   }
 
   void prepareTableForFollowUpdates(String table, [bool clearData = true]) {
@@ -1855,6 +2159,11 @@ class LocalFavoritesManager with ChangeNotifier {
   ///   from an older build and thus older in time. When NEITHER side has a
   ///   timestamp (both legacy), it falls back to the sticky OR that #106
   ///   introduced, so an unread mark is still never silently lost.
+  ///   Exception: when both sides are dated and hold the same
+  ///   `last_update_time`, a read on either side wins regardless of order. A
+  ///   check raises the flag only when its baseline differs, so a flag for an
+  ///   update the other device already read comes from a device that checked
+  ///   before receiving that read; its newer timestamp must not resurrect it.
   /// - `last_update_time` / `last_check_time` follow the freshest check: they
   ///   are restored from the snapshot only when its check is at least as
   ///   recent as the imported row's. Restoring a stale baseline would make
@@ -1880,47 +2189,45 @@ class LocalFavoritesManager with ChangeNotifier {
         }
         _ensureUpdateColumns(db, table);
         // SQLite evaluates every RHS against the pre-update row, so the
-        // `flag_update_time` / `last_check_time` read inside these CASEs sees
-        // the imported value even though the same statement also reassigns it.
-        // `?l*` = snapshot (this device); bare columns = imported (backup).
+        // columns read inside these CASEs see the imported values even though
+        // the same statement also reassigns them.
+        // ?1 flag time, ?2 flag, ?3 update time, ?4 check time (0 if none),
+        // ?5 check time: snapshot (this device); bare columns = imported.
+        const sameUpdate =
+            '?1 is not null and flag_update_time is not null '
+            'and ?3 is not null and ?3 == last_update_time';
         var statement = db.prepare("""
           update "$table" set
             has_new_update = case
-              when ? is not null and flag_update_time is not null
-                then case when ? >= flag_update_time
-                  then ? else coalesce(has_new_update, 0) end
-              when ? is not null then ?
+              when $sameUpdate then coalesce(has_new_update, 0) & ?2
+              when ?1 is not null and flag_update_time is not null
+                then case when ?1 >= flag_update_time
+                  then ?2 else coalesce(has_new_update, 0) end
+              when ?1 is not null then ?2
               when flag_update_time is not null then coalesce(has_new_update, 0)
-              else (coalesce(has_new_update, 0) | ?) end,
+              else (coalesce(has_new_update, 0) | ?2) end,
             flag_update_time = case
-              when ? is not null and (flag_update_time is null or ? >= flag_update_time)
-                then ?
+              when $sameUpdate and ?2 != coalesce(has_new_update, 0)
+                then case when ?2 == 0 then ?1 else flag_update_time end
+              when ?1 is not null and (flag_update_time is null or ?1 >= flag_update_time)
+                then ?1
               else flag_update_time end,
             last_update_time = case
-              when ? >= coalesce(last_check_time, 0) and ? is not null then ?
+              when ?4 >= coalesce(last_check_time, 0) and ?3 is not null then ?3
               else last_update_time end,
             last_check_time = case
-              when ? >= coalesce(last_check_time, 0) and ? is not null then ?
+              when ?4 >= coalesce(last_check_time, 0) and ?5 is not null then ?5
               else last_check_time end
-          where id == ? and type == ?;
+          where id == ?6 and type == ?7;
         """);
         try {
           for (var row in entry.value) {
-            var checkTime = row.lastCheckTime ?? 0;
-            var flagTime = row.flagUpdateTime;
-            var flag = row.hasNewUpdate ? 1 : 0;
             statement.execute([
-              // has_new_update
-              flagTime, // both-dated guard
-              flagTime, flag, // local newer -> local flag
-              flagTime, flag, // only local dated -> local flag
-              flag, // neither dated -> OR
-              // flag_update_time
-              flagTime, flagTime, flagTime,
-              // last_update_time
-              checkTime, row.lastUpdateTime, row.lastUpdateTime,
-              // last_check_time
-              checkTime, row.lastCheckTime, row.lastCheckTime,
+              row.flagUpdateTime,
+              row.hasNewUpdate ? 1 : 0,
+              row.lastUpdateTime,
+              row.lastCheckTime ?? 0,
+              row.lastCheckTime,
               row.id,
               row.type,
             ]);

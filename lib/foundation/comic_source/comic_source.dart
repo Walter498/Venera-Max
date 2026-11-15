@@ -10,7 +10,6 @@ import 'package:flutter/widgets.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/comic_collection_store.dart';
-import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/comic_source/collection_source.dart';
 import 'package:venera/foundation/comic_source/source_library.dart';
 import 'package:venera/foundation/comic_source/webdav_source.dart';
@@ -760,14 +759,6 @@ class ComicSource {
 
   final ChapterCommentsLoader? chapterCommentsLoader;
 
-  /// Optional: lets the source perform an HTTP GET for the app.
-  ///
-  /// Some hosts reject the app's own client while accepting the source's, so
-  /// features without a source hook (community, rank metadata) can go through
-  /// the source's request path. Assigned by the parser when the script exposes
-  /// [apiFetch]; null means the feature must use its own transport.
-  Future<Res<String>> Function(String path, [Object? body])? apiFetch;
-
   final SendChapterCommentFunc? sendChapterCommentFunc;
 
   final RegExp? idMatcher;
@@ -824,6 +815,14 @@ class ComicSource {
     if (_lastSavedCommentRevision != revision) {
       _lastSavedCommentRevision = revision;
       settingsChanges.changed();
+    }
+    if (App.isBackgroundTask) {
+      final file = File("${App.dataPath}/comic_source/$key.data");
+      file.parent.createSync(recursive: true);
+      writeStringAtomicSync(file.path, jsonEncode(data));
+      DataSync().requestAutoUpload();
+      return;
+    }
     }
     if (_haveWaitingTask) return;
     while (_isSaving) {
@@ -1116,9 +1115,6 @@ typedef CategoryOptionsLoader =
       String? param,
     );
 
-typedef CategoryComicsFilterLoader =
-    Future<Res<List<Comic>>> Function(CategoryFilterRequest request);
-
 class CategoryComicsData {
   /// options
   final List<CategoryComicsOptions>? options;
@@ -1132,22 +1128,12 @@ class CategoryComicsData {
   /// [Res.subData] should be maxPage or null if there is no limit.
   final CategoryComicsLoader load;
 
-  /// Optional source-native server-side loader for a complete filter state.
-  /// The host must not synthesize a combined param when this is absent.
-  final CategoryComicsFilterLoader? loadWithFilters;
-
-  /// Groups whose source API supports multiple values from the same row.
-  /// Different rows can still be combined whenever loadWithFilters exists.
-  final Set<String>? multiSelectGroups;
-
   final RankingData? rankingData;
 
   const CategoryComicsData({
     this.options,
     this.optionsLoader,
     required this.load,
-    this.loadWithFilters,
-    this.multiSelectGroups,
     this.rankingData,
   });
 }
