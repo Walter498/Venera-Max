@@ -15,7 +15,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version-file: pubspec.yaml
+          flutter-version: '3.44.3'
           architecture: x64
       - run: sudo xcode-select --switch /Applications/Xcode_16.4.app || true
       - run: flutter pub get
