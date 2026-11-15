@@ -5,6 +5,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:venera/foundation/chapter_metadata.dart';
+import 'package:venera/foundation/category_filter_plan.dart';
 
 import 'package:flutter/widgets.dart';
 import 'package:venera/foundation/app.dart';
@@ -545,6 +546,9 @@ class ComicSource {
   final String url;
 
   final String version;
+
+  /// Optional source-owned API transport used by the Lizi/Qingman bridges.
+  Future<Res<String>> Function(String path, [dynamic body])? apiFetch;
 
   final ({CommentCapabilities? work, CommentCapabilities? chapter}) _initialCommentCapabilities;
   final CommentCapabilities? Function(bool chapter)? resolveCommentCapabilities;
@@ -1129,11 +1133,15 @@ class CategoryComicsData {
 
   final RankingData? rankingData;
 
+  /// Source-declared groups that can be selected together in category filters.
+  final List<String>? multiSelectGroups;
+
   const CategoryComicsData({
     this.options,
     this.optionsLoader,
     required this.load,
     this.rankingData,
+    this.multiSelectGroups,
   });
 }
 

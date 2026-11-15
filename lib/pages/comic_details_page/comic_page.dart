@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +18,8 @@ import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/chapter_duplicates.dart';
 import 'package:venera/foundation/comic_collection_store.dart';
 import 'package:venera/foundation/comic_details_cache.dart';
+import 'package:venera/foundation/cache_manager.dart';
+import 'package:venera/foundation/js_engine.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comic_state_repository.dart';
 import 'package:venera/foundation/comic_type.dart';
@@ -145,6 +148,10 @@ class ComicPage extends StatefulWidget {
 
 class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     with _ComicPageActions {
+  int _coverRefreshVersion = 0;
+
+  String get _coverUrl => comic.cover.isNotEmpty ? comic.cover : widget.cover ?? '';
+
   @override
   History? history;
 
@@ -413,6 +420,16 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     ComicCollectionStore.setDetailDisplayMode(mode);
     ComicSourceManager().refreshCollectionSources();
   }
+
+  VoidCallback? get jumpToLastReadChapter => history == null ? null : () {
+    if (scrollController.hasClients) {
+      scrollController.animateTo(
+        scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+  };
 
   @override
   void reloadDetails() {
@@ -1769,6 +1786,63 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         _preloadComments(source, comic.id, comic.subId);
         return _commentsSession;
       }));
+  }
+
+  Widget _buildCollectionCovers() {
+    final collection = _collection;
+    if (collection == null || collection.members.isEmpty) {
+      return const SliverPadding(padding: EdgeInsets.zero);
+    }
+    final comics = [
+      for (final member in collection.members)
+        Comic(
+          member.label,
+          member.cachedCover,
+          member.comicId,
+          member.cachedSubtitle.isEmpty ? null : member.cachedSubtitle,
+          const ['Collection member'],
+          '',
+          member.sourceKey,
+          null,
+          null,
+        ),
+    ];
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: _ComicSectionHeader(
+            icon: Icons.collections_bookmark_outlined,
+            title: 'Comics in collection'.tl,
+            trailing: Text(
+              '${comics.length}',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: context.colorScheme.outline,
+              ),
+            ),
+          ),
+        ),
+        SliverGridComics(
+          comics: comics,
+          onTap: (comic, heroID) {
+            final member = collection.members.firstWhere(
+              (item) =>
+                  item.sourceKey == comic.sourceKey && item.comicId == comic.id,
+            );
+            context.to(
+              () => ComicPage(
+                id: member.comicId,
+                sourceKey: member.sourceKey,
+                cover: member.cachedCover,
+                title: member.label,
+                heroID: heroID,
+              ),
+            );
+          },
+          badgeBuilder: (comic) => ComicSource.find(comic.sourceKey)?.name,
+        ),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
+      ],
+    );
   }
 
   Widget buildChapters() {

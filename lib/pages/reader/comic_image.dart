@@ -138,6 +138,12 @@ class _ComicImageState extends State<ComicImage> with WidgetsBindingObserver {
 
   static clear() => _cache.clear();
 
+  bool get split => _imageInfo != null &&
+      widget.width == double.infinity &&
+      widget.widePageSplit.appliesTo(Size(
+        _imageInfo!.image.width.toDouble(), _imageInfo!.image.height.toDouble(),
+      ));
+
   /// Whether the page is laid out as two stacked halves.
   bool get isShownSplit {
     final size = _cache[widget.image.hashCode];

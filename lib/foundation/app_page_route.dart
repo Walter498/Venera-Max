@@ -695,8 +695,8 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
     } else if (event is PointerUpEvent) {
       // Only a swipe that was not aborted resolves through a drag end.
       if (_accepted && !_suppressed) {
-        final Velocity velocity =
-            _velocityTracker?.getVelocity() ?? Velocity.zero;
+        final velocity =
+            _velocityTracker?.getVelocity().pixelsPerSecond.dx ?? 0.0;
 
         onEnd(
           DragEndDetails(

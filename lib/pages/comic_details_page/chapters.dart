@@ -262,6 +262,8 @@ class _NormalComicChapters extends StatefulWidget {
 
 class _NormalComicChaptersState extends State<_NormalComicChapters>
     with _ChapterSelectionMixin {
+  int? _locatedChapter;
+  final _chapterGridKey = GlobalKey();
   late _ComicPageState state;
 
   late bool reverse;
@@ -1084,5 +1086,23 @@ class _ChaptersUpdatingIndicator extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+
+class _LazyChapterCover extends StatelessWidget {
+  const _LazyChapterCover({required this.coverUrl, required this.placeholderIndex, required this.sourceKey, required this.comicId, required this.epId});
+  final String? coverUrl;
+  final int placeholderIndex;
+  final String sourceKey;
+  final String comicId;
+  final String epId;
+  @override
+  Widget build(BuildContext context) {
+    final url = coverUrl;
+    if (url == null || url.isEmpty) {
+      return ColoredBox(color: context.colorScheme.surfaceContainerHighest, child: Center(child: Text('$placeholderIndex')));
+    }
+    return AnimatedImage(image: CachedImageProvider(url, sourceKey: sourceKey));
   }
 }

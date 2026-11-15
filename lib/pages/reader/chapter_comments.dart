@@ -228,6 +228,7 @@ class _ChapterCommentTile extends StatefulWidget {
     required this.showAvatar,
     this.showActions = true,
     this.provider,
+    this.onContentTap,
   });
 
   final Comment comment;
@@ -927,5 +928,444 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
               onPressed:_openAll,child:Text('View all comments'.tl))),
           ]));
       });
+  }
+}
+
+
+class EmbeddedChapterCommentsPage extends StatefulWidget {
+  const EmbeddedChapterCommentsPage({
+    super.key,
+    required this.comicId,
+    required this.epId,
+    required this.source,
+    required this.comicTitle,
+    required this.chapterTitle,
+    this.scrollWithReader = false,
+    this.chapterNavigation,
+    this.onPageTap,
+  });
+
+  final String comicId;
+  final String epId;
+  final ComicSource source;
+  final String comicTitle;
+  final String chapterTitle;
+
+  final bool scrollWithReader;
+  final Widget? chapterNavigation;
+
+  /// A tap, at its global position, on the page rather than on one of its
+  /// controls: the input box, the buttons, loading more comments.
+  final void Function(Offset position)? onPageTap;
+
+  @override
+  State<EmbeddedChapterCommentsPage> createState() =>
+      _EmbeddedChapterCommentsPageState();
+}
+
+class _EmbeddedChapterCommentsPageState
+    extends State<EmbeddedChapterCommentsPage> {
+  bool _loading = true;
+  List<Comment>? _comments;
+  String? _error;
+  int _page = 1;
+  int? maxPage;
+  var textController = TextEditingController();
+  final inputFocusNode = FocusNode();
+  final scrollController = ScrollController();
+  bool sending = false;
+
+  /// Both loads are build-triggered (loading placeholder / list tail); a
+  /// rebuild during the request used to fire a duplicate one, double-loading
+  /// the same page.
+  bool _requestInFlight = false;
+
+  Offset? _tapDownPosition;
+
+  bool _inputFocusedOnTapDown = false;
+
+  /// Set once the finger has been down long enough to be a long press, which
+  /// lifting must not turn into a page tap.
+  bool _heldLong = false;
+
+  Timer? _holdTimer;
+
+  @override
+  void dispose() {
+    _holdTimer?.cancel();
+    textController.dispose();
+    inputFocusNode.dispose();
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _tapDownPosition = event.position;
+    _inputFocusedOnTapDown = inputFocusNode.hasFocus;
+    _heldLong = false;
+    _holdTimer?.cancel();
+    _holdTimer = Timer(kLongPressTimeout, () => _heldLong = true);
+  }
+
+  void _onPageTap() {
+    final position = _tapDownPosition;
+    if (position == null || _heldLong) return;
+    if (_inputFocusedOnTapDown || inputFocusNode.hasFocus) {
+      // The first tap away from a comment being typed only puts the keyboard
+      // away; turning the page would throw the draft away.
+      inputFocusNode.unfocus();
+      return;
+    }
+    widget.onPageTap?.call(position);
+  }
+
+  /// [child] passes its taps to [EmbeddedChapterCommentsPage.onPageTap].
+  Widget _withPageTap(Widget child) {
+    if (widget.onPageTap == null) return child;
+    return Listener(
+      onPointerDown: _onPointerDown,
+      onPointerUp: (_) => _holdTimer?.cancel(),
+      onPointerCancel: (_) => _holdTimer?.cancel(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: _onPageTap,
+        child: child,
+      ),
+    );
+  }
+
+  /// A control the page tap must not go through.
+  Widget _control(Widget child) =>
+      widget.onPageTap == null ? child : _ChapterCommentsControl(child: child);
+
+  void firstLoad() async {
+    if (_requestInFlight) return;
+    _requestInFlight = true;
+    var res = await widget.source.chapterCommentsLoader!(
+      widget.comicId,
+      widget.epId,
+      1,
+      null,
+    );
+    _requestInFlight = false;
+    if (res.error) {
+      if (mounted) {
+        setState(() {
+          _error = res.errorMessage;
+          _loading = false;
+        });
+      }
+    } else if (mounted) {
+      var filteredComments = res.data
+          .where((c) => !_shouldBlockComment(c))
+          .toList();
+      setState(() {
+        _comments = filteredComments;
+        _loading = false;
+        maxPage = res.subData;
+      });
+    }
+  }
+
+  void loadMore() async {
+    if (_requestInFlight) return;
+    if (widget.scrollWithReader) {
+      setState(() => _requestInFlight = true);
+    } else {
+      _requestInFlight = true;
+    }
+    var res = await widget.source.chapterCommentsLoader!(
+      widget.comicId,
+      widget.epId,
+      _page + 1,
+      null,
+    );
+    _requestInFlight = false;
+    if (res.error) {
+      if (mounted) {
+        if (widget.scrollWithReader) setState(() {});
+        context.showMessage(message: res.errorMessage ?? "Unknown Error");
+      }
+    } else if (mounted) {
+      var filteredComments = res.data
+          .where((c) => !_shouldBlockComment(c))
+          .toList();
+      setState(() {
+        _comments!.addAll(filteredComments);
+        _page++;
+        if (maxPage == null && res.data.isEmpty) {
+          maxPage = _page;
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _withPageTap(_buildPage());
+  }
+
+  Widget _buildPage() {
+    return Container(
+      color: context.colorScheme.surface,
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: widget.scrollWithReader
+              ? MainAxisSize.min
+              : MainAxisSize.max,
+          children: [
+            _buildHeader(),
+            if (widget.scrollWithReader)
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 160),
+                child: _buildBody(),
+              )
+            else
+              Expanded(child: _buildBody()),
+            _control(_buildBottom()),
+            if (widget.chapterNavigation != null)
+              _control(widget.chapterNavigation!),
+            // Only this spacer may depend on the keyboard inset: reading it at
+            // the page root rebuilt the whole comments grid on every frame of
+            // the IME animation (#107). Scoped here, those frames only resize
+            // an empty box and relayout the column.
+            ListenableBuilder(
+              listenable: inputFocusNode,
+              builder: (context, _) => SizedBox(
+                height: widget.scrollWithReader && !inputFocusNode.hasFocus
+                    ? 0
+                    : MediaQuery.viewInsetsOf(context).bottom,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: context.colorScheme.outlineVariant,
+            width: 0.6,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (widget.chapterNavigation == null)
+            _control(
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                tooltip: "Exit".tl,
+              ),
+            ),
+          const SizedBox(width: 4),
+          Icon(Icons.comment, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("Chapter Comments".tl, style: ts.s18),
+                Text(widget.chapterTitle, style: ts.s12),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      firstLoad();
+      return const Center(child: CircularProgressIndicator());
+    } else if (_error != null) {
+      return NetworkError(
+        message: _error!,
+        retry: () {
+          setState(() {
+            _loading = true;
+            _error = null;
+          });
+        },
+        withAppbar: false,
+      );
+    } else if (_comments == null || _comments!.isEmpty) {
+      return Center(child: Text("No comments yet".tl, style: ts.s14));
+    } else {
+      var showAvatar = _comments!.any((e) => e.avatar != null);
+      return _buildCommentsList(showAvatar);
+    }
+  }
+
+  Widget _buildCommentsList(bool showAvatar) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final crossAxisCount = isLandscape ? 2 : 1;
+
+    if (widget.scrollWithReader) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MasonryGridView.count(
+            primary: false,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: crossAxisCount,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            itemCount: _comments!.length,
+            itemBuilder: (context, index) => _ChapterCommentTile(
+              comment: _comments![index],
+              source: widget.source,
+              comicId: widget.comicId,
+              epId: widget.epId,
+              showAvatar: showAvatar,
+              onContentTap: _contentTap,
+            ),
+          ),
+          if (_page < (maxPage ?? _page + 1))
+            _control(
+              TextButton(
+                onPressed: _requestInFlight ? null : loadMore,
+                child: Text(
+                  _requestInFlight ? 'Loading'.tl : 'Load more comments'.tl,
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
+    return AppScrollBar(
+      controller: scrollController,
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        child: MasonryGridView.count(
+          controller: scrollController,
+          crossAxisCount: crossAxisCount,
+          mainAxisSpacing: 0,
+          crossAxisSpacing: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          itemCount: _comments!.length + 1,
+          itemBuilder: (context, index) {
+            if (index == _comments!.length) {
+              if (_page < (maxPage ?? _page + 1)) {
+                loadMore();
+                return const ListLoadingIndicator();
+              } else {
+                return const SizedBox();
+              }
+            }
+            return _ChapterCommentTile(
+              comment: _comments![index],
+              source: widget.source,
+              comicId: widget.comicId,
+              epId: widget.epId,
+              showAvatar: showAvatar,
+              onContentTap: _contentTap,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  VoidCallback? get _contentTap => widget.onPageTap == null ? null : _onPageTap;
+
+  Widget _buildBottom() {
+    if (widget.source.sendChapterCommentFunc == null) {
+      return const SizedBox(height: 0);
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: context.colorScheme.outlineVariant,
+            width: 0.6,
+          ),
+        ),
+      ),
+      child: Material(
+        color: context.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(24),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: textController,
+                focusNode: inputFocusNode,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  hintText: "Comment".tl,
+                ),
+                minLines: 1,
+                maxLines: 5,
+              ),
+            ),
+            if (sending)
+              const Padding(
+                padding: EdgeInsets.all(8),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              IconButton(
+                onPressed: () async {
+                  if (textController.text.isEmpty) {
+                    return;
+                  }
+                  setState(() {
+                    sending = true;
+                  });
+                  var b = await widget.source.sendChapterCommentFunc!(
+                    widget.comicId,
+                    widget.epId,
+                    textController.text,
+                    null,
+                  );
+                  if (!mounted) return;
+                  if (!b.error) {
+                    textController.text = "";
+                    setState(() {
+                      sending = false;
+                      _loading = true;
+                      _comments?.clear();
+                      _page = 1;
+                      maxPage = null;
+                    });
+                  } else {
+                    if (mounted) {
+                      context.showMessage(message: b.errorMessage ?? "Error");
+                    }
+                    setState(() {
+                      sending = false;
+                    });
+                  }
+                },
+                icon: Icon(
+                  Icons.send,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+          ],
+        ).paddingLeft(16).paddingRight(4),
+      ),
+    );
   }
 }

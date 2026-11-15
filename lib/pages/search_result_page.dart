@@ -39,6 +39,8 @@ class SearchResultPage extends StatefulWidget {
 
   final List<String>? options;
 
+  final Set<String> initialTags;
+
   @override
   State<SearchResultPage> createState() => _SearchResultPageState();
 }
