@@ -306,6 +306,24 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
   }
 }
 
+/// Keeps taps on and around a comment control, including a disabled one, from
+/// reaching the page under it.
+class _ChapterCommentsControl extends StatelessWidget {
+  const _ChapterCommentsControl({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: () {},
+      child: child,
+    );
+  }
+}
+
 class _ChapterCommentTile extends StatefulWidget {
   const _ChapterCommentTile({
     required this.comment,
@@ -314,6 +332,7 @@ class _ChapterCommentTile extends StatefulWidget {
     required this.epId,
     required this.showAvatar,
     this.showActions = true,
+    this.onContentTap,
   });
 
   final Comment comment;
@@ -322,6 +341,9 @@ class _ChapterCommentTile extends StatefulWidget {
   final String epId;
   final bool showAvatar;
   final bool showActions;
+
+  /// Set inside the reader: a tap on the comment text is a tap on the page.
+  final VoidCallback? onContentTap;
 
   @override
   State<_ChapterCommentTile> createState() => _ChapterCommentTileState();
@@ -372,7 +394,10 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
                 if (widget.comment.time != null)
                   Text(widget.comment.time!, style: ts.s12),
                 const SizedBox(height: 4),
-                _CommentContent(text: widget.comment.content),
+                _CommentContent(
+                  text: widget.comment.content,
+                  onTap: widget.onContentTap,
+                ),
                 buildActions(),
               ],
             ),
@@ -389,23 +414,33 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
     if (widget.comment.score == null && widget.comment.replyCount == null) {
       return const SizedBox();
     }
-    return SizedBox(
-      height: 36,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          if (widget.comment.score != null &&
-              widget.source.voteCommentFunc != null)
-            buildVote(),
-          if (widget.comment.score != null &&
-              widget.source.likeCommentFunc != null)
-            buildLike(),
-          // Only show reply button if comment has both id and replyCount
-          if (widget.comment.replyCount != null && widget.comment.id != null)
-            buildReply(),
-        ],
-      ),
-    ).paddingTop(8);
+    Widget buttons = Row(
+      mainAxisSize: widget.onContentTap == null
+          ? MainAxisSize.max
+          : MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        if (widget.comment.score != null &&
+            widget.source.voteCommentFunc != null)
+          buildVote(),
+        if (widget.comment.score != null &&
+            widget.source.likeCommentFunc != null)
+          buildLike(),
+        // Only show reply button if comment has both id and replyCount
+        if (widget.comment.replyCount != null && widget.comment.id != null)
+          buildReply(),
+      ],
+    );
+    if (widget.onContentTap != null) {
+      // A near miss next to a button must not turn the page.
+      buttons = Align(
+        alignment: Alignment.centerRight,
+        child: _ChapterCommentsControl(
+          child: SizedBox(height: 36, child: buttons),
+        ),
+      );
+    }
+    return SizedBox(height: 36, child: buttons).paddingTop(8);
   }
 
   Widget buildReply() {
@@ -599,24 +634,30 @@ class _ChapterCommentTileState extends State<_ChapterCommentTile> {
 }
 
 class _CommentContent extends StatelessWidget {
-  const _CommentContent({required this.text});
+  const _CommentContent({required this.text, this.onTap});
 
   final String text;
 
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return CommentContent(text: text, fontSize: commentsFontSize);
+    return CommentContent(text: text, fontSize: commentsFontSize, onTap: onTap);
   }
 }
 
-/// Embedded chapter comments page for displaying at end of chapter in gallery mode.
-class _EmbeddedChapterCommentsPage extends StatefulWidget {
-  const _EmbeddedChapterCommentsPage({
+/// Chapter-end comments, optionally sharing the vertical reader's scroll view.
+class EmbeddedChapterCommentsPage extends StatefulWidget {
+  const EmbeddedChapterCommentsPage({
+    super.key,
     required this.comicId,
     required this.epId,
     required this.source,
     required this.comicTitle,
     required this.chapterTitle,
+    this.scrollWithReader = false,
+    this.chapterNavigation,
+    this.onPageTap,
   });
 
   final String comicId;
@@ -625,19 +666,27 @@ class _EmbeddedChapterCommentsPage extends StatefulWidget {
   final String comicTitle;
   final String chapterTitle;
 
+  final bool scrollWithReader;
+  final Widget? chapterNavigation;
+
+  /// A tap, at its global position, on the page rather than on one of its
+  /// controls: the input box, the buttons, loading more comments.
+  final void Function(Offset position)? onPageTap;
+
   @override
-  State<_EmbeddedChapterCommentsPage> createState() =>
+  State<EmbeddedChapterCommentsPage> createState() =>
       _EmbeddedChapterCommentsPageState();
 }
 
 class _EmbeddedChapterCommentsPageState
-    extends State<_EmbeddedChapterCommentsPage> {
+    extends State<EmbeddedChapterCommentsPage> {
   bool _loading = true;
   List<Comment>? _comments;
   String? _error;
   int _page = 1;
   int? maxPage;
   var textController = TextEditingController();
+  final inputFocusNode = FocusNode();
   final scrollController = ScrollController();
   bool sending = false;
 
@@ -646,12 +695,64 @@ class _EmbeddedChapterCommentsPageState
   /// the same page.
   bool _requestInFlight = false;
 
+  Offset? _tapDownPosition;
+
+  bool _inputFocusedOnTapDown = false;
+
+  /// Set once the finger has been down long enough to be a long press, which
+  /// lifting must not turn into a page tap.
+  bool _heldLong = false;
+
+  Timer? _holdTimer;
+
   @override
   void dispose() {
+    _holdTimer?.cancel();
     textController.dispose();
+    inputFocusNode.dispose();
     scrollController.dispose();
     super.dispose();
   }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _tapDownPosition = event.position;
+    _inputFocusedOnTapDown = inputFocusNode.hasFocus;
+    _heldLong = false;
+    _holdTimer?.cancel();
+    _holdTimer = Timer(kLongPressTimeout, () => _heldLong = true);
+  }
+
+  void _onPageTap() {
+    final position = _tapDownPosition;
+    if (position == null || _heldLong) return;
+    if (_inputFocusedOnTapDown || inputFocusNode.hasFocus) {
+      // The first tap away from a comment being typed only puts the keyboard
+      // away; turning the page would throw the draft away.
+      inputFocusNode.unfocus();
+      return;
+    }
+    widget.onPageTap?.call(position);
+  }
+
+  /// [child] passes its taps to [EmbeddedChapterCommentsPage.onPageTap].
+  Widget _withPageTap(Widget child) {
+    if (widget.onPageTap == null) return child;
+    return Listener(
+      onPointerDown: _onPointerDown,
+      onPointerUp: (_) => _holdTimer?.cancel(),
+      onPointerCancel: (_) => _holdTimer?.cancel(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: _onPageTap,
+        child: child,
+      ),
+    );
+  }
+
+  /// A control the page tap must not go through.
+  Widget _control(Widget child) =>
+      widget.onPageTap == null ? child : _ChapterCommentsControl(child: child);
 
   void firstLoad() async {
     if (_requestInFlight) return;
@@ -684,7 +785,11 @@ class _EmbeddedChapterCommentsPageState
 
   void loadMore() async {
     if (_requestInFlight) return;
-    _requestInFlight = true;
+    if (widget.scrollWithReader) {
+      setState(() => _requestInFlight = true);
+    } else {
+      _requestInFlight = true;
+    }
     var res = await widget.source.chapterCommentsLoader!(
       widget.comicId,
       widget.epId,
@@ -694,6 +799,7 @@ class _EmbeddedChapterCommentsPageState
     _requestInFlight = false;
     if (res.error) {
       if (mounted) {
+        if (widget.scrollWithReader) setState(() {});
         context.showMessage(message: res.errorMessage ?? "Unknown Error");
       }
     } else if (mounted) {
@@ -712,21 +818,40 @@ class _EmbeddedChapterCommentsPageState
 
   @override
   Widget build(BuildContext context) {
+    return _withPageTap(_buildPage());
+  }
+
+  Widget _buildPage() {
     return Container(
       color: context.colorScheme.surface,
       child: SafeArea(
         child: Column(
+          mainAxisSize: widget.scrollWithReader
+              ? MainAxisSize.min
+              : MainAxisSize.max,
           children: [
             _buildHeader(),
-            Expanded(child: _buildBody()),
-            _buildBottom(),
+            if (widget.scrollWithReader)
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 160),
+                child: _buildBody(),
+              )
+            else
+              Expanded(child: _buildBody()),
+            _control(_buildBottom()),
+            if (widget.chapterNavigation != null)
+              _control(widget.chapterNavigation!),
             // Only this spacer may depend on the keyboard inset: reading it at
             // the page root rebuilt the whole comments grid on every frame of
             // the IME animation (#107). Scoped here, those frames only resize
             // an empty box and relayout the column.
-            Builder(
-              builder: (context) =>
-                  SizedBox(height: MediaQuery.viewInsetsOf(context).bottom),
+            ListenableBuilder(
+              listenable: inputFocusNode,
+              builder: (context, _) => SizedBox(
+                height: widget.scrollWithReader && !inputFocusNode.hasFocus
+                    ? 0
+                    : MediaQuery.viewInsetsOf(context).bottom,
+              ),
             ),
           ],
         ),
@@ -747,13 +872,16 @@ class _EmbeddedChapterCommentsPageState
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            tooltip: "Exit".tl,
-          ),
+          if (widget.chapterNavigation == null)
+            _control(
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                tooltip: "Exit".tl,
+              ),
+            ),
           const SizedBox(width: 4),
           Icon(Icons.comment, size: 24),
           const SizedBox(width: 12),
@@ -800,6 +928,39 @@ class _EmbeddedChapterCommentsPageState
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final crossAxisCount = isLandscape ? 2 : 1;
 
+    if (widget.scrollWithReader) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MasonryGridView.count(
+            primary: false,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: crossAxisCount,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            itemCount: _comments!.length,
+            itemBuilder: (context, index) => _ChapterCommentTile(
+              comment: _comments![index],
+              source: widget.source,
+              comicId: widget.comicId,
+              epId: widget.epId,
+              showAvatar: showAvatar,
+              onContentTap: _contentTap,
+            ),
+          ),
+          if (_page < (maxPage ?? _page + 1))
+            _control(
+              TextButton(
+                onPressed: _requestInFlight ? null : loadMore,
+                child: Text(
+                  _requestInFlight ? 'Loading'.tl : 'Load more comments'.tl,
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
     return AppScrollBar(
       controller: scrollController,
       child: ScrollConfiguration(
@@ -826,12 +987,15 @@ class _EmbeddedChapterCommentsPageState
               comicId: widget.comicId,
               epId: widget.epId,
               showAvatar: showAvatar,
+              onContentTap: _contentTap,
             );
           },
         ),
       ),
     );
   }
+
+  VoidCallback? get _contentTap => widget.onPageTap == null ? null : _onPageTap;
 
   Widget _buildBottom() {
     if (widget.source.sendChapterCommentFunc == null) {
@@ -856,6 +1020,7 @@ class _EmbeddedChapterCommentsPageState
             Expanded(
               child: TextField(
                 controller: textController,
+                focusNode: inputFocusNode,
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   isCollapsed: true,
@@ -889,6 +1054,7 @@ class _EmbeddedChapterCommentsPageState
                     textController.text,
                     null,
                   );
+                  if (!mounted) return;
                   if (!b.error) {
                     textController.text = "";
                     setState(() {
@@ -914,102 +1080,6 @@ class _EmbeddedChapterCommentsPageState
               ),
           ],
         ).paddingLeft(16).paddingRight(4),
-      ),
-    );
-  }
-}
-
-/// A compact chapter footer in the reader, with a full comments route.
-/// Never fabricates a total count: the badge counts the fetched first page.
-class _ChapterCommentsPreview extends StatefulWidget {
-  const _ChapterCommentsPreview({super.key, required this.comicId,
-    required this.epId, required this.source, required this.comicTitle,
-    required this.chapterTitle});
-  final String comicId, epId, comicTitle, chapterTitle;
-  final ComicSource source;
-  @override
-  State<_ChapterCommentsPreview> createState() => _ChapterCommentsPreviewState();
-}
-
-class _ChapterCommentsPreviewState extends State<_ChapterCommentsPreview> {
-  List<Comment>? _comments;
-  String? _error;
-  int _generation = 0;
-
-  @override
-  void initState() { super.initState(); _load(); }
-
-  @override
-  void didUpdateWidget(covariant _ChapterCommentsPreview oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.epId != widget.epId || oldWidget.comicId != widget.comicId ||
-        oldWidget.source.key != widget.source.key) {
-      _comments = null; _error = null; _load();
-    }
-  }
-
-  Future<void> _load() async {
-    final generation = ++_generation;
-    try {
-      final res = await widget.source.chapterCommentsLoader!(
-        widget.comicId, widget.epId, 1, null);
-      if (!mounted || generation != _generation) return;
-      setState(() {
-        if (res.error) { _error = res.errorMessage ?? 'Comments unavailable'; }
-        else { _comments = res.data.where((c) => !_shouldBlockComment(c)).toList(); }
-      });
-    } catch (e) {
-      if (mounted && generation == _generation) setState(() => _error = e.toString());
-    }
-  }
-
-  void _openAll() {
-    context.to(() => ChapterCommentsPage(
-      comicId: widget.comicId, epId: widget.epId, source: widget.source,
-      comicTitle: widget.comicTitle, chapterTitle: widget.chapterTitle,
-    ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final comments = _comments;
-    return Material(
-      color: context.colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-            const SizedBox(width: 8),
-            Expanded(child: Text('Chapter Comments'.tl, style: ts.s18)),
-            TextButton(onPressed: _openAll, child: Text('View all comments'.tl)),
-          ]),
-          Text(widget.chapterTitle, style: ts.s12.withColor(context.colorScheme.outline)),
-          const SizedBox(height: 10),
-          if (comments == null && _error == null)
-            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
-          else if (_error != null)
-            TextButton(onPressed: () { setState(() { _error = null; }); _load(); },
-              child: Text('Retry'.tl))
-          else if (comments!.isEmpty)
-            Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: Text('No comments'.tl))
-          else
-            for (final comment in comments.take(3))
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(comment.userName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  if (comment.time != null) Text(comment.time!, style: ts.s12.withColor(context.colorScheme.outline)),
-                  // Rich content/replies remain on the full page; the compact
-                  // preview is deliberately bounded for long chapter footers.
-                  Text(comment.content, maxLines: 3, overflow: TextOverflow.ellipsis),
-                ]),
-              ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(onPressed: _openAll,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: Text('View comments and reply'.tl)),
-        ]),
       ),
     );
   }

@@ -98,7 +98,9 @@ class LocalComic with HistoryMixin implements Comic {
       cover = row['cover'] as String,
       comicType = ComicType(row['comic_type'] as int),
       downloadedChapters =
-          List.from(jsonDecode(row['downloadedChapters'] as String)),
+          List<String>.from(jsonDecode(row['downloadedChapters'] as String))
+              .toSet()
+              .toList(),
       createdAt = DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
       description = (row['description'] as String?) ?? "";
 
@@ -522,30 +524,48 @@ class LocalManager with ChangeNotifier {
     }
   }
 
+  /// Ids are never handed out twice. History, favorites and the domain mirror
+  /// are keyed by id and can outlive a deleted comic (restored backups, other
+  /// devices), so a reused id would inherit them (issues #135, #316).
+  /// Time-based so devices adding comics independently don't collide either.
   String findValidId(ComicType type) {
     final res = _db.select(
-      '''
-      SELECT id FROM comics WHERE comic_type = ?
-      ORDER BY CAST(id AS INTEGER) DESC
-      LIMIT 1;
-      ''',
+      'SELECT MAX(CAST(id AS INTEGER)) FROM comics WHERE comic_type = ?;',
       [type.value],
     );
-    if (res.isEmpty) {
-      return '1';
-    }
-    return (int.parse((res.first[0])) + 1).toString();
+    final maxId = (res.first[0] as int?) ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return (now > maxId ? now : maxId + 1).toString();
   }
 
   Future<void> add(LocalComic comic, [String? id]) async {
-    var old = find(id ?? comic.id, comic.comicType);
-    var downloaded = List<String>.from(comic.downloadedChapters);
+    final storedId = id ?? comic.id;
+    var old = find(storedId, comic.comicType);
+    var downloaded = comic.downloadedChapters.toSet();
     if (old != null) {
       downloaded.addAll(old.downloadedChapters);
     }
-    _writeComic(comic, id ?? comic.id, downloaded);
+    _writeComic(comic, storedId, downloaded.toList());
     try {
-      const ComicStateRepository().mirrorLocalComic(comic);
+      // Importers pass the real id separately from a placeholder on [comic];
+      // mirroring the placeholder would write another comic's domain row.
+      const ComicStateRepository().mirrorLocalComic(
+        storedId == comic.id
+            ? comic
+            : LocalComic(
+                id: storedId,
+                title: comic.title,
+                subtitle: comic.subtitle,
+                tags: comic.tags,
+                directory: comic.directory,
+                chapters: comic.chapters,
+                cover: comic.cover,
+                comicType: comic.comicType,
+                downloadedChapters: comic.downloadedChapters,
+                createdAt: comic.createdAt,
+                description: comic.description,
+              ),
+      );
     } catch (_) {}
     notifyListeners();
   }
@@ -681,13 +701,18 @@ class LocalManager with ChangeNotifier {
   List<LocalComic> _getComicsSortedByLastRead() {
     var allComics = _db.select('SELECT * FROM comics;');
     var comics = allComics.map((row) => LocalComic.fromRow(row)).toList();
-    comics.sort((a, b) {
-      var historyA = HistoryManager().find(a.id, a.comicType);
-      var historyB = HistoryManager().find(b.id, b.comicType);
-      var timeA = historyA?.time ?? DateTime.fromMillisecondsSinceEpoch(0);
-      var timeB = historyB?.time ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return timeB.compareTo(timeA);
-    });
+    // One lookup per comic: a local history lookup also checks records synced
+    // from other devices, too costly to repeat inside the comparator.
+    final readAt = <LocalComic, int>{
+      for (final comic in comics)
+        comic:
+            HistoryManager()
+                .find(comic.id, comic.comicType)
+                ?.time
+                .millisecondsSinceEpoch ??
+            0,
+    };
+    comics.sort((a, b) => readAt[b]!.compareTo(readAt[a]!));
     return comics;
   }
 
@@ -700,6 +725,20 @@ class LocalManager with ChangeNotifier {
       return null;
     }
     return LocalComic.fromRow(res.first);
+  }
+
+  /// Local ids are assigned per device ([findValidId]), so history synced from
+  /// another device names that device's id. The title is what both copies
+  /// share: pair [id] with the comic here that carries [title], but only when
+  /// [id] is not in use here and exactly one comic matches (issue #348).
+  LocalComic? findSyncedCopy(String id, String title) {
+    if (!isInitialized || title.isEmpty) return null;
+    if (find(id, ComicType.local) != null) return null;
+    final res = _db.select(
+      'SELECT * FROM comics WHERE comic_type = ? AND title = ? LIMIT 2;',
+      [ComicType.local.value, title],
+    );
+    return res.length == 1 ? LocalComic.fromRow(res.first) : null;
   }
 
   @override
@@ -1269,10 +1308,11 @@ class LocalManager with ChangeNotifier {
   }
 
   void batchDeleteComics(
-    List<LocalComic> comics, [
+    List<LocalComic> comics, {
     bool removeFileOnDisk = true,
-    bool removeFavoriteAndHistory = true,
-  ]) {
+    bool removeFavorites = true,
+    bool removeHistory = true,
+  }) {
     if (comics.isEmpty) {
       return;
     }
@@ -1307,8 +1347,10 @@ class LocalManager with ChangeNotifier {
       }
     }
 
-    if (removeFavoriteAndHistory) {
+    if (removeFavorites) {
       LocalFavoritesManager().batchDeleteComicsInAllFolders(comicIDs);
+    }
+    if (removeHistory) {
       HistoryManager().batchDeleteHistories(comicIDs);
     }
 
@@ -1372,6 +1414,41 @@ class LocalManager with ChangeNotifier {
   }
 }
 
+/// Measures files asynchronously so sorting a large library stays responsive.
+Future<List<LocalComic>> sortLocalComicsBySize(
+  List<LocalComic> comics, {
+  bool descending = false,
+}) async {
+  final sizes = <String, int>{};
+  for (final path in comics.map((c) => c.baseDir).toSet()) {
+    var size = 0;
+    try {
+      await for (final entry in Directory(path).list(
+        recursive: true,
+        followLinks: false,
+      )) {
+        if (entry is! File) continue;
+        try {
+          size += await entry.length();
+        } on FileSystemException {
+          // A download or deletion may change files during the scan.
+        }
+      }
+    } on FileSystemException {
+      // Missing or inaccessible files contribute no measurable bytes.
+    }
+    sizes[path] = size;
+  }
+  return List<LocalComic>.of(comics)..sort((a, b) {
+    final bySize = (sizes[a.baseDir] ?? 0).compareTo(sizes[b.baseDir] ?? 0);
+    if (bySize != 0) return descending ? -bySize : bySize;
+    final byTitle = a.title.compareTo(b.title);
+    if (byTitle != 0) return byTitle;
+    final byType = a.comicType.value.compareTo(b.comicType.value);
+    return byType != 0 ? byType : a.id.compareTo(b.id);
+  });
+}
+
 enum LocalSortType {
   defaultSort("default"),
   name("name"),
@@ -1379,11 +1456,15 @@ enum LocalSortType {
   timeDesc("time_desc"),
   timeAsc("time_asc"),
   author("author"),
-  lastRead("last_read");
+  lastRead("last_read"),
+  sizeAsc("size_asc"),
+  sizeDesc("size_desc");
 
   final String value;
 
   const LocalSortType(this.value);
+
+  bool get isSize => this == sizeAsc || this == sizeDesc;
 
   static LocalSortType fromString(String value) {
     for (var type in values) {

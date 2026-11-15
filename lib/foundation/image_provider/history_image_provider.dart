@@ -21,8 +21,14 @@ class HistoryImageProvider
   @override
   Future<Uint8List> load(chunkEvents, checkStop) async {
     var url = history.cover;
-    if (!url.contains('/')) {
-      var localComic = LocalManager().find(history.id, history.type);
+    // A local cover is relative to the comic directory and may sit inside a
+    // chapter folder (`ch1/01.jpg`), so the type decides, not the slash.
+    if (history.type == ComicType.local || !url.contains('/')) {
+      var localComic =
+          LocalManager().find(history.id, history.type) ??
+          (history.type == ComicType.local
+              ? LocalManager().findSyncedCopy(history.id, history.title)
+              : null);
       if (localComic != null) {
         // Delegate to the local provider so a missing/renamed cover file falls
         // back to scanning the comic directory (issue #38) instead of throwing
@@ -44,7 +50,11 @@ class HistoryImageProvider
       history.cover = url;
       // Keep the row's list visibility: this fetch can land after the user
       // deleted the record, and a plain add would put it back (issue #270).
-      HistoryManager().updateHistoryKeepingVisibility(history);
+      final current = HistoryManager().find(history.id, history.type);
+      if (current != null) {
+        current.cover = url;
+        HistoryManager().updateHistoryKeepingVisibility(current);
+      }
     }
     await for (var progress in ImageDownloader.loadThumbnail(
       url,

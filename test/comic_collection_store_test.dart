@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/comic_collection_store.dart';
 import 'package:venera/foundation/comic_source/collection_source.dart';
 
@@ -134,6 +135,21 @@ void main() {
       expect(copy.members.single.displayName, 'Part 1');
       expect(copy.members.single.cachedTitle, 'T1');
       expect(copy.createdAt.millisecondsSinceEpoch, 1234);
+    });
+
+    test('detail display mode defaults to chapters for unknown values', () {
+      expect(
+        CollectionDetailDisplayMode.fromName(null),
+        CollectionDetailDisplayMode.chapters,
+      );
+      expect(
+        CollectionDetailDisplayMode.fromName('unknown'),
+        CollectionDetailDisplayMode.chapters,
+      );
+      expect(
+        CollectionDetailDisplayMode.fromName('covers'),
+        CollectionDetailDisplayMode.covers,
+      );
     });
   });
 
@@ -306,6 +322,66 @@ void main() {
       );
       expect(CollectionMember(sourceKey: 's', comicId: 'the-id').label,
           'the-id');
+    });
+  });
+
+  group('isMember', () {
+    Map<String, dynamic> collection(String id, List<List<String>> members) => {
+      'id': id,
+      'sourceKey': 'comic_collection_$id',
+      'members': [
+        for (final m in members) {'sourceKey': m[0], 'comicId': m[1]},
+      ],
+    };
+
+    setUp(() {
+      appdata.settings[ComicCollectionStore.settingsKey] = [
+        collection('a', [
+          ['jm', '1'],
+          ['local', '2'],
+        ]),
+        collection('b', [
+          ['other', '1'],
+        ]),
+      ];
+    });
+
+    tearDown(() {
+      appdata.settings[ComicCollectionStore.settingsKey] = [];
+    });
+
+    test('reports membership across every collection', () {
+      expect(ComicCollectionStore.isMember('jm', '1'), isTrue);
+      expect(ComicCollectionStore.isMember('local', '2'), isTrue);
+      expect(ComicCollectionStore.isMember('other', '1'), isTrue);
+    });
+
+    test('keys on the source and id pair, not either alone', () {
+      // 'jm/1' is a member and 'other/1' is a member, but neither makes
+      // 'other/2' or 'jm/2' one.
+      expect(ComicCollectionStore.isMember('jm', '2'), isFalse);
+      expect(ComicCollectionStore.isMember('other', '2'), isFalse);
+      expect(ComicCollectionStore.isMember('unknown', '1'), isFalse);
+    });
+
+    test('sees a replaced payload despite the memo', () {
+      // Tiles ask once per build, so the answer is memoised. A sync download or
+      // backup restore swaps the whole settings map without going through the
+      // store's write path, and a memo keyed on anything but the stored list's
+      // identity would keep answering for the configuration just replaced.
+      expect(ComicCollectionStore.isMember('jm', '1'), isTrue);
+      appdata.settings[ComicCollectionStore.settingsKey] = [
+        collection('c', [
+          ['fresh', '9'],
+        ]),
+      ];
+      expect(ComicCollectionStore.isMember('jm', '1'), isFalse);
+      expect(ComicCollectionStore.isMember('fresh', '9'), isTrue);
+    });
+
+    test('is false when nothing is configured', () {
+      appdata.settings[ComicCollectionStore.settingsKey] = null;
+      expect(ComicCollectionStore.isMember('jm', '1'), isFalse);
     });
   });
 

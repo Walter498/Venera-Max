@@ -86,6 +86,9 @@ class MainActivity : FlutterFragmentActivity() {
     private fun handleNotificationRoute(intent: Intent?) {
         val route = intent?.getStringExtra(EXTRA_NOTIFICATION_ROUTE) ?: return
         intent.removeExtra(EXTRA_NOTIFICATION_ROUTE)
+        // Reopening from recents replays the task's last launch intent; that
+        // old tap (or launcher shortcut) must not navigate again.
+        if ((intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return
         val handler = notificationRouteHandler
         if (handler != null) {
             handler.invoke(route)
@@ -130,6 +133,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         GeneratedPluginRegistrant.registerWith(flutterEngine)
+        ReadingWidgets.register(this, flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "venera/method_channel"
@@ -198,6 +202,14 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     val ok = runCatching { applyLauncherIcon(target) }
                         .onFailure { Log.w("Venera", "set launcher icon failed: ${it.message}") }
+                        .getOrDefault(false)
+                    res.success(ok)
+                }
+
+                "setAppShortcuts" -> {
+                    val items = call.arguments as? List<*> ?: emptyList<Any>()
+                    val ok = runCatching { AppShortcuts.publish(this, items) }
+                        .onFailure { Log.w("Venera", "set app shortcuts failed: ${it.message}") }
                         .getOrDefault(false)
                     res.success(ok)
                 }
@@ -368,6 +380,22 @@ class MainActivity : FlutterFragmentActivity() {
                         val ok = runCatching { openBatteryOptimizationSettings() }
                             .getOrDefault(false)
                         res.success(ok)
+                    }
+                    else -> res.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "venera/eink")
+            .setMethodCallHandler { call, res ->
+                when (call.method) {
+                    "rippleSupported" -> res.success(EinkPanel.rippleSupported)
+                    "queueRipple" -> {
+                        val codes = (call.arguments as? List<*>)
+                            ?.mapNotNull { (it as? Number)?.toInt() }
+                        res.success(
+                            codes != null && codes.size == 4 &&
+                                EinkPanel.queueRipple(codes, this)
+                        )
                     }
                     else -> res.notImplemented()
                 }

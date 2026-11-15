@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
-import 'package:venera/foundation/category_filter_plan.dart';
-import 'package:venera/foundation/comic_tag_enricher.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/global_state.dart';
 import 'package:venera/pages/aggregated_search_page.dart';
@@ -18,7 +16,6 @@ class SearchResultPage extends StatefulWidget {
     required this.text,
     required this.sourceKey,
     this.options,
-    this.initialTags = const <String>{},
   });
 
   final String text;
@@ -26,10 +23,6 @@ class SearchResultPage extends StatefulWidget {
   final String sourceKey;
 
   final List<String>? options;
-
-  /// Category labels already selected on the category page; the result list
-  /// starts filtered by them so the search matches what the user is looking at.
-  final Set<String> initialTags;
 
   @override
   State<SearchResultPage> createState() => _SearchResultPageState();
@@ -43,10 +36,6 @@ class _SearchResultPageState extends State<SearchResultPage> {
   late List<String> options;
 
   late String text;
-  final Set<String> _tagFilter = {};
-  final Set<String> _availableTags = {};
-  int? _resultTotal;
-  int _loadedCount = 0;
 
   OverlayEntry? get suggestionOverlay => suggestionsController.entry;
 
@@ -113,22 +102,12 @@ class _SearchResultPageState extends State<SearchResultPage> {
     super.dispose();
   }
 
-  String checkAutoLanguage(String text) {
-    var setting = appdata.settings["autoAddLanguageFilter"] ?? 'none';
-    if (setting == 'none') {
-      return text;
-    }
-    var searchSource = sourceKey;
-    // TODO: Move it to a better place
-    const enabledSources = ['nhentai', 'ehentai'];
-    if (!enabledSources.contains(searchSource)) {
-      return text;
-    }
-    if (!text.contains('language:')) {
-      return '$text language:$setting';
-    }
-    return text;
-  }
+  String checkAutoLanguage(String text) => applyAutoLanguageFilter(
+    text,
+    sourceKey: sourceKey,
+    language: appdata.settings["autoAddLanguageFilter"],
+    enabledSources: appdata.settings["languageFilterSources"],
+  );
 
   @override
   void initState() {
@@ -136,7 +115,6 @@ class _SearchResultPageState extends State<SearchResultPage> {
     text = checkAutoLanguage(widget.text);
     controller = SearchBarController(currentText: text, onSearch: search);
     options = widget.options ?? const [];
-    _tagFilter.addAll(widget.initialTags);
     validateOptions();
     appdata.addSearchHistory(text);
     suggestionsController = _SuggestionsController(controller, sourceKey);
@@ -174,252 +152,27 @@ class _SearchResultPageState extends State<SearchResultPage> {
         ],
       );
     }
-    final serverFilter = _tagFilter.isNotEmpty && searchData.loadWithFilters != null;
-    final filterKey = [..._tagFilter]..sort();
     return ComicList(
-      key: Key(text + options.toString() + sourceKey + filterKey.toString()),
+      key: Key(text + options.toString() + sourceKey),
       enableSelection: true,
-      // Server-filtered results have already satisfied every selected tag.
-      // Local fallback is used only when the source has no filter loader.
-      filterTags: serverFilter ? const <String>{} : _tagFilter,
-      emptyFilterText: '沒有同時符合標籤和搜索結果的漫畫',
-      onAvailableTags: (tags) {
-        if (!mounted) return;
-        setState(() {
-          _availableTags
-            ..clear()
-            ..addAll(tags);
-          // Selections are kept: a label a result does not carry is reported by
-          // the empty-message below instead of being silently unselected.
-        });
-      },
       selectionHandlerCallback: (fn) => _enterSelection = fn,
       scrollbarTopPadding: context.padding.top + 56,
       errorLeading: AppSearchBar(controller: controller, action: buildAction()),
-      onResultCount: (total, loaded) {
-        if (!mounted) return;
-        setState(() {
-          _resultTotal = total;
-          _loadedCount = loaded;
-        });
-      },
-      leadingSliver: SliverMainAxisGroup(
-        slivers: [
-          SliverSearchBar(
-            controller: controller,
-            onChanged: onChanged,
-            action: buildAction(),
-          ),
-          if (_resultTotal != null || _loadedCount > 0)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Text(
-                  _resultTotal == null
-                      ? '已載入 $_loadedCount 本'
-                      : '共 $_resultTotal 本 · 已載入 $_loadedCount 本',
-                  style: TextStyle(color: context.colorScheme.outline),
-                ),
-              ),
-            ),
-        ],
+      leadingSliver: SliverSearchBar(
+        controller: controller,
+        onChanged: onChanged,
+        action: buildAction(),
       ),
-      loadPage: serverFilter
+      loadPage: searchData.loadPage == null
           ? null
-          : (searchData.loadPage == null
-              ? null
-              : (i) => searchData.loadPage!(text, i, options)),
-      loadWithFilters: serverFilter
-          ? (i) => searchData.loadWithFilters!(SearchFilterRequest(
-                keyword: text,
-                selections: _selectedSearchFilters(),
-                options: options,
-                page: i,
-              ))
-          : null,
+          : (i) {
+              return searchData.loadPage!(text, i, options);
+            },
       loadNext: searchData.loadNext == null
           ? null
           : (i) {
               return searchData.loadNext!(text, i, options);
             },
-    );
-  }
-
-  Map<String, List<String>> _sourceTagGroups() {
-    final data = ComicSource.find(sourceKey)?.categoryData;
-    if (data == null) return const {};
-    final groups = <String, List<String>>{};
-    for (final part in data.categories) {
-      if (part is! FixedCategoryPart) continue;
-      final labels = <String>[];
-      for (final item in part.categories) {
-        final label = item.label.trim();
-        final param = item.target.attributes?['param']?.toString();
-        if (label.isNotEmpty && param != null && param != 'rank') {
-          labels.add(label);
-        }
-      }
-      if (labels.isNotEmpty) groups[part.title] = labels.toSet().toList();
-    }
-    return groups;
-  }
-
-  bool _canMultiSelectGroup(String group) {
-    final source = ComicSource.find(sourceKey);
-    final params = <String?>[];
-    for (final part in source?.categoryData?.categories ?? const <BaseCategoryPart>[]) {
-      if (part.title != group) continue;
-      for (final item in part.categories) {
-        params.add(item.target.attributes?['param']?.toString());
-      }
-    }
-    return filterGroupAllowsMultiple(
-      hasServerLoader: _searchData?.loadWithFilters != null,
-      group: group,
-      params: params,
-      declaredGroups: source?.categoryComicsData?.multiSelectGroups,
-    );
-  }
-
-  String? _tagGroupFor(String label) {
-    final data = ComicSource.find(sourceKey)?.categoryData;
-    if (data == null) return null;
-    for (final part in data.categories) {
-      if (part is! FixedCategoryPart) continue;
-      for (final item in part.categories) {
-        if (item.label.trim() == label.trim()) return part.title;
-      }
-    }
-    return null;
-  }
-
-  List<CategoryFilterSelection> _selectedSearchFilters() {
-    final data = ComicSource.find(sourceKey)?.categoryData;
-    if (data == null) return const [];
-    final selected = <CategoryFilterSelection>[];
-    for (final part in data.categories) {
-      if (part is! FixedCategoryPart) continue;
-      for (final item in part.categories) {
-        final label = item.label.trim();
-        if (!_tagFilter.contains(label)) continue;
-        final attr = item.target.attributes;
-        final param = attr?['param']?.toString();
-        if (param == null || param == 'rank') continue;
-        selected.add(CategoryFilterSelection(
-          group: part.title,
-          label: label,
-          param: param,
-          category: attr?['category']?.toString() ?? part.title,
-        ));
-      }
-    }
-    return normalizeCategorySelections(selected);
-  }
-
-  bool _comicMatchesTag(Comic comic, String wanted) {
-    return ComicTagEnricher.instance
-        .tagsFor(comic)
-        .any((tag) => categoryTagMatches(tag, wanted));
-  }
-
-  Future<void> _showTagFilter() async {
-    final groups = _sourceTagGroups();
-    final fallback = groups.isEmpty ? _availableTags.toList() : const <String>[];
-    var picked = {..._tagFilter};
-    await showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      builder: (sheet) => StatefulBuilder(
-        builder: (context, setSheet) {
-          return SizedBox(
-            height: context.height * .68,
-            child: Column(children: [
-              ListTile(
-                title: Text("Filter by tag".tl),
-                subtitle: Text("Source categories".tl),
-                trailing: TextButton(
-                  onPressed: () => setSheet(picked.clear),
-                  child: Text("Clear".tl),
-                ),
-              ),
-              Expanded(
-                child: groups.isEmpty && fallback.isEmpty
-                    ? Center(
-                        child: Text(
-                          "This source provides no filter tags".tl,
-                          textAlign: TextAlign.center,
-                        ),
-                      )
-                    : ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        children: [
-                          if (groups.isNotEmpty)
-                            for (final entry in groups.entries) ...[
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
-                                child: Text(
-                                  entry.key,
-                                  style: const TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: [
-                                  for (final tag in entry.value)
-                                    FilterChip(
-                                      label: Text(tag),
-                                      selected: picked.contains(tag),
-                                      onSelected: (on) => setSheet(() {
-                                        if (on) {
-                                          if (!_canMultiSelectGroup(entry.key)) {
-                                            picked.removeWhere((existing) =>
-                                                _tagGroupFor(existing) == entry.key);
-                                          }
-                                          picked.add(tag);
-                                        } else {
-                                          picked.remove(tag);
-                                        }
-                                      }),
-                                    ),
-                                ],
-                              ),
-                            ]
-                          else
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                for (final tag in fallback)
-                                  FilterChip(
-                                    label: Text(tag),
-                                    selected: picked.contains(tag),
-                                    onSelected: (on) => setSheet(() {
-                                      if (on) picked.add(tag); else picked.remove(tag);
-                                    }),
-                                  ),
-                              ],
-                            ),
-                        ],
-                      ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () {
-                      setState(() { _tagFilter..clear()..addAll(picked); });
-                      Navigator.pop(sheet);
-                    },
-                    child: Text("Apply".tl),
-                  ),
-                ),
-              ),
-            ]),
-          );
-        },
-      ),
     );
   }
 
@@ -435,20 +188,9 @@ class _SearchResultPageState extends State<SearchResultPage> {
           ),
         ),
         Tooltip(
-          message: "Filter by tag".tl,
-          child: IconButton(
-            icon: Badge(
-              isLabelVisible: _tagFilter.isNotEmpty,
-              label: Text('${_tagFilter.length}'),
-              child: const Icon(Icons.filter_alt_outlined),
-            ),
-            onPressed: _showTagFilter,
-          ),
-        ),
-        Tooltip(
           message: "Settings".tl,
           child: IconButton(
-            icon: const Icon(Icons.tune_rounded),
+            icon: const Icon(Icons.filter_alt_outlined),
             onPressed: () async {
               if (suggestionOverlay != null) {
                 suggestionsController.remove();
@@ -475,6 +217,25 @@ class _SearchResultPageState extends State<SearchResultPage> {
       ],
     );
   }
+}
+
+/// Appends `language:<language>` for sources the user opted into.
+String applyAutoLanguageFilter(
+  String text, {
+  required String sourceKey,
+  Object? language,
+  Object? enabledSources,
+}) {
+  if (language is! String || language.isEmpty || language == 'none') {
+    return text;
+  }
+  if (enabledSources is! List || !enabledSources.contains(sourceKey)) {
+    return text;
+  }
+  if (text.contains('language:')) {
+    return text;
+  }
+  return '$text language:$language';
 }
 
 class _SuggestionsController {

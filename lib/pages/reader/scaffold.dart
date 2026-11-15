@@ -2,6 +2,10 @@ part of 'reader.dart';
 
 const _readerChromeAnimationDuration = Duration(milliseconds: 140);
 
+// Native sliders can return values just below an integer page.
+@visibleForTesting
+int readerPageFromSliderValue(double value) => value.round();
+
 class _ReaderScaffold extends StatefulWidget {
   const _ReaderScaffold({required this.child});
 
@@ -125,54 +129,12 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     // Refresh the translation status badge as pages start/finish/fail; the
     // top bar lives in an OverlayEntry that a parent setState won't rebuild.
     ImageTranslationService.instance.addListener(_onTranslationStatusChanged);
-    PreTranslationTaskManager.instance.addListener(_onPreTranslationChanged);
     Future.delayed(const Duration(milliseconds: 200), addDragListener);
+    context.reader._scaffoldState = this;
   }
 
   void _onTranslationStatusChanged() {
     if (mounted) setState(() {});
-  }
-
-  void _onPreTranslationChanged() {
-    if (mounted) setState(() {});
-  }
-
-  PreTranslationTask? get _chapterTranslationTask =>
-      PreTranslationTaskManager.instance.runningTaskFor(
-        context.reader.cid, context.reader.type.sourceKey);
-
-  Widget _buildChapterTranslationChip() {
-    final task = _chapterTranslationTask;
-    if (task == null) return const SizedBox.shrink();
-    final activity = PreTranslationTaskManager.instance.activityOf(task.id);
-    final progress = activity?.liveProgress(task) ?? task.progress;
-    final processed = activity?.liveProcessed(task) ?? task.done + task.failed;
-    final total = task.total;
-    final label = total > 0 ? '$processed/$total' : '…';
-    final elapsed = DateTime.now().difference(task.createdAt).inSeconds;
-    final remaining = processed > 0 && total > processed
-        ? (elapsed * (total - processed) / processed).round()
-        : null;
-    final eta = remaining == null ? '估算中' : '约 ${remaining}s';
-    return Material(
-      color: context.colorScheme.surfaceContainerHigh,
-      elevation: 4,
-      borderRadius: BorderRadius.circular(18),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(width: 20, height: 20,
-            child: CircularProgressIndicator(value: progress <= 0 ? null : progress,
-              strokeWidth: 2.4)),
-          const SizedBox(width: 7),
-          Text('翻譯本章 $label · $eta', style: ts.s12),
-          if (task.failed > 0) ...[
-            const SizedBox(width: 5),
-            Text('失敗 ${task.failed}', style: TextStyle(color: context.colorScheme.error, fontSize: 11)),
-          ],
-        ]),
-      ),
-    );
   }
 
   @override
@@ -180,8 +142,8 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     ImageTranslationService.instance.removeListener(
       _onTranslationStatusChanged,
     );
-    PreTranslationTaskManager.instance.removeListener(_onPreTranslationChanged);
-    // 方向鎖只屬於閱讀器：離開時交還系統預設，其他頁面不受影響
+    // The orientation lock belongs to the reader only: hand the device back to
+    // the platform default so other pages stay unaffected.
     if (rotation != null) {
       SystemChrome.setPreferredOrientations(resolveReadingOrientations(null));
     }
@@ -196,12 +158,41 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     setState(() {
       _isOpen = !_isOpen;
     });
+    context.reader._onMenuToggled(_isOpen);
   }
 
+  /// Reader-only orientation lock: null follows the device, false locks
+  /// portrait, true locks landscape. Reverted in [dispose].
   bool? rotation;
 
   void update() {
     setState(() {});
+  }
+
+  /// Phones in landscape have little height to spare, so the bars collapse to a
+  /// single compact row there.
+  bool get compactBars =>
+      App.isMobile && MediaQuery.orientationOf(context) == Orientation.landscape;
+
+  /// Compact top bar height. The floor follows the text scale: the title area
+  /// stacks a 16sp and a 12sp line when a chapter name is present, so a fixed
+  /// 48 overflows once the system font is enlarged.
+  double get topBarHeight => compactBars
+      ? math.min(
+          kTopBarHeight,
+          math.max(48.0, MediaQuery.textScalerOf(context).scale(16 + 12) + 16),
+        )
+      : kTopBarHeight;
+
+  double get bottomBarHeight => compactBars ? 56.0 : kBottomBarHeight;
+
+  void toggleReadingOrientation() {
+    setState(() {
+      rotation = nextReadingOrientation(rotation);
+    });
+    SystemChrome.setPreferredOrientations(
+      resolveReadingOrientations(rotation),
+    );
   }
 
   /// Night mode overlay tint, selected by `readerNightModeColor` setting.
@@ -223,9 +214,19 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     return Stack(
       children: [
         Positioned.fill(
-          child: AbsorbPointer(
-            absorbing: context.reader.isPageAnimating,
-            child: widget.child,
+          // Keep horizontal turns and zoomed pans protected during animations,
+          // when the content below may be absent from pointer hit tests.
+          child: SwipeRegionMarker(
+            active: () {
+              final reader = context.reader;
+              return (reader.mode != ReaderMode.galleryTopToBottom &&
+                      reader.mode != ReaderMode.continuousTopToBottom) ||
+                  (reader._imageViewController?.isImageZoomed ?? false);
+            },
+            child: AbsorbPointer(
+              absorbing: context.reader.isPageAnimating,
+              child: widget.child,
+            ),
           ),
         ),
         if (appdata.settings['readerNightMode'] == true)
@@ -245,29 +246,6 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             !isOnChapterCommentsPage)
           buildPageInfoText(),
         if (!isOnChapterCommentsPage) buildStatusInfo(),
-        // 自動閱讀中：底部小字提示（連點兩下可關閉）
-        if (context.reader.isAutoReading && !isOnChapterCommentsPage)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 28,
-            child: IgnorePointer(
-              child: Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.toOpacity(0.55),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Text(
-                    '連點兩下關閉自動閱讀',
-                    style: TextStyle(fontSize: 12, color: Colors.white),
-                  ),
-                ),
-              ),
-            ),
-          ),
         Positioned(
           right: 16,
           bottom: 36,
@@ -283,17 +261,11 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             ),
           ),
         ),
-        if (_chapterTranslationTask != null)
-          Positioned(
-            right: 16,
-            bottom: 112,
-            child: IgnorePointer(child: _buildChapterTranslationChip()),
-          ),
         Positioned(
           top: 0,
           left: 0,
           right: 0,
-          height: kTopBarHeight + context.padding.top,
+          height: topBarHeight + context.padding.top,
           child: AnimatedSlide(
             duration: _readerChromeAnimationDuration,
             curve: Curves.easeOutCubic,
@@ -312,6 +284,17 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             child: RepaintBoundary(child: buildBottom()),
           ),
         ),
+        // Topmost: an e-ink refresh must cover the bars and page info as well.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ValueListenableBuilder<Color?>(
+              valueListenable: context.reader._einkRefresher.overlay,
+              builder: (context, color, _) => color == null
+                  ? const SizedBox.shrink()
+                  : ColoredBox(color: color),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -325,15 +308,10 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       child: Container(
         padding: EdgeInsets.only(top: context.padding.top),
         decoration: BoxDecoration(
-          // Liquid Glass：更通透（0.92 → 0.55）
-          color: context.colorScheme.surface.toOpacity(
-              appdata.settings['ui_style'] == 'glass' ? 0.55 : 0.92),
-          border: appdata.settings['ui_style'] == 'glass'
-              ? null
-              : Border(
-                  bottom:
-                      BorderSide(color: Colors.grey.toOpacity(0.5), width: 0.5),
-                ),
+          color: context.colorScheme.surface.toOpacity(0.92),
+          border: Border(
+            bottom: BorderSide(color: Colors.grey.toOpacity(0.5), width: 0.5),
+          ),
         ),
         child: Padding(
           padding: EdgeInsets.only(
@@ -381,24 +359,8 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                     onPressed: openChapterComments,
                   ),
                 ),
-              if (canDownloadFromReader())
-                Tooltip(
-                  message: "Download".tl,
-                  child: IconButton(
-                    icon: const Icon(Icons.download_outlined),
-                    onPressed: pickChaptersAndDownload,
-                  ),
-                ),
               ...buildTranslationControls(),
-              if (ImageTranslationService.isEnabledForComic(
-                    context.reader.cid, context.reader.type.sourceKey))
-                Tooltip(
-                  message: "Translate current chapter".tl,
-                  child: IconButton(
-                    icon: const Icon(Icons.translate_rounded),
-                    onPressed: context.reader.translateCurrentChapter,
-                  ),
-                ),
+              MenuButton(entries: buildMoreMenuEntries()),
               Tooltip(
                 message: "Settings".tl,
                 child: IconButton(
@@ -414,26 +376,28 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     );
   }
 
-  /// Cache key of the currently visible page's translated variant plus the
+  /// Cache keys of the translated variants of the images on screen plus the
   /// comic's own render mode, or null when translation is not enabled for this
-  /// comic or the page can't be resolved. The mode travels with the key because
+  /// comic or no image is on screen. The mode travels with the keys because
   /// the status/error markers are per rendered image, and the mode is a
   /// per-comic setting.
-  ({String cacheKey, InpaintMode mode})? _currentTranslationTarget() {
+  ({List<String> cacheKeys, InpaintMode mode})? _currentTranslationTargets() {
     final reader = context.reader;
     if (!ImageTranslationService.enabledFor(reader.cid, reader.type.sourceKey)) {
       return null;
     }
-    final images = reader.images;
-    if (images == null || images.isEmpty) return null;
-    var index = (reader.currentImagePage - 1).clamp(0, images.length - 1);
+    final (start, end) = reader.pageImageRange;
+    if (start >= end) return null;
     return (
-      cacheKey: ImageTranslationService.cacheKeyFor(
-        reader.type.comicSource?.key,
-        reader.cid,
-        reader.eid,
-        index + 1,
-      ),
+      cacheKeys: [
+        for (var i = start; i < end; i++)
+          ImageTranslationService.cacheKeyFor(
+            reader.type.comicSource?.key,
+            reader.cid,
+            reader.eid,
+            i + 1,
+          ),
+      ],
       mode: TranslationConfig.of(reader.cid, reader.type.sourceKey).mode,
     );
   }
@@ -447,7 +411,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       return const [];
     }
     final service = ImageTranslationService.instance;
-    final target = _currentTranslationTarget();
+    final targets = _currentTranslationTargets();
     final widgets = <Widget>[];
 
     // Show-original toggle: lets the reader compare against the source art
@@ -468,50 +432,57 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       ),
     );
 
-    if (target != null && !reader.showOriginalPages) {
-      switch (service.statusOf(target.cacheKey, target.mode)) {
-        case PageTranslationStatus.translating:
-          widgets.add(
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+    if (targets != null && !reader.showOriginalPages) {
+      PageTranslationStatus statusOf(String key) =>
+          service.statusOf(key, targets.mode);
+      final failed = [
+        for (final key in targets.cacheKeys)
+          if (statusOf(key) == PageTranslationStatus.failed) key,
+      ];
+      // With several images on screen, a failure, which wants a tap, is shown
+      // before work still running on another.
+      if (failed.isNotEmpty) {
+        widgets.add(
+          Tooltip(
+            message:
+                service.errorOf(failed.first, targets.mode) ??
+                "Translation failed".tl,
+            child: IconButton(
+              icon: Icon(
+                Icons.error_outline,
+                color: context.colorScheme.error,
               ),
+              onPressed: () => _retryTranslation(failed, targets.mode),
             ),
-          );
-        case PageTranslationStatus.failed:
-          widgets.add(
-            Tooltip(
-              message:
-                  service.errorOf(target.cacheKey, target.mode) ??
-                  "Translation failed".tl,
-              child: IconButton(
-                icon: Icon(
-                  Icons.error_outline,
-                  color: context.colorScheme.error,
-                ),
-                onPressed: () =>
-                    _retryTranslation(target.cacheKey, target.mode),
-              ),
+          ),
+        );
+      } else if (targets.cacheKeys.any(
+        (key) => statusOf(key) == PageTranslationStatus.translating,
+      )) {
+        widgets.add(
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          );
-        case PageTranslationStatus.translated:
-        case PageTranslationStatus.noContent:
-        case PageTranslationStatus.idle:
-          break;
+          ),
+        );
       }
     }
     return widgets;
   }
 
-  void _retryTranslation(String cacheKey, InpaintMode mode) {
+  void _retryTranslation(List<String> cacheKeys, InpaintMode mode) {
     final service = ImageTranslationService.instance;
-    var error = service.errorOf(cacheKey, mode);
-    service.clearFailure(cacheKey, mode);
-    // Dropping the cached image entry makes the provider reload and re-schedule
-    // the page; the failure back-off was just cleared so it runs immediately.
+    var error = service.errorOf(cacheKeys.first, mode);
+    for (final key in cacheKeys) {
+      service.clearFailure(key, mode);
+    }
+    // Dropping the cached image entries makes the providers reload and
+    // re-schedule the pages; the failure back-off was just cleared so they run
+    // immediately.
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
     if (mounted) setState(() {});
@@ -520,125 +491,22 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     }
   }
 
+  bool _isImageLiked(int imageNumber) => ImageFavoriteManager().has(
+    context.reader.cid,
+    context.reader.type.sourceKey,
+    context.reader.eid,
+    imageNumber,
+    context.reader.chapter,
+  );
+
+  /// Whether an image on screen is collected. Several can share the screen;
+  /// collecting asks which one.
   bool isLiked() {
-    return ImageFavoriteManager().has(
-      context.reader.cid,
-      context.reader.type.sourceKey,
-      context.reader.eid,
-      context.reader.page,
-      context.reader.chapter,
-    );
-  }
-
-  /// ⑤ 閱讀器下載按鈕：開出「選章下載」頁，預設勾選當前正在閱讀的章節。
-  /// 單章漫畫（無章節列表）維持原本「下載整部」的行為。
-  Future<void> pickChaptersAndDownload() async {
-    final reader = context.reader;
-    final chapters = reader.widget.chapters;
-    if (chapters == null) {
-      downloadFromReader();
-      return;
+    final (start, end) = context.reader.pageImageRange;
+    for (var i = start; i < end; i++) {
+      if (_isImageLiked(i + 1)) return true;
     }
-    final source = ComicSource.find(reader.type.sourceKey);
-    if (source == null) return;
-    if (LocalManager().isDownloading(reader.cid, reader.type)) {
-      showToast(message: "The comic is downloading".tl, context: context);
-      return;
-    }
-    if (!await ensureDownloadStorageWritable()) return;
-
-    final titles = chapters.titles.toList();
-    final ids = chapters.ids.toList();
-    if (titles.isEmpty || ids.isEmpty) {
-      downloadFromReader();
-      return;
-    }
-
-    final local = LocalManager().find(reader.cid, reader.type);
-    final downloaded = <int>[];
-    if (local != null) {
-      for (int i = 0; i < ids.length && i < titles.length; i++) {
-        if (local.downloadedChapters.contains(ids[i])) downloaded.add(i);
-      }
-    }
-
-    final current = reader.chapter - 1;
-    final selected = await showDownloadChapterSelect(
-      App.rootContext,
-      titles: titles,
-      downloadedEps: downloaded,
-      preselected: current >= 0 && current < titles.length
-          ? {current}
-          : const <int>{},
-      hiddenEps: {for (final c in reader._hiddenChapters) c - 1},
-    );
-    if (selected == null || selected.isEmpty) return;
-    if (!mounted) return;
-    LocalManager().addTask(
-      ImagesDownloadTask(
-        source: source,
-        comicId: reader.cid,
-        comicTitle: reader.widget.name,
-        chapters: [
-          for (final i in selected)
-            if (i >= 0 && i < ids.length) ids[i],
-        ],
-      ),
-    );
-    showToast(message: "Download started".tl, context: context);
-    update();
-  }
-
-  /// ⑥ 是否已把整部漫畫收進本地收藏夾。
-  bool isComicFavorited() {
-    final reader = context.reader;
-    if (reader.type == ComicType.local) return false;
-    return LocalFavoritesManager().find(reader.cid, reader.type).isNotEmpty;
-  }
-
-  /// ⑥ 收藏整部漫畫（原本的收藏按鈕是收藏「當前這一張圖」）。
-  /// 優先收進設定裡的快速收藏夾，沒有就收進第一個收藏夾。
-  void favoriteComicFromReader() {
-    final reader = context.reader;
-    if (reader.type == ComicType.local) {
-      showToast(
-        message: "Local comic collection is not supported at present".tl,
-        context: context,
-      );
-      return;
-    }
-    final manager = LocalFavoritesManager();
-    final folders = manager.folderNames;
-    if (folders.isEmpty) {
-      showToast(message: "No favorite folder".tl, context: context);
-      return;
-    }
-    // 已是收藏 → 再按一次即取消收藏（雙向切換）
-    if (manager.find(reader.cid, reader.type).isNotEmpty) {
-      manager.batchDeleteComicsInAllFolders([ComicID(reader.type, reader.cid)]);
-      showToast(message: "Removed from favorites".tl, context: context);
-      update();
-      return;
-    }
-    var folder = appdata.settings['quickFavorite'];
-    if (folder is! String || !folders.contains(folder)) {
-      folder = folders.first;
-    }
-    manager.addComic(
-      folder,
-      FavoriteItem(
-        id: reader.cid,
-        name: reader.widget.name,
-        coverPath: reader.widget.history.cover,
-        author: reader.widget.author,
-        type: reader.type,
-        tags: reader.widget.tags,
-      ),
-      null,
-      null,
-    );
-    showToast(message: "Added to favorites".tl, context: context);
-    update();
+    return false;
   }
 
   /// Whether the in-reader download button should show: only for online source
@@ -748,7 +616,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           "E${context.reader.chapter}";
       var translatedTags = tags.map((e) => e.translateTagsToCN).toList();
 
-      if (isLiked()) {
+      if (_isImageLiked(page)) {
         ImageFavoriteManager().deleteImageFavorite([
           ImageFavorite(page, imageKey, null, eid, id, ep, sourceKey, epName),
         ]);
@@ -847,155 +715,242 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     }
   }
 
+  /// Low-frequency actions, folded into the top bar's menu to keep both bars
+  /// short: chapter download, desktop fullscreen and share.
+  List<MenuEntry> buildMoreMenuEntries() {
+    return [
+      if (canDownloadFromReader())
+        MenuEntry(
+          icon: Icons.download_outlined,
+          text: "Download".tl,
+          onClick: downloadFromReader,
+        ),
+      if (App.isDesktop)
+        MenuEntry(
+          icon: Icons.fullscreen,
+          text: AppShortcuts.hint(
+            "Full Screen".tl,
+            ShortcutAction.toggleFullscreen,
+          ),
+          onClick: () => context.reader.fullscreen(),
+        ),
+      MenuEntry(icon: Icons.share, text: "Share".tl, onClick: share),
+    ];
+  }
+
   Widget buildBottom() {
     // Use maxPage for display (excluding chapter comments page)
     final displayPage = context.reader.page.clamp(1, context.reader.maxPage);
-    final showPercent =
-        appdata.settings.getReaderSetting(
-          context.reader.cid,
-          context.reader.type.sourceKey,
-          'showReadingProgressPercent',
-        ) !=
-        false;
-    final percentText = context.reader.maxPage <= 1
-        ? "--"
-        : "${(displayPage / context.reader.maxPage * 100).clamp(1, 100).toStringAsFixed(0)}%";
+    var text = "E${context.reader.chapter} : P$displayPage";
+    if (context.reader.widget.chapters == null) {
+      text = "P$displayPage";
+    }
 
-    final items = <_ReaderBottomItem>[
-      _ReaderBottomItem(
-        icon: appdata.settings['readerNightMode'] == true
-            ? Icons.nightlight_round
-            : Icons.nightlight_outlined,
-        label: "夜间",
-        onTap: () {
-          // Manual toggle takes over: stop following the system theme so the
-          // user's explicit choice isn't immediately overridden.
-          if (appdata.settings['readerNightModeFollowSystem'] == true) {
-            appdata.settings['readerNightModeFollowSystem'] = false;
-          }
-          appdata.settings['readerNightMode'] =
-              !(appdata.settings['readerNightMode'] == true);
-          appdata.saveData();
+    final buttons = [
+      ReaderNightModeButton(
+        tooltip: AppShortcuts.hint(
+          "Night mode".tl,
+          ShortcutAction.toggleNightMode,
+        ),
+        onPressed: toggleNightMode,
+        onChanged: () {
           context.reader.update();
           update();
         },
       ),
-      _ReaderBottomItem(
-        icon: isComicFavorited() ? Icons.favorite : Icons.favorite_border,
-        label: "收藏",
-        onTap: favoriteComicFromReader,
+      Tooltip(
+        message: AppShortcuts.hint(
+          "Collect the image".tl,
+          ShortcutAction.collectImage,
+        ),
+        child: IconButton(
+          icon: Icon(isLiked() ? Icons.favorite : Icons.favorite_border),
+          onPressed: addImageFavorite,
+        ),
       ),
-      if (App.isDesktop)
-        _ReaderBottomItem(
-          icon: Icons.fullscreen,
-          label: "全屏",
-          onTap: () => context.reader.fullscreen(),
-        ),
       if (App.isMobile)
-        _ReaderBottomItem(
-          icon: rotation == null
-              ? Icons.screen_rotation
-              : rotation == false
-              ? Icons.screen_lock_portrait
-              : Icons.screen_lock_landscape,
-          label: rotation == null ? "跟隨系統" : (rotation == false ? "直向" : "橫向"),
-          onTap: () {
-            setState(() {
-              rotation = nextReadingOrientation(rotation);
-            });
-            SystemChrome.setPreferredOrientations(
-              resolveReadingOrientations(rotation),
-            );
-          },
+        Tooltip(
+          message: "${"Reading Orientation".tl}: ${switch (rotation) {
+            false => "Portrait".tl,
+            true => "Landscape".tl,
+            _ => "Auto".tl,
+          }}",
+          child: IconButton(
+            icon: Icon(switch (rotation) {
+              false => Icons.screen_lock_portrait,
+              true => Icons.screen_lock_landscape,
+              _ => Icons.screen_rotation,
+            }),
+            onPressed: toggleReadingOrientation,
+          ),
         ),
-      _ReaderBottomItem(
-        icon: context.reader.isAutoReading
-            ? Icons.timer
-            : Icons.timer_sharp,
-        label: "自动",
-        onTap: () {
-          context.reader.autoPageTurning(
-            context.reader.cid,
-            context.reader.type,
-          );
-            // 進入自動閱讀 → 自動收起上下欄（畫面乾淨）
-            if (context.reader.isAutoReading &&
-                context.readerScaffold.isOpen) {
-              context.readerScaffold.openOrClose();
-            }
+      ReaderAutoPageTurningButton(
+        tooltip: AppShortcuts.hint(
+          "Auto Page Turning".tl,
+          ShortcutAction.toggleAutoPageTurning,
+        ),
+        isSelected: context.reader.autoPageTurning,
+        readerMode: context.reader.mode.name,
+        comicId: context.reader.cid,
+        comicSource: context.reader.type.sourceKey,
+        onPressed: toggleAutoPageTurning,
+        onChanged: () {
+          context.reader._syncAutoTurn(restartCountdown: true);
+          context.reader.update();
           update();
         },
       ),
-      if (context.reader.widget.chapters != null)
-        _ReaderBottomItem(
-          icon: Icons.library_books,
-          label: "目录",
-          onTap: openChapterDrawer,
+      if (context.reader.mode.isGallery && context.reader.imagesPerPage > 1)
+        Tooltip(
+          message: context.reader.isPairingShifted
+              ? "Undo page shift".tl
+              : "Shift pages by one".tl,
+          child: IconButton(
+            isSelected: context.reader.isPairingShifted,
+            icon: const Icon(Icons.auto_stories_outlined),
+            selectedIcon: const Icon(Icons.auto_stories),
+            onPressed: context.reader.canShiftPairing ? shiftPairing : null,
+          ),
         ),
-      _ReaderBottomItem(
-        icon: Icons.skip_previous_rounded,
-        label: "上一话",
-        onTap: () => context.reader.toPrevChapter(),
-      ),
-      _ReaderBottomItem(
-        icon: Icons.skip_next_rounded,
-        label: "下一话",
-        onTap: () => context.reader.toNextChapter(),
+      if (context.reader.widget.chapters != null)
+        Tooltip(
+          message: "Chapters".tl,
+          child: IconButton(
+            icon: const Icon(Icons.library_books),
+            onPressed: openChapterDrawer,
+          ),
+        ),
+      Tooltip(
+        message: "Save Image".tl,
+        child: IconButton(
+          icon: const Icon(Icons.download),
+          onPressed: saveCurrentImage,
+        ),
       ),
     ];
 
-    Widget child = SizedBox(
-      height: kBottomBarHeight,
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              // 兩端大按鈕（first_page/last_page）已按用戶要求刪除（2026-09-17），
-              // 只留進度條 + 百分比；上下話用下方文字按鈕。
-              Expanded(child: buildSlider()),
-              // 阅读进度百分比（可在阅读设置中关闭）；点击可跳页
-              if (showPercent)
-                GestureDetector(
-                  onTap: showPageJumpDialog,
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    alignment: Alignment.center,
-                    constraints: const BoxConstraints(minWidth: 52),
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Text(
-                      percentText,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 8),
-            ],
+    void turnChapter(bool forward) {
+      final reader = context.reader;
+      final target = reader.visibleChapterFrom(
+        reader.chapter,
+        forward ? 1 : -1,
+      );
+      if (target != null) {
+        reader.toChapter(target);
+      } else {
+        reader.toPage(forward ? reader.maxPage : 1);
+      }
+    }
+
+    final prevChapterButton = IconButton.filledTonal(
+      onPressed: () => turnChapter(isReversed),
+      icon: const Icon(Icons.first_page),
+    );
+
+    final nextChapterButton = IconButton.filledTonal(
+      onPressed: () => turnChapter(!isReversed),
+      icon: const Icon(Icons.last_page),
+    );
+
+    final pageIndicator = GestureDetector(
+      onTap: showPageJumpDialog,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 13),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  for (var item in items)
-                    Expanded(child: _ReaderBottomLabeledButton(item: item)),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
+
+    Widget twoRowLayout() => Column(
+      children: [
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const SizedBox(width: 8),
+            prevChapterButton,
+            Expanded(child: buildSlider()),
+            pageIndicator,
+            nextChapterButton,
+            const SizedBox(width: 8),
+          ],
+        ),
+        LayoutBuilder(
+          builder: (context, constrains) {
+            final small = (constrains.maxWidth - buttons.length * 50) < 120;
+            return Row(
+              children: [
+                const Spacer(),
+                for (var button in buttons)
+                  if (!small)
+                    button.paddingHorizontal(4)
+                  else ...[
+                    button,
+                    const Spacer(),
+                  ],
+                if (!small) const SizedBox(width: 4),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+
+    // Landscape phones have little height to spare: fold the slider row and the
+    // action row into one so the bar stops covering a third of the page. Only
+    // when the width actually fits everything plus a usable slider, otherwise
+    // the single row overflows and the two-row layout is the lesser evil.
+    Widget child = compactBars
+        ? LayoutBuilder(
+            builder: (context, constrains) {
+              const kMinSliderWidth = 120.0;
+              final fits =
+                  constrains.maxWidth -
+                      (buttons.length + 2) * 48 -
+                      74 -
+                      8 >=
+                  kMinSliderWidth;
+              return SizedBox(
+                height: fits ? bottomBarHeight : kBottomBarHeight,
+                child: fits
+                    ? Row(
+                        children: [
+                          const SizedBox(width: 4),
+                          prevChapterButton,
+                          Expanded(child: buildSlider()),
+                          pageIndicator,
+                          nextChapterButton,
+                          ...buttons,
+                          const SizedBox(width: 4),
+                        ],
+                      )
+                    : twoRowLayout(),
+              );
+            },
+          )
+        : SizedBox(height: bottomBarHeight, child: twoRowLayout());
+
+    if (context.reader.autoPageTurning) {
+      child = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [buildAutoTurnBar(), child],
+      );
+    }
 
     return BlurEffect(
       child: Container(
         decoration: BoxDecoration(
-          // Liquid Glass：更通透（0.92 → 0.55）
-          color: context.colorScheme.surface.toOpacity(
-              appdata.settings['ui_style'] == 'glass' ? 0.55 : 0.92),
-          border: (isOpen && appdata.settings['ui_style'] != 'glass')
+          color: context.colorScheme.surface.toOpacity(0.92),
+          border: isOpen
               ? Border(
                   top: BorderSide(
                     color: Colors.grey.toOpacity(0.5),
@@ -1016,6 +971,100 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     );
   }
 
+  void toggleNightMode() {
+    // Manual toggle takes over: stop following the system theme so the
+    // user's explicit choice isn't immediately overridden.
+    if (appdata.settings['readerNightModeFollowSystem'] == true) {
+      appdata.settings['readerNightModeFollowSystem'] = false;
+    }
+    appdata.settings['readerNightMode'] =
+        !(appdata.settings['readerNightMode'] == true);
+    appdata.saveData();
+    context.reader.update();
+    update();
+  }
+
+  void shiftPairing() {
+    final view = context.reader._imageViewController;
+    if (view is _GalleryModeState) view.shiftPairing();
+  }
+
+  void toggleAutoPageTurning() {
+    final reader = context.reader;
+    reader.toggleAutoPageTurning();
+    // Starting means reading on: close the menu so the countdown or the
+    // scrolling begins right away.
+    if (reader.autoPageTurning && _isOpen) {
+      openOrClose();
+    } else {
+      update();
+    }
+  }
+
+  /// Speed (scroll) or interval (page) controls, shown above the bottom bar
+  /// while auto turning is on, so it can be tuned without leaving the page.
+  Widget buildAutoTurnBar() {
+    final reader = context.reader;
+    final scrolls = reader._autoTurnScrolls;
+    final key = scrolls ? 'autoScrollSpeed' : 'autoPageTurningInterval';
+    final value = scrolls
+        ? autoScrollSpeedOf(reader.effectiveSetting(key))
+        : autoTurnIntervalOf(reader.effectiveSetting(key));
+    final min = scrolls ? autoScrollSpeedMin : autoTurnIntervalMin;
+    final max = scrolls ? autoScrollSpeedMax : autoTurnIntervalMax;
+
+    void set(int next) {
+      appdata.settings.setEffectiveReaderSetting(
+        reader.cid,
+        reader.type.sourceKey,
+        key,
+        next,
+      );
+      appdata.saveData();
+      update();
+    }
+
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              (scrolls ? "Auto scroll speed" : "Auto page turning interval").tl,
+              style: ts.s14,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            tooltip: "Decrease".tl,
+            icon: const Icon(Icons.remove),
+            onPressed: value > min ? () => set(value - 1) : null,
+          ),
+          SizedBox(
+            width: 40,
+            child: Text(
+              scrolls ? '$value' : '${value}s',
+              textAlign: TextAlign.center,
+              style: ts.s14,
+            ),
+          ),
+          IconButton(
+            tooltip: "Increase".tl,
+            icon: const Icon(Icons.add),
+            onPressed: value < max ? () => set(value + 1) : null,
+          ),
+          const SizedBox(width: 4),
+          TextButton(
+            onPressed: () => reader.stopAutoPageTurning(),
+            child: Text("Stop".tl),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
   var sliderFocus = FocusNode();
 
   Widget buildSlider() {
@@ -1029,7 +1078,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       reversed: isReversed,
       divisions: (context.reader.maxPage - 1).clamp(2, 1 << 16),
       onChanged: (i) {
-        context.reader.toPage(i.toInt());
+        context.reader.toPage(readerPageFromSliderValue(i));
       },
     );
   }
@@ -1124,64 +1173,116 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
   void openSetting() {
     _openSideBar(
-      ReaderSettings(
-        comicId: context.reader.cid,
-        comicSource: context.reader.type.sourceKey,
-        onChanged: (key) {
-          final scopeChanged = key == 'enabled';
-          if (key == "readerMode" || scopeChanged) {
-            context.reader.mode = ReaderMode.fromKey(
-              appdata.settings.getReaderSetting(
+      ReaderSettingsPanel(
+        child: ReaderSettings(
+          showSearch: true,
+          comicId: context.reader.cid,
+          comicSource: context.reader.type.sourceKey,
+          currentPageImage: _snapshotCurrentPageImage,
+          currentReadingMode: () => context.reader.mode.key,
+          onChanged: (key) {
+            final scopeChanged = key == 'enabled';
+            if (key == "readerMode" ||
+                key == 'adaptiveReading' ||
+                key == 'adaptivePagedMode' ||
+                key == 'enableContinuousChapterReading' ||
+                scopeChanged) {
+              context.reader._refreshReadingMode();
+            }
+            if (key == "enableTurnPageByVolumeKey" || scopeChanged) {
+              if (appdata.settings.getReaderSetting(
                 context.reader.cid,
                 context.reader.type.sourceKey,
-                'readerMode',
-              ),
-            );
-          }
-          if (key == "enableTurnPageByVolumeKey" || scopeChanged) {
-            if (appdata.settings.getReaderSetting(
-              context.reader.cid,
-              context.reader.type.sourceKey,
-              'enableTurnPageByVolumeKey',
-            )) {
-              context.reader.handleVolumeEvent();
-            } else {
-              context.reader.stopVolumeEvent();
+                'enableTurnPageByVolumeKey',
+              )) {
+                context.reader.handleVolumeEvent();
+              } else {
+                context.reader.stopVolumeEvent();
+              }
             }
-          }
-          if (key == "quickCollectImage" || scopeChanged) {
-            addDragListener();
-          }
-          if (key == "showSystemStatusBar" || scopeChanged) {
-            final showSystemStatusBar =
-                appdata.settings.getReaderSetting(
-                  context.reader.cid,
-                  context.reader.type.sourceKey,
-                  'showSystemStatusBar',
-                ) ==
-                true;
-            applyReaderSystemUiMode(showSystemStatusBar);
-          }
-          if (key == "showChapterComments" ||
-              key == "showChapterCommentsAtEnd" || scopeChanged) {
-            update();
-          }
-          // Changing this comic's language pair or text-removal mode addresses a
-          // different translation cache generation, but the image providers are
-          // keyed on the page identity alone — without dropping them the reader
-          // would keep showing the render made with the previous settings.
-          if (key == "imageTranslationSource" ||
-              key == "imageTranslationTarget" ||
-              key == "imageTranslationInpaintMode" ||
-              key == "enableImageTranslation" || scopeChanged) {
-            PaintingBinding.instance.imageCache.clear();
-            PaintingBinding.instance.imageCache.clearLiveImages();
-          }
-          context.reader.update();
-        },
+            if (key == "quickCollectImage" || scopeChanged) {
+              addDragListener();
+            }
+            if (key == "readerKeepScreenOn" || scopeChanged) {
+              context.reader._syncScreenOn();
+            }
+            if (key == "showSystemStatusBar" || scopeChanged) {
+              final showSystemStatusBar =
+                  appdata.settings.getReaderSetting(
+                    context.reader.cid,
+                    context.reader.type.sourceKey,
+                    'showSystemStatusBar',
+                  ) ==
+                  true;
+              applyReaderSystemUiMode(showSystemStatusBar);
+            }
+            if (key == "showChapterComments" ||
+                key == "showChapterCommentsAtEnd" ||
+                scopeChanged) {
+              update();
+            }
+            // Changing this comic's language pair or text-removal mode addresses a
+            // different translation cache generation, but the image providers are
+            // keyed on the page identity alone — without dropping them the reader
+            // would keep showing the render made with the previous settings.
+            if (key == "imageTranslationSource" ||
+                key == "imageTranslationTarget" ||
+                key == "imageTranslationInpaintMode" ||
+                key == "enableImageTranslation" ||
+                scopeChanged) {
+              PaintingBinding.instance.imageCache.clear();
+              PaintingBinding.instance.imageCache.clearLiveImages();
+            }
+            if (key == "autoPageTurningInterval" ||
+                key == "autoPageTurningMode" ||
+                key == "readerMode" ||
+                scopeChanged) {
+              context.reader._syncAutoTurn(restartCountdown: true);
+            }
+            context.reader.update();
+          },
+        ),
       ),
       width: 400,
     );
+  }
+
+  /// A caller-owned copy of the decoded page nearest the reader's centre, for
+  /// the enhancement preview. Null when no page has been decoded yet.
+  ImageInfo? _snapshotCurrentPageImage() {
+    if (!mounted) return null;
+    final readerBox = context.findRenderObject();
+    if (readerBox is! RenderBox || !readerBox.hasSize) return null;
+    final center = readerBox.localToGlobal(readerBox.size.center(Offset.zero));
+    final Iterable<State<ComicImage>> states =
+        switch (context.reader._imageViewController) {
+          final _GalleryModeState s => s.imageStates,
+          final _ContinuousModeState s => s.imageStates,
+          _ => const [],
+        };
+    ImageInfo? best;
+    var bestDistance = double.infinity;
+    for (final state in states.whereType<_ComicImageState>()) {
+      final info = state._imageInfo;
+      if (info == null || !state.mounted) continue;
+      final box = state.context.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+      // Kept-alive pages that aren't painted get a zero transform; their rect
+      // comes out empty or NaN and must not win.
+      final rect = MatrixUtils.transformRect(
+        box.getTransformTo(null),
+        Offset.zero & box.size,
+      );
+      if (!rect.isFinite || rect.isEmpty) continue;
+      final distance = rect.contains(center)
+          ? 0.0
+          : (rect.center - center).distance;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = info;
+      }
+    }
+    return best?.clone();
   }
 
   void _openSideBar(Widget widget, {double width = 400}) {
@@ -1444,11 +1545,15 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
   }
 
   Future<Offset?> _showSelectImageOverlay() {
+    final reader = context.reader;
+    // Closing the menu would resume auto turning under the picker.
+    reader._autoTurnHeld = true;
     if (_isOpen) {
       openOrClose();
     }
 
     var completer = Completer<Offset?>();
+    completer.future.whenComplete(() => reader._autoTurnHeld = false);
 
     var overlay = Overlay.of(context);
     OverlayEntry? entry;
@@ -1712,53 +1817,6 @@ class _SelectImageOverlayContentState
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 閱讀器底欄的一個「圖標 + 文字」按鈕項
-class _ReaderBottomItem {
-  const _ReaderBottomItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-}
-
-class _ReaderBottomLabeledButton extends StatelessWidget {
-  const _ReaderBottomLabeledButton({required this.item});
-
-  final _ReaderBottomItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: item.onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(item.icon, size: 22, color: context.colorScheme.onSurface),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: context.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
         ),
       ),
     );

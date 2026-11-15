@@ -4,8 +4,11 @@ This document covers the setup steps and controls for each feature. If a setting
 
 ## Contents
 
+- [Finding settings](#finding-settings)
 - [AI Translation](#ai-translation)
   - [Setup](#setup)
+  - [Target languages](#target-languages)
+  - [Source languages and recognition models](#source-languages-and-recognition-models)
   - [Custom translation scripts](#custom-translation-scripts)
   - [Enabling](#enabling)
   - [Controls while reading](#controls-while-reading)
@@ -18,7 +21,32 @@ This document covers the setup steps and controls for each feature. If a setting
   - [Chapter layout](#chapter-layout)
   - [Editing](#editing)
   - [Limitations](#limitations)
+- [Auto page turning](#auto-page-turning)
+- [E-ink screens](#e-ink-screens)
 - [Non-obvious controls](#non-obvious-controls)
+
+## Finding settings
+
+Open Settings: wide windows show categories on the left and their contents on the right. Phones and narrow windows show a category list; choose a category and use Back to return to the list. Common options appear on the category page, while further options such as page layout and gestures are under "More settings".
+
+| Category | Main options |
+| --- | --- |
+| Appearance & layout | Theme and language; "Layout and navigation" contains Home Page Layout, the image favorites tab, and app icons and transitions on supported platforms |
+| Reading settings | Reading mode; "Page layout", "Auto turning & preload", "Gesture settings", "Display settings", "Image processing / enhancement", "Favorites settings" and "E-ink screen" |
+| AI Translation | Languages, performance mode, providers, models and prompt; "Advanced translation settings" and "Help & cleanup" |
+| Library & favorites | Favorite actions, follow updates, sorting and new favorite position, and invalid favorite cleanup |
+| Browsing & filters | Comic list style, card information, search preferences, browsing pages, content blocking and comic sources |
+| Downloads & storage | Download threads and concurrent tasks, Wi-Fi-only downloads and cache; "Storage locations" contains local comic storage and the comic cache directory |
+| Sync & backup | WebDAV, sync mode and backup retention; "Sync preferences", "Import, export & history" and the WebDAV comic library |
+| Network | Proxy and DNS overrides; download options are under "Downloads & storage" |
+| Privacy & device | App lock, background behavior, and window, tray and keyboard shortcut options on supported platforms |
+| About & help | App updates and the guide; logs and debugging tools are under "Diagnostics" |
+
+Search by name or keyword at the top of Settings, then select a result to open its category or subpage and locate the option. On desktop, `Ctrl+K` (`Cmd+K` on macOS) focuses search. When an option depends on another switch or reading mode, search explains the dependency and locates the prerequisite without changing your settings. Options unsupported on your platform are hidden.
+
+While reading, open the reader menu → Settings to adjust reading options in the sidebar. Opening an entry under "More settings" or "AI Translation" changes the page inside the sidebar. Back returns one level, or closes the sidebar from its first page. Sidebar search only includes reading and translation settings.
+
+Settings with scope controls inherit in this order: current comic → this device → global. Turn on "Enable comic specific settings" or "Enable device specific settings" to customize that scope; the explanation at the top and labels on individual settings show the current scope. Choose "Use inherited value" on an overridden option to restore its parent value. Device-local options such as cache paths, translation performance and e-ink settings keep their separate scope, as explained on their pages.
 
 <!--anchor:ai-translation-->
 ## AI Translation
@@ -30,7 +58,7 @@ Detection and recognition run on the device; the recognized text is sent to an A
 <!--anchor:translation-setup-->
 ### Setup
 
-1. Settings → AI Translation.
+1. Settings → AI Translation. Language and performance mode are under "Translation preferences", providers and testing under "Translation services", and models and custom languages under "Models & languages".
 2. "LLM providers" → add one. Pick "Google Translate" to use its free endpoint: no account, no key, nothing to fill in — just save and it works. The trade-off is that each line is translated on its own, so wording and character names may vary between pages, and quality is below an AI model. It is not an official API, so it can be rate-limited or stop working at any time — use an AI model if you need reliability.
 3. For better results pick "AI model": enter the API URL and API key (some local services can leave it blank), then tap "Get models" to choose a model. Any OpenAI-compatible service works. If model fetching fails, enter the model name manually. You can add several providers and switch at any time.
 4. "Test translation" → a returned translation confirms the configuration works.
@@ -39,11 +67,74 @@ Detection and recognition run on the device; the recognized text is sent to an A
 | Language | Size |
 | --- | --- |
 | Japanese (incl. vertical text) | ~460 MB |
-| Chinese / Latin | ~11 MB |
+| Chinese (Simplified + Traditional) | ~17 MB |
+| Chinese / Latin (Simplified only) | ~11 MB |
 | English | ~9 MB |
 | Korean | ~8 MB |
 
 With "Source language" set to "Auto detect", the detector plus any one recognition model is sufficient; the app determines each comic's language itself.
+
+<!--anchor:translation-target-->
+### Target languages
+
+"Target language" includes Simplified Chinese, Traditional Chinese, English, Japanese, Korean, French, German, Spanish, Russian and Vietnamese. You can add a language that is not listed:
+
+1. Settings → AI Translation → "Custom languages" → "+" next to "Target languages".
+2. "Language name": the AI model translates into this name. Write it in that language, such as `ไทย` or `Bahasa Indonesia`.
+3. "Language code": sent to Google Translate and translation scripts, such as `th`, `id` or `pt-BR`. Use a code your service supports.
+4. Save, then select it under "Target language".
+
+- Translated pages are stored by language code, so a code cannot be changed after it is added. The name can be changed at any time.
+- Removing a custom language does not delete pages already translated into it; adding the same code again brings them back.
+- Built-in languages cannot be removed or changed. The custom list travels with your backups across devices.
+- Source languages are extended in the next section.
+- Translations are laid out left to right, so right-to-left languages such as Arabic or Hebrew may not display correctly.
+
+<!--anchor:translation-source-->
+### Source languages and recognition models
+
+Built-in source languages and the recognition model each uses:
+
+| Source language | Recognition model |
+| --- | --- |
+| Japanese | Japanese model (~460 MB), horizontal and vertical text |
+| Simplified Chinese | Chinese (Simplified + Traditional) model; the Chinese / Latin model if that is not downloaded |
+| Traditional Chinese | Chinese (Simplified + Traditional) model (~17 MB), required |
+| English | English model |
+| Korean | Korean model |
+
+- The Chinese / Latin model (~11 MB) only covers common Simplified characters and lacks about 3,800 Traditional ones, so Traditional comics come out with wrong characters. The Chinese (Simplified + Traditional) model covers about 18,000 characters, reads both scripts and also vertical Chinese; once downloaded, Simplified Chinese uses it too.
+- "Auto detect" tells Simplified and Traditional apart, so a Traditional comic is translated into Simplified Chinese as usual.
+- For a Traditional comic, choose "Traditional Chinese" as the source language. Under "Auto detect", vertical Chinese may be read by the Japanese model as Japanese; choosing the language avoids that.
+- If previously opened Traditional pages were recorded as having no text to translate, first choose the correct source language and prepare its model, then long-press "Pre-translate" on the details page → "Re-translate" to recognize them again.
+
+**Model size and accuracy**
+
+A larger model knows more characters and fonts, so it reads more accurately; the cost is a bigger download, a slower first load, more memory and more heat on phones. A character missing from the dictionary is always read as a look-alike, so dictionary coverage matters more than size. Character error rates measured on a desktop with rendered Traditional dialogue (real comic lettering and screentone are harder):
+
+| Model | Result |
+| --- | --- |
+| Chinese / Latin (~11 MB) | ~17% wrong Traditional characters; vertical text unreadable |
+| Chinese (Simplified + Traditional) (~17 MB) | No errors on Traditional, Simplified or vertical text |
+| PP-OCRv6 small (~21 MB) | Same as above, slightly slower |
+| PP-OCRv6 tiny (~4.5 MB) | About 3x faster, ~18% wrong Traditional characters |
+
+**Adding another source language**
+
+1. Settings → AI Translation → "Custom languages" → "+" next to "Source languages".
+2. Enter a language name and code (such as `fr`, `ru`, `th`).
+3. Enter the recognition model link (.onnx) and character dictionary link (.txt), or use "Fill in a tested model" for Latin script, Cyrillic or Thai.
+4. Saving reads the file sizes; the download starts after you confirm. Models over 100 MB get an extra warning.
+
+- Only PP-OCR text recognition models (CTC) in ONNX format work, together with the character dictionary they were trained with. Paddle, MNN or PyTorch files and encoder-decoder models such as manga-ocr do not.
+- "Input height": 48 for PP-OCRv3 and later, 32 for older models.
+- After download the model is run once; if it cannot run, is not a recognition model, or its class count does not match the dictionary, the files are deleted and the reason is shown.
+- Custom source languages must be selected under "Source language"; "Auto detect" only chooses among the built-in languages.
+- The language list travels with your backups; model files do not, so each device downloads its own.
+
+**Custom text detection model**
+
+"Text detection model" on the same page can be replaced with your own, shared by all languages. Only PP-OCR text detection models (DBNet) in ONNX format work; tested choices are PP-OCRv5 mobile (~4.8 MB) and PP-OCRv6 small (~9.9 MB). A larger detector finds small or stylized lettering more reliably but is slower on every page. The built-in detector is used until the download finishes.
 
 <!--anchor:translation-script-->
 ### Custom translation scripts
@@ -61,7 +152,7 @@ The function receives an object containing:
 | --- | --- |
 | `texts` | An array of input strings, possibly from one or several pages |
 | `sourceLang` | Source language code, such as `en`, `ja` or `zh`. `auto` means the app has not determined the language yet; your script or service must detect it, or map it to the API's auto-detection parameter |
-| `targetLang` | Target language code, such as `zh`, `zh-TW` or `en`; map language codes as required by your service |
+| `targetLang` | Target language code, such as `zh`, `zh-TW` or `en`, or the code of a custom target language; map language codes as required by your service |
 | `glossary` | This comic's existing glossary as `{source: translation}`. The script must pass it to the service or apply it itself to keep names consistent |
 | `provider` | The provider dialog's `{url, key, model}`, all strings. The app does not append URL paths or add authentication headers for your script |
 
@@ -137,14 +228,14 @@ Long-press the "Pre-translate" button on the detail page to open:
 Other options:
 
 - To redo only some chapters: select them in the chapter picker and use "Re-translate selected".
-- If the translation is poorly masked: adjust "Text removal". "Smart erase" (default) reconstructs the bubble's background and screentone; "Color patch" covers the area with a solid block — faster, with harder edges.
+- If the translation is poorly masked: Settings → AI Translation → Advanced translation settings → "Text removal". "Smart erase" (default) reconstructs the bubble's background and screentone; "Color patch" covers the area with a solid block — faster, with harder edges.
 
 <!--anchor:translation-performance-->
 ### Performance and usage
 
-Translated text is stored, so a page normally runs OCR and an LLM request only once; re-reading does not spend more credits. Switching between "Smart erase" and "Color patch" only redraws the page from stored text, without repeating OCR or translation. "Clear translation results" frees the space and keeps the language and glossary learned per comic. Results written by the old cache format are discarded automatically after upgrading and must be translated again.
+Translated text is stored, so a page normally runs OCR and an LLM request only once; re-reading does not spend more credits. Switching between "Smart erase" and "Color patch" only redraws the page from stored text, without repeating OCR or translation. Settings → AI Translation → Help & cleanup → "Clear translation results" frees the space and keeps the language and glossary learned per comic. Results written by older versions using the old cache format are discarded automatically and must be translated again.
 
-If throughput is poor or the provider returns rate-limit errors, adjust:
+If throughput is poor or the provider returns rate-limit errors, adjust "Performance mode" in Settings → AI Translation. The other options below are under "More settings" → "Advanced translation settings" on that page:
 
 | Setting | Effect |
 | --- | --- |
@@ -154,7 +245,15 @@ If throughput is poor or the provider returns rate-limit errors, adjust:
 | OCR parallelism | Local recognition threads, 0 for automatic. Mobile limits concurrency automatically; the Japanese model uses one worker on mobile. Lower it if the device heats up or stutters |
 | Image download concurrency | Images downloaded at once |
 
-Most users do not need Advanced settings; changing any performance detail switches the mode to "Custom" automatically. Each text line is erased using a tight region and the translated text is kept inside its own area, reducing damage to characters and backgrounds. Complex artwork, very long sentences and unusual layouts can still need a retry or the "Color patch" fallback.
+Most users do not need "Advanced translation settings"; changing any performance detail switches the mode to "Custom" automatically. Each text line is erased using a tight region and the translated text is kept inside its own area, reducing damage to characters and backgrounds. Complex artwork, very long sentences and unusual layouts can still need a retry or the "Color patch" fallback.
+
+"Translation prompt" replaces the built-in prompt. The built-in one asks for natural dialogue, reuse of already-agreed character names, and a report of proper nouns new to the page — requirements that cost input tokens on every request. A small self-hosted model that cannot afford them can be given a shorter prompt, at the cost of translation quality and consistent naming across pages. When writing your own:
+
+| Placeholder | Replaced with |
+| --- | --- |
+| `$target` | The target language name, e.g. "English"; for a custom target language, the name entered when adding it |
+
+Two things must stay in the prompt or the feature stops working. First, ask the model to output only a JSON object like `{"lines":[{"id":0,"text":"translation"}]}` with each id appearing exactly once — the app uses those ids to put each translation back in its own bubble, and a reply it cannot parse fails the page. Second, if you want names to stay consistent, tell the model to reuse the renderings given in the `glossary` field and to return newly seen proper nouns in a `names` field. Clearing the field and saving restores the built-in prompt. The setting travels with your backups across devices.
 
 <!--anchor:translation-limits-->
 ### Things to know
@@ -166,7 +265,7 @@ Most users do not need Advanced settings; changing any performance detail switch
 <!--anchor:cache-directory-->
 ## Comic cache directory
 
-Use this to put images cached during online reading on a drive or directory with more free space. Settings → Data & Sync → Data → "Comic cache directory" → "Set": choose a folder or enter an absolute path the app can write to, such as `D:\VeneraCache`. Saving checks the path and write access and automatically creates missing folders. The setting shows the active path and adds an "After restart" path when a change is pending. Choose "Use default" to clear the input, then save to restore the default location on the next launch.
+Use this to put images cached during online reading on a drive or directory with more free space. Settings → Downloads & storage → Storage locations → "Comic cache directory" → "Set": choose a folder or enter an absolute path the app can write to, such as `D:\VeneraCache`. Saving checks the path and write access and automatically creates missing folders. The setting shows the active path and adds an "After restart" path when a change is pending. Choose "Use default" to clear the input, then save to restore the default location on the next launch.
 
 | Location | Contents |
 | --- | --- |
@@ -176,7 +275,7 @@ Use this to put images cached during online reading on a drive or directory with
 Enter the parent directory; the app appends `venera-cache/cache`, so do not append it yourself. Keep unrelated files out of the app's `venera-cache` directory. A directory with that name containing unrelated data, or cache subdirectories that are links, may be rejected. If the path is unavailable, check that it is absolute, the drive is connected, and permissions and existing files allow its use.
 
 - **Restart required**: saving does not change the cache used by the running app. Fully quit and restart to use the new location.
-- **Old cache is kept and is not moved**: the app accumulates a new cache at the new location. To free the old cache's space, use "Clear Cache" before switching and restarting.
+- **Old cache is kept and is not moved**: the app accumulates a new cache at the new location. To free the old cache's space, use Settings → Downloads & storage → "Clear Cache" before switching and restarting.
 - **Clearing uses the currently active location**: "Clear Cache" clears only the cache used by this run, without searching earlier locations or clearing the parent directory you entered. After editing the path but before restarting, it still clears the old location; after a startup fallback, it clears the default location.
 - **Restore the default**: clear the path, save and restart. Old cache in the custom directory is kept.
 - **Startup fallback**: if the custom path is unavailable at startup, the app shows an error and uses the default cache directory for that session. The saved custom path is kept. Fix the path or permissions and restart to try it again.
@@ -195,12 +294,12 @@ The original comics are unchanged; the collection is an additional entry point.
 
 In bulk:
 
-1. Long-press a comic in any list to enter multi-select, then select the parts of one work.
-2. Collection icon in the toolbar → "Add to collection".
+1. In a regular comic list, long-press a comic (or right-click on desktop) → "Multi-Select", then select the parts of one work. In local comics and local favorites, long-press enters multi-select directly.
+2. Toolbar more menu → "Add to collection".
 3. Choose "New collection" as the target and enter a name (empty uses the first comic's title).
 4. Choose a chapter layout and confirm.
 
-Individually: long-press a comic → "Add to collection", swipe its row, or use the more menu on its detail page.
+Individually: on mobile, long-press a comic → "Add to collection"; on desktop, right-click → "Organize" → "Add to collection". The more menu on a comic's detail page also offers "Add to collection" directly. Regular comic lists on mobile expose this action when swiped left; favorites and history lists have different swipe actions.
 
 Two options are offered when adding: file the new collection into a favorite folder, and "Un-favorite the added comics" so only the collection remains in favorites.
 
@@ -215,7 +314,7 @@ Either can be changed at any time; read progress and downloaded chapters are una
 <!--anchor:collection-edit-->
 ### Editing
 
-Collections appear in the "Collections" card on the home page, hidden while none exist. To move or hide it: Settings → Appearance → Home layout.
+Collections appear in the "Collections" card on the home page, hidden while none exist. To move or hide it: Settings → Appearance & layout → Layout and navigation → Home Page Layout.
 
 From the collections page, menu → "Edit":
 
@@ -236,16 +335,55 @@ On a collection's detail page using "Chapter tabs", long-press a tab (right-clic
 - A collection's update time is the newest among its members.
 - Collection settings and custom covers are included in backup and sync.
 
+<!--anchor:auto-page-turning-->
+## Auto page turning
+
+Open the menu while reading and tap "Auto Page Turning" in the bottom bar to start it; tap it again to stop.
+
+- **Gallery modes**: turn a page at a fixed interval, 1–20 seconds, 5 by default.
+- **Continuous modes**: "Auto page turning mode" offers "Turn pages" or "Scroll". "Scroll" moves the page at a steady speed, 1–30, 15 by default. The speed is relative to the image width, so a level reads at the same pace on phones, tablets and desktop.
+
+Change the interval, mode and speed in Settings → Reading settings → Auto turning & preload, or reader menu → Settings → Auto turning & preload. Like other reading settings, they can be set per comic or per device.
+
+While it runs, opening the menu shows an extra row above the bottom bar: adjust the interval or speed there, or tap "Stop". Changes are saved to the settings.
+
+- **Pauses automatically**: while the menu, a popup or another page is open, or while the app is in the background. The countdown starts again when you return.
+- **You take over**: in scroll mode, a touch, drag, mouse wheel or tap turn takes over, and scrolling resumes shortly after you let go.
+- **Waits for loading**: a page that is still loading is waited for, not skipped. In page mode, a manual page turn or a newly loaded chapter restarts the countdown.
+- **Stops at the end**: at the end, or when a chapter fails to load, it stops and shows a notice.
+- **Screen stays on**: the screen stays on while it runs (phones and tablets only).
+
+To keep the screen on without auto page turning, turn on Settings → Reading settings → Display settings → "Keep screen on while reading". Phones and tablets only, off by default, and it can be set per comic or per device.
+
+<!--anchor:eink-->
+## E-ink screens
+
+Settings → Reading settings → "E-ink screen". These settings stay on this device and are not synced, so a phone does not start flashing on every page turn.
+
+**Full refresh on page turn**: after a page turn settles, a solid color briefly fills the screen so the e-ink panel redraws every pixel and clears the ghost of the previous page. Gallery modes only.
+
+| Option | Effect |
+| --- | --- |
+| Refresh color | White (default), Black, or Black, then white |
+| Refresh every N pages | How often to refresh, 1–10, 1 by default |
+| Refresh duration (ms) | How long each color is shown, 50–1000, 150 by default |
+
+If some ghosting remains, try a longer duration or "Black, then white".
+
+**Ripple page turn**: shown only on iReader devices running SmartOS 4 or later. In gallery modes, tap and key page turns use the device's own ripple effect in place of the slide animation, following the reading direction and screen rotation. Dragging a page with your finger is unchanged. "Ripple speed" offers Slower, Standard or Faster. A page that is due for a full refresh skips the ripple.
+
+Neither feature has had much testing on real devices yet. If the refresh has no effect or the ripple runs the wrong way, please report your device model and system version.
+
 <!--anchor:gestures-->
 ## Non-obvious controls
 
-These have no corresponding button. Long-press on mobile; most also respond to right-click on desktop.
+Some actions are available through long-press or swipe. Comic lists also support right-click on desktop, while the detailed list on mobile has an "Actions" button for the comic menu. The detail-page buttons below use long-press.
 
 Lists and favorites:
 
-- Long-press a comic: open its action menu (add to collection, favorite, read later, and so on).
-- Swipe a list row: quick actions.
-- Long-press to enter multi-select, then act in bulk.
+- In regular comic lists, long-press a comic (or right-click on desktop) to open its action menu. On desktop, favorite, collection and read-later actions are grouped under "Organize".
+- Swipe a list row: quick actions vary by page; on mobile, swipe left in a regular comic list to add to a collection.
+- In regular comic lists, choose "Multi-Select" from the action menu for bulk actions. In local comics and local favorites, long-press enters multi-select directly.
 - Long-press empty space on the home page: rearrange or hide home sections.
 
 Comic detail page:

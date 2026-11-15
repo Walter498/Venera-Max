@@ -9,7 +9,7 @@ import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/foundation/read_later.dart';
 import 'package:venera/pages/comic_collection_edit_page.dart';
-import 'package:venera/pages/favorites/favorite_actions.dart';
+import 'package:venera/pages/favorites/favorites_page.dart';
 import 'package:venera/pages/guide_page.dart';
 import 'package:venera/utils/io.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
@@ -458,16 +458,20 @@ class _ComicCollectionsPageState extends State<ComicCollectionsPage>
                   return [
                     if (!multiSelectMode)
                       MenuEntry(
+                        action: MenuAction.select,
                         icon: Icons.checklist,
                         text: 'Multi-Select'.tl,
                         onClick: () => _enterSelectMode(comic),
                       ),
                     MenuEntry(
+                      group: MenuGroup.organize,
                       icon: Icons.edit,
                       text: 'Edit'.tl,
                       onClick: () => _edit(collection),
                     ),
                     MenuEntry(
+                      action: MenuAction.remove,
+                      destructive: true,
                       icon: Icons.delete_outline,
                       text: 'Delete'.tl,
                       color: context.colorScheme.error,
@@ -475,6 +479,7 @@ class _ComicCollectionsPageState extends State<ComicCollectionsPage>
                     ),
                     if (sourceIndex > 0)
                       MenuEntry(
+                        group: MenuGroup.organize,
                         icon: Icons.arrow_upward,
                         text: 'Move up'.tl,
                         onClick: () {
@@ -488,6 +493,7 @@ class _ComicCollectionsPageState extends State<ComicCollectionsPage>
                     if (sourceIndex >= 0 &&
                         sourceIndex < collections.length - 1)
                       MenuEntry(
+                        group: MenuGroup.organize,
                         icon: Icons.arrow_downward,
                         text: 'Move down'.tl,
                         onClick: () {

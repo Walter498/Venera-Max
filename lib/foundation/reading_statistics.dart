@@ -111,15 +111,43 @@ class ReadingStatisticsSummary {
   final List<DailyReadingDuration> daily;
   final List<ComicReadingStatistics> recentComics;
 
-  factory ReadingStatisticsSummary.empty(DateTime now) {
-    final today = DateTime(now.year, now.month, now.day);
+  Duration get periodTotal =>
+      daily.fold(Duration.zero, (total, day) => total + day.duration);
+
+  int get dayCount => daily.length;
+
+  int get readingDays =>
+      daily.where((day) => day.duration > Duration.zero).length;
+
+  Duration get averageDaily => dayCount == 0
+      ? Duration.zero
+      : Duration(milliseconds: periodTotal.inMilliseconds ~/ dayCount);
+
+  factory ReadingStatisticsSummary.empty(
+    DateTime now, {
+    DateTime? month,
+    DateTime? start,
+    DateTime? end,
+    bool allTime = false,
+  }) {
+    final period = _readingPeriod(
+      now,
+      month: month,
+      start: start,
+      end: end,
+      allTime: allTime,
+    );
     return ReadingStatisticsSummary(
       today: Duration.zero,
       lastSevenDays: Duration.zero,
       total: Duration.zero,
-      daily: List.generate(7, (index) {
+      daily: List.generate(_readingDayCount(period.start, period.end), (index) {
         return DailyReadingDuration(
-          day: DateTime(today.year, today.month, today.day - 6 + index),
+          day: DateTime(
+            period.start.year,
+            period.start.month,
+            period.start.day + index,
+          ),
           duration: Duration.zero,
         );
       }),
@@ -127,6 +155,54 @@ class ReadingStatisticsSummary {
     );
   }
 }
+
+DateTime _readingDateOnly(DateTime value) {
+  final local = value.toLocal();
+  return DateTime(local.year, local.month, local.day);
+}
+
+({DateTime start, DateTime end}) _readingPeriod(
+  DateTime now, {
+  DateTime? month,
+  DateTime? start,
+  DateTime? end,
+  bool allTime = false,
+  DateTime? firstDay,
+}) {
+  if ((start == null) != (end == null)) {
+    throw ArgumentError('Both start and end are required for a date range.');
+  }
+  if ((month != null && (start != null || allTime)) ||
+      (allTime && start != null)) {
+    throw ArgumentError('Choose a month, date range, or all time.');
+  }
+  final today = _readingDateOnly(now);
+  final from = start != null
+      ? _readingDateOnly(start)
+      : month != null
+      ? DateTime(month.year, month.month)
+      : allTime
+      ? firstDay ?? today
+      : DateTime(today.year, today.month, today.day - 6);
+  final requestedEnd = end != null
+      ? _readingDateOnly(end)
+      : month != null
+      ? DateTime(month.year, month.month + 1, 0)
+      : today;
+  if (from.isAfter(requestedEnd) || from.isAfter(today)) {
+    throw ArgumentError('The range must start no later than its end or today.');
+  }
+  return (start: from, end: requestedEnd.isAfter(today) ? today : requestedEnd);
+}
+
+// UTC calendar dates count days without daylight-saving offsets.
+int _readingDayCount(DateTime start, DateTime end) =>
+    DateTime.utc(
+      end.year,
+      end.month,
+      end.day,
+    ).difference(DateTime.utc(start.year, start.month, start.day)).inDays +
+    1;
 
 int readingDayKey(DateTime value) =>
     value.year * 10000 + value.month * 100 + value.day;
@@ -230,23 +306,43 @@ class ReadingStatisticsStore {
     }
   }
 
-  ReadingStatisticsSummary readSummary({DateTime? now}) {
+  ReadingStatisticsSummary readSummary({
+    DateTime? now,
+    DateTime? month,
+    DateTime? start,
+    DateTime? end,
+    bool allTime = false,
+  }) {
     final current = now ?? DateTime.now();
-    final today = DateTime(current.year, current.month, current.day);
+    final today = _readingDateOnly(current);
     final sevenDayStart = DateTime(today.year, today.month, today.day - 6);
-    final recentStart = DateTime(today.year, today.month, today.day - 29);
     final todayKey = readingDayKey(today);
+    final firstDay = allTime
+        ? db.select('select min(day) from reading_statistics where day <= ?;', [
+                todayKey,
+              ]).first[0]
+              as int?
+        : null;
+    final period = _readingPeriod(
+      current,
+      month: month,
+      start: start,
+      end: end,
+      allTime: allTime,
+      firstDay: firstDay == null ? null : readingDateFromDayKey(firstDay),
+    );
     final sevenDayKey = readingDayKey(sevenDayStart);
-    final recentKey = readingDayKey(recentStart);
+    final startKey = readingDayKey(period.start);
+    final endKey = readingDayKey(period.end);
 
     final dailyRows = db.select(
       '''
       select day, sum(duration_ms) as duration_ms
       from reading_statistics
-      where day >= ?
+      where day >= ? and day <= ?
       group by day;
       ''',
-      [sevenDayKey],
+      [startKey, endKey],
     );
     final dailyValues = <int, Duration>{
       for (final row in dailyRows)
@@ -254,11 +350,13 @@ class ReadingStatisticsStore {
           milliseconds: (row['duration_ms'] as num).toInt(),
         ),
     };
-    final daily = List.generate(7, (index) {
+    final daily = List.generate(_readingDayCount(period.start, period.end), (
+      index,
+    ) {
       final day = DateTime(
-        sevenDayStart.year,
-        sevenDayStart.month,
-        sevenDayStart.day + index,
+        period.start.year,
+        period.start.month,
+        period.start.day + index,
       );
       return DailyReadingDuration(
         day: day,
@@ -270,10 +368,10 @@ class ReadingStatisticsStore {
       '''
       select id, type, title, subtitle, cover, duration_ms, last_read_time
       from reading_statistics
-      where day >= ?
+      where day >= ? and day <= ?
       order by last_read_time desc;
       ''',
-      [recentKey],
+      [startKey, endKey],
     );
     final recentComics = <String, ComicReadingStatistics>{};
     for (final row in recentRows) {
@@ -304,12 +402,12 @@ class ReadingStatisticsStore {
       final where = onlyDay != null
           ? 'where day = ?'
           : fromDay != null
-          ? 'where day >= ?'
+          ? 'where day >= ? and day <= ?'
           : '';
       final args = onlyDay != null
           ? <Object?>[onlyDay]
           : fromDay != null
-          ? <Object?>[fromDay]
+          ? <Object?>[fromDay, todayKey]
           : const <Object?>[];
       final value = db
           .select(

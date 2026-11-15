@@ -19,23 +19,18 @@ class Res<T> {
 
   final dynamic subData;
 
-  /// Optional server-reported total for paged category / search results.
-  /// Null means the source does not report one; callers must not invent it.
-  final int? total;
-
   @override
   String toString() => _data.toString();
 
-  Res.fromErrorRes(Res another, {this.subData, this.total})
+  Res.fromErrorRes(Res another, {this.subData})
       : _data = null,
         errorMessage = another.errorMessage;
 
   /// network result
-  const Res(this._data, {this.errorMessage, this.subData, this.total});
+  const Res(this._data, {this.errorMessage, this.subData});
 
   const Res.error(String err)
       : _data = null,
         subData = null,
-        total = null,
         errorMessage = err;
 }

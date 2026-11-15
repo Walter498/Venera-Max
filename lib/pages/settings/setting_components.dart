@@ -242,7 +242,7 @@ class SelectSetting extends StatelessWidget {
       width: double.infinity,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth < 450) {
+          if (App.isMobile || constraints.maxWidth < 450) {
             return _DoubleLineSelectSettings(
               title: title,
               settingKey: settingKey,
@@ -360,34 +360,77 @@ class _DoubleLineSelectSettingsState extends State<_DoubleLineSelectSettings> {
             ),
         ],
       ),
-      subtitle: Text(widget.optionTranslation[value] ?? "None"),
+      subtitle: Text(widget.optionTranslation[value] ?? "None".tl),
       trailing: const Icon(Icons.arrow_drop_down),
       onTap: () {
         var renderBox = context.findRenderObject() as RenderBox;
         var offset = renderBox.localToGlobal(Offset.zero);
         var size = renderBox.size;
         var rect = offset & size;
-        showMenu(
-          elevation: 3,
-          color: context.brightness == Brightness.light
-              ? const Color(0xFFF6F6F6)
-              : const Color(0xFF1E1E1E),
-          context: context,
-          position: RelativeRect.fromRect(
-            rect,
-            Offset.zero & MediaQuery.of(context).size,
-          ),
-          items: widget.optionTranslation.keys
-              .map(
-                (key) => PopupMenuItem(
-                  value: key,
-                  height: App.isMobile ? 46 : 40,
-                  child: Text(widget.optionTranslation[key]!),
+        final selection = App.isMobile
+            ? showModalBottomSheet<String>(
+                context: context,
+                useSafeArea: true,
+                showDragHandle: true,
+                isScrollControlled: true,
+                builder: (sheetContext) => SafeArea(
+                  top: false,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.7,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                            child: Text(
+                              widget.title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          for (final entry in widget.optionTranslation.entries)
+                            ListTile(
+                              title: Text(entry.value),
+                              selected: entry.key == value,
+                              trailing: entry.key == value
+                                  ? const Icon(Icons.check)
+                                  : null,
+                              onTap: () =>
+                                  Navigator.pop(sheetContext, entry.key),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               )
-              .toList(),
-        ).then((value) {
-          if (value != null) {
+            : showMenu<String>(
+                elevation: 3,
+                color: context.brightness == Brightness.light
+                    ? const Color(0xFFF6F6F6)
+                    : const Color(0xFF1E1E1E),
+                context: context,
+                position: RelativeRect.fromRect(
+                  rect,
+                  Offset.zero & MediaQuery.of(context).size,
+                ),
+                items: widget.optionTranslation.keys
+                    .map(
+                      (key) => PopupMenuItem(
+                        value: key,
+                        height: App.isMobile ? 46 : 40,
+                        child: Text(widget.optionTranslation[key]!),
+                      ),
+                    )
+                    .toList(),
+              );
+        selection.then((value) {
+          if (value != null && mounted) {
             setState(() {
               if (widget.comicId != null) {
                 appdata.settings.setReaderSetting(
@@ -682,16 +725,23 @@ class _SliderSettingState extends State<_SliderSetting> {
 }
 
 class _PopupWindowSetting extends StatelessWidget {
-  const _PopupWindowSetting({required this.title, required this.builder});
+  const _PopupWindowSetting({
+    required this.title,
+    required this.builder,
+    this.subtitle,
+  });
 
   final Widget Function() builder;
 
   final String title;
 
+  final String? subtitle;
+
   @override
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle!),
       trailing: const Icon(Icons.arrow_right),
       onTap: () {
         showPopUpWidget(App.rootContext, builder());
@@ -783,14 +833,42 @@ class _MultiPagesFilterState extends State<_MultiPagesFilter> {
     return PopUpWidgetScaffold(
       title: widget.title,
       tailing: [
-        if (keys.length < widget.pages.length)
+        if (canAddMore)
           TextButton.icon(
             label: Text("Add".tl),
             icon: const Icon(Icons.add),
             onPressed: showAddDialog,
           ),
       ],
-      body: view,
+      body: keys.isEmpty ? buildEmpty() : view,
+    );
+  }
+
+  // Stale keys of removed sources don't count toward what is left to add.
+  bool get canAddMore => widget.pages.keys.any((k) => !keys.contains(k));
+
+  Widget buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.playlist_add,
+            size: 64,
+            color: context.colorScheme.outline,
+          ),
+          const SizedBox(height: 16),
+          Text("No items".tl, style: ts.s16),
+          if (canAddMore) ...[
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              icon: const Icon(Icons.add),
+              label: Text("Add".tl),
+              onPressed: showAddDialog,
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -832,26 +910,34 @@ class _MultiPagesFilterState extends State<_MultiPagesFilter> {
           builder: (context, setState) {
             return ContentDialog(
               title: "Add".tl,
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: canAdd.entries
-                    .map(
-                      (e) => CheckboxListTile(
-                        value: selected.contains(e.key),
-                        title: Text(e.value),
-                        key: Key(e.key),
-                        onChanged: (value) {
-                          setState(() {
-                            if (value!) {
-                              selected.add(e.key);
-                            } else {
-                              selected.remove(e.key);
-                            }
-                          });
-                        },
-                      ),
-                    )
-                    .toList(),
+              // Cap the list so the buttons stay on screen with many entries.
+              content: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: (context.height * 0.6).clamp(160.0, 480.0),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: canAdd.entries
+                        .map(
+                          (e) => CheckboxListTile(
+                            value: selected.contains(e.key),
+                            title: Text(e.value),
+                            key: Key(e.key),
+                            onChanged: (value) {
+                              setState(() {
+                                if (value!) {
+                                  selected.add(e.key);
+                                } else {
+                                  selected.remove(e.key);
+                                }
+                              });
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
               ),
               actions: [
                 if (selected.length < canAdd.length)
@@ -921,45 +1007,6 @@ class _CallbackSetting extends StatelessWidget {
       subtitle: subtitle == null ? null : Text(subtitle!),
       trailing: TextButton(onPressed: callback, child: Text(actionTitle)),
       onTap: callback,
-    );
-  }
-}
-
-/// Collapsible settings group with a leading icon. Shared by every settings
-/// page so the header font ([ts.bold.s18]) and padding stay consistent.
-class _SettingsExpansionTile extends StatelessWidget {
-  const _SettingsExpansionTile({
-    this.expansionKey,
-    required this.title,
-    required this.icon,
-    required this.children,
-    this.initiallyExpanded = false,
-  });
-
-  final Key? expansionKey;
-
-  final String title;
-
-  final IconData icon;
-
-  final List<Widget> children;
-
-  final bool initiallyExpanded;
-
-  @override
-  Widget build(BuildContext context) {
-    return ExpansionTile(
-      key: expansionKey,
-      initiallyExpanded: initiallyExpanded,
-      maintainState: _SettingsJumpScope.targetOf(context) != null,
-      expansionAnimationStyle: _SettingsJumpScope.targetOf(context) != null
-          ? AnimationStyle.noAnimation
-          : null,
-      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-      childrenPadding: const EdgeInsets.only(bottom: 8),
-      leading: Icon(icon),
-      title: Text(title, style: ts.bold.s18),
-      children: children,
     );
   }
 }

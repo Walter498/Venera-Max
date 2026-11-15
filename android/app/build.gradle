@@ -27,20 +27,20 @@ if (flutterVersionName == null) {
 
 def keystorePropertiesFile = rootProject.file("key.properties")
 def keystoreProperties = new Properties()
-def hasReleaseKeystore = keystorePropertiesFile.exists()
-if (hasReleaseKeystore) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-    hasReleaseKeystore = ["storeFile", "storePassword", "keyAlias", "keyPassword"].every { key ->
-        def value = keystoreProperties[key]
-        value != null && !value.toString().trim().isEmpty()
+if (!keystorePropertiesFile.exists()) {
+    throw new GradleException("Missing android/key.properties for release signing")
+}
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+["storeFile", "storePassword", "keyAlias", "keyPassword"].each { key ->
+    def value = keystoreProperties[key]
+    if (value == null || value.toString().trim().isEmpty()) {
+        throw new GradleException("Missing android/key.properties value: ${key}")
     }
 }
-def releaseStoreFile = hasReleaseKeystore
-    ? rootProject.file(keystoreProperties["storeFile"])
-    : null
-hasReleaseKeystore = hasReleaseKeystore && releaseStoreFile.exists()
-// Manual Android builds may intentionally use the generated debug keystore.
-// Tagged releases still enforce the signing gate in the workflow.
+def releaseStoreFile = rootProject.file(keystoreProperties["storeFile"])
+if (!releaseStoreFile.exists()) {
+    throw new GradleException("Missing Android release keystore file: ${releaseStoreFile}")
+}
 
 android {
     namespace = "io.github.kyosee.venera"
@@ -72,21 +72,16 @@ android {
 
     signingConfigs {
         debug {
-            // Use the standard debug keystore when no release key is present.
-            if (hasReleaseKeystore) {
-                storeFile releaseStoreFile
-                storePassword keystoreProperties['storePassword']
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
-            }
+            storeFile releaseStoreFile
+            storePassword keystoreProperties['storePassword']
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
         }
         release {
-            if (hasReleaseKeystore) {
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
-                storeFile releaseStoreFile
-                storePassword keystoreProperties['storePassword']
-            }
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile releaseStoreFile
+            storePassword keystoreProperties['storePassword']
         }
     }
 
@@ -109,16 +104,7 @@ android {
             ndk {
                 abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
             }
-            if (hasReleaseKeystore) {
-                signingConfig signingConfigs.release
-            } else if (System.getenv("VENERA_TEST_SIGNING") == "1") {
-                signingConfig signingConfigs.debug
-            } else {
-                if (gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }) {
-                    throw new GradleException("Release signing key is missing; set VENERA_TEST_SIGNING=1 only for test APK builds")
-                }
-                signingConfig signingConfigs.release
-            }
+            signingConfig signingConfigs.release
         }
         debug {
             ndk {

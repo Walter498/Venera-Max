@@ -3,17 +3,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:venera/foundation/appdata.dart';
-import 'package:venera/foundation/reader_page_plan.dart';
 import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/image_translation/llm_translator.dart';
 import 'package:venera/foundation/image_translation/translation_config.dart';
 import 'package:venera/foundation/image_translation/translation_models.dart';
-import 'package:venera/foundation/image_translation/translation_performance_config.dart';
 import 'package:venera/foundation/image_translation/translation_pipeline.dart';
 import 'package:venera/foundation/image_translation/translation_store.dart';
 import 'package:venera/foundation/image_translation/translation_types.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/foundation/source_platform.dart';
+import 'package:venera/utils/data_sync.dart';
 import 'package:venera/utils/io.dart';
 
 /// Per-page translation state exposed to the reader UI for status feedback.
@@ -78,8 +77,6 @@ class _TranslationTask {
   final TranslationConfig config;
   final TranslationChapterIdentity chapter;
   final listeners = <VoidCallback>[];
-  int get pageOrdinal => int.tryParse(
-      RegExp(r'p(\d+)@$').firstMatch(cacheKey)?.group(1) ?? '') ?? 0;
 }
 
 /// Schedules page translations, caches results and notifies the reader when
@@ -178,27 +175,7 @@ class ImageTranslationService with ChangeNotifier {
 
   /// LLM translation is network-bound, so a second page's OCR can run in the
   /// worker while the first waits for its response.
-  int get _maxConcurrent => TranslationPerformanceConfig.effective.llmConcurrency;
-
-  String? _readerScope;
-  int _readerPage = 1;
-  Timer? _pumpTimer;
-
-  void setReadingPosition(String? sourceKey, String cid, String eid, int page) {
-    _readerScope = chapterScopePrefix(sourceKey, cid, eid);
-    _readerPage = page;
-    _pumpTimer?.cancel();
-    _pumpTimer = Timer(const Duration(milliseconds: 25), () {
-      _pumpTimer = null;
-      _pump();
-    });
-  }
-
-  int _priority(_TranslationTask task) => readerTranslationPriority(
-      task.pageOrdinal, _readerPage,
-      sameChapter: _readerScope != null && task.cacheKey.startsWith(_readerScope!));
-
-
+  int get _maxConcurrent => 2;
 
   /// Whether detection/OCR models AND the user's LLM endpoint are usable for
   /// [sourceLang]. The source language is per-comic, so readiness is too: a
@@ -386,8 +363,63 @@ class ImageTranslationService with ChangeNotifier {
     _completed.removeWhere((k) => k.startsWith(scopePrefix));
     _noContent.removeWhere((k) => k.startsWith(scopePrefix));
     _failures.removeWhere((k, _) => k.startsWith(scopePrefix));
+    // Publish the deletion so other devices drop these pages too.
+    DataSync().onTranslationsChanged();
     return removed;
   }
+
+  /// Merges another device's stored translations (see
+  /// [TranslationStore.mergeFrom]) and drops the rendered images of pages whose
+  /// text changed, which the reader would otherwise keep serving. [restore] and
+  /// [adoptLocalLanguages] (see [TranslationStore.mergeFrom]) are for imports the
+  /// user asked for, as opposed to a background sync.
+  Future<TranslationMergeResult> mergeStoreFrom(
+    String path, {
+    bool restore = false,
+    bool adoptLocalLanguages = false,
+  }) async {
+    var result = await TranslationStore().mergeFrom(
+      path,
+      restore: restore,
+      // Page keys spell a local comic's missing key as 'null'.
+      languageFor: adoptLocalLanguages
+          ? (sourceKey, cid) => TranslationConfig.of(
+              cid,
+              sourceKey == 'null' ? null : sourceKey,
+            ).sourceLang
+          : null,
+    );
+    await _forgetRendered(result.changedKeys);
+    return result;
+  }
+
+  Future<void> _forgetRendered(Set<String> keys) async {
+    if (keys.isEmpty) return;
+    // A wide change (e.g. a clear from another device): one prefix pass is
+    // cheaper than a lookup per page.
+    if (keys.length > 256) {
+      await CacheManager().deleteByPrefix(_pageKeyPrefix);
+      _completed.clear();
+      _noContent.clear();
+      _failures.clear();
+      _errors.clear();
+    } else {
+      for (var key in keys) {
+        for (var mode in InpaintMode.values) {
+          var renderKey = renderedKey(key, mode);
+          await CacheManager().delete(renderKey);
+          _completed.remove(renderKey);
+          _failures.remove(renderKey);
+          _errors.remove(renderKey);
+        }
+        _noContent.remove(key);
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Leading segment shared by every translated page key.
+  static const _pageKeyPrefix = 'pageTranslation@';
 
   /// Re-translates a whole comic: drops every stored page + rendered image for
   /// the current language pair AND the comic's learned glossary, so the next
@@ -407,12 +439,13 @@ class ImageTranslationService with ChangeNotifier {
   /// and the durable stored text both go. The learned per-comic language locks
   /// and glossaries are left intact. Returns the rendered-image count removed.
   Future<int> clearAllTranslationCache() async {
-    var removed = await CacheManager().deleteByPrefix('pageTranslation@');
+    var removed = await CacheManager().deleteByPrefix(_pageKeyPrefix);
     TranslationStore().clearAll();
     _completed.clear();
     _noContent.clear();
     _failures.clear();
     notifyListeners();
+    DataSync().onTranslationsChanged();
     return removed;
   }
 
@@ -573,11 +606,6 @@ class ImageTranslationService with ChangeNotifier {
       );
       _updateLanguageLock(comicKey, analysis.languageVotes, config);
       _mergeGlossary(comicKey, analysis.newGlossary);
-      if (analysis.incomplete) {
-        // Leave nothing behind: no text cache, no rendered image, so the page
-        // is retried and cannot masquerade as translated.
-        throw Exception('Translation incomplete');
-      }
       regions = analysis.regions;
       TranslationStore().put(cacheKey, regions, chapter: chapter);
     }
@@ -621,6 +649,7 @@ class ImageTranslationService with ChangeNotifier {
     TranslationConfig config, {
     required TranslationChapterIdentity chapter,
     bool Function()? shouldCancel,
+    Future<void> Function()? waitUntilResumed,
     void Function(TranslationStage stage, double completedPages)? onStage,
   }) async {
     var success = List.filled(pages.length, false);
@@ -628,6 +657,11 @@ class ImageTranslationService with ChangeNotifier {
     TranslationStore().recordExistingChapter(chapter);
     var pipeline = _pipeline ??= PageTranslationPipeline();
     var sourceLang = _effectiveSourceFor(comicKey, config);
+
+    Future<void> waitForResume() async {
+      await waitUntilResumed?.call();
+      if (shouldCancel?.call() ?? false) throw const PipelineCanceled();
+    }
 
     // Final regions per page once known; null = a fresh-OCR page still awaiting
     // the LLM (composed in stage 2) or a page that failed and is skipped.
@@ -665,7 +699,7 @@ class ImageTranslationService with ChangeNotifier {
 
     // Stage 1 — resolve each page as far as possible without the LLM.
     for (var i = 0; i < pages.length; i++) {
-      if (shouldCancel?.call() ?? false) throw const PipelineCanceled();
+      await waitForResume();
       var p = pages[i];
       try {
         var renderKey = renderedKey(p.cacheKey, config.mode);
@@ -686,12 +720,15 @@ class ImageTranslationService with ChangeNotifier {
               : TranslationStage.loadingModel,
           completedPages(),
         );
+        await waitForResume();
         pendingOcr[i] = await pipeline.ocrPage(
           p.imageBytes,
           sourceLang: sourceLang,
           targetLang: config.targetLang,
         );
         freshOcr[i] = true;
+      } on PipelineCanceled {
+        rethrow;
       } catch (e, s) {
         Log.warning('Image Translation', 'Batch OCR failed: $e\n$s');
         settled[i] = true; // failed; success[i] stays false
@@ -718,10 +755,9 @@ class ImageTranslationService with ChangeNotifier {
 
     var batchOk = true;
     var translated = const <String>[];
-    var missingTextIds = const <int>{};
     if (texts.isNotEmpty) {
-      if (shouldCancel?.call() ?? false) throw const PipelineCanceled();
       onStage?.call(TranslationStage.translating, completedPages());
+      await waitForResume();
       try {
         var result = await LlmTranslator.translateBatch(
           texts,
@@ -731,7 +767,6 @@ class ImageTranslationService with ChangeNotifier {
         );
         _mergeGlossary(comicKey, result.glossary);
         translated = result.texts;
-        missingTextIds = result.missingIds;
       } catch (e, s) {
         Log.warning('Image Translation', 'Batch translate failed: $e\n$s');
         batchOk = false;
@@ -743,16 +778,6 @@ class ImageTranslationService with ChangeNotifier {
       if (po == null) continue;
       if (!batchOk && po.pending.isNotEmpty) {
         settled[i] = true; // request failed; retry this page on a later run
-        continue;
-      }
-      // Does this page own any line the model failed to answer?
-      var pageMissing = false;
-      for (var k = 0; k < po.pending.length; k++) {
-        if (missingTextIds.contains(sliceAt[i] + k)) pageMissing = true;
-      }
-      if (pageMissing) {
-        // Retried later; caching it would freeze the untranslated lines.
-        settled[i] = true;
         continue;
       }
       var slice = po.pending.isEmpty || !batchOk
@@ -772,7 +797,7 @@ class ImageTranslationService with ChangeNotifier {
       if (settled[i]) continue;
       var regions = regionsOf[i];
       if (regions == null) continue;
-      if (shouldCancel?.call() ?? false) throw const PipelineCanceled();
+      await waitForResume();
       var p = pages[i];
       onStage?.call(TranslationStage.rendering, completedPages());
       try {
@@ -805,10 +830,6 @@ class ImageTranslationService with ChangeNotifier {
       }
     }
     onStage?.call(TranslationStage.rendering, completedPages());
-    // The reader decides whether a page is translated from [_completed]; that
-    // map just changed, so listeners must rebuild or the visible page keeps
-    // showing the pre-translation image until something else forces a rebuild.
-    if (success.any((ok) => ok)) notifyListeners();
     return success;
   }
 
@@ -852,10 +873,11 @@ class ImageTranslationService with ChangeNotifier {
     if (_queue.length >= _maxQueueLength) {
       // Prefer recent requests: the reader schedules pages in reading order,
       // so the oldest not-yet-started page is the one furthest behind.
-      final waiting = _queue.where((t) => !_active.contains(t)).toList();
-      if (waiting.isEmpty) return;
-      waiting.sort((a, b) => _priority(b).compareTo(_priority(a)));
-      _queue.remove(waiting.first);
+      var oldest = _queue.where((t) => !_active.contains(t)).firstOrNull;
+      if (oldest == null) {
+        return;
+      }
+      _queue.remove(oldest);
     }
     _queue.add(
       _TranslationTask(
@@ -869,19 +891,13 @@ class ImageTranslationService with ChangeNotifier {
       )..listeners.add(onTranslated),
     );
     _releaseTimer?.cancel();
-    // Coalesce asynchronously arriving image downloads before choosing pages.
-    _pumpTimer ??= Timer(const Duration(milliseconds: 60), () {
-      _pumpTimer = null;
-      _pump();
-    });
+    _pump();
   }
 
   void _pump() {
     while (_active.length < _maxConcurrent) {
-      final pending = _queue.where((t) => !_active.contains(t)).toList();
-      if (pending.isEmpty) break;
-      pending.sort((a, b) => _priority(a).compareTo(_priority(b)));
-      final next = pending.first;
+      var next = _queue.where((t) => !_active.contains(t)).firstOrNull;
+      if (next == null) break;
       _active.add(next);
       unawaited(_process(next));
     }

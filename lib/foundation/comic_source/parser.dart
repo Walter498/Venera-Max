@@ -216,21 +216,6 @@ class ComicSourceParser {
       _parseArchiveDownloader(),
     );
 
-    // A script may expose apiFetch(path) so the app can reuse the source's
-    // own request path for hosts that reject the app's client.
-    var apiFetch = _getValue("apiFetch");
-    if (apiFetch is JSInvokable) {
-      final call = JSAutoFreeFunction(apiFetch);
-      source.apiFetch = (path, [body]) async {
-        try {
-          final result = await call([path, body]);
-          return Res(result?.toString() ?? "");
-        } catch (e) {
-          return Res.error(e.toString());
-        }
-      };
-    }
-
     await source.loadData();
 
     if (_checkExists("init")) {
@@ -678,42 +663,6 @@ class ComicSourceParser {
       };
     }
 
-    CategoryComicsFilterLoader? loadWithFilters;
-    final rawGroups = _checkExists("categoryComics.multiSelectGroups")
-        ? _getValue("categoryComics.multiSelectGroups")
-        : null;
-    if (rawGroups != null && rawGroups is! List) {
-      throw ComicSourceParseException("categoryComics.multiSelectGroups must be a List");
-    }
-    final Set<String>? multiSelectGroups = rawGroups is List
-        ? rawGroups.whereType<String>().toSet()
-        : null;
-    if (_checkExists("categoryComics.loadWithFilters")) {
-      loadWithFilters = (request) async {
-        try {
-          var res = await JsEngine().runCode("""
-            ComicSource.sources.$_key.categoryComics.loadWithFilters(
-              ${jsonEncode(request.toJson())}
-            )
-          """);
-          if (res is! Map || res["comics"] is! List) {
-            return Res.error("Invalid filtered category response");
-          }
-          return Res(
-            List.generate(
-              res["comics"].length,
-              (index) => Comic.fromJson(res["comics"][index], _key!),
-            ),
-            subData: res["maxPage"],
-            total: res["total"] is num ? (res["total"] as num).toInt() : null,
-          );
-        } catch (e, s) {
-          Log.error("Network", "$e\n$s");
-          return Res.error(e.toString());
-        }
-      };
-    }
-
     RankingData? rankingData;
     if (_checkExists("categoryComics.ranking")) {
       var options = <String, String>{};
@@ -794,15 +743,12 @@ class ComicSourceParser {
               (index) => Comic.fromJson(res["comics"][index], _key!),
             ),
             subData: res["maxPage"],
-            total: res["total"] is num ? (res["total"] as num).toInt() : null,
           );
         } catch (e, s) {
           Log.error("Network", "$e\n$s");
           return Res.error(e.toString());
         }
       },
-      loadWithFilters: loadWithFilters,
-      multiSelectGroups: multiSelectGroups,
       rankingData: rankingData,
     );
   }
@@ -835,29 +781,6 @@ class ComicSourceParser {
 
     SearchNextFunction? loadNext;
 
-    SearchFilterLoader? loadWithFilters;
-    if (_checkExists('search.loadWithFilters')) {
-      loadWithFilters = (request) async {
-        try {
-          var res = await JsEngine().runCode("""
-          ComicSource.sources.$_key.search.loadWithFilters(
-            ${jsonEncode(request.toJson())})
-        """);
-          return Res(
-            List.generate(
-              res["comics"].length,
-              (index) => Comic.fromJson(res["comics"][index], _key!),
-            ),
-            subData: res["maxPage"],
-            total: res["total"] is num ? (res["total"] as num).toInt() : null,
-          );
-        } catch (e, s) {
-          Log.error("Network", "$e\n$s");
-          return Res.error(e.toString());
-        }
-      };
-    }
-
     if (_checkExists('search.load')) {
       loadPage = (keyword, page, searchOption) async {
         try {
@@ -871,7 +794,6 @@ class ComicSourceParser {
               (index) => Comic.fromJson(res["comics"][index], _key!),
             ),
             subData: res["maxPage"],
-            total: res["total"] is num ? (res["total"] as num).toInt() : null,
           );
         } catch (e, s) {
           Log.error("Network", "$e\n$s");
@@ -899,12 +821,7 @@ class ComicSourceParser {
       };
     }
 
-    return SearchPageData(
-      options,
-      loadPage,
-      loadNext,
-      loadWithFilters: loadWithFilters,
-    );
+    return SearchPageData(options, loadPage, loadNext);
   }
 
   LoadComicFunc? _parseLoadComicFunc() {
@@ -930,7 +847,6 @@ class ComicSourceParser {
         var res = await JsEngine().runCode("""
           ComicSource.sources.$_key.comic.loadEp(${jsonEncode(id)}, ${jsonEncode(ep)})
         """);
-        // 型別防護：源回傳異常資料時給出明確錯誤，而不是後續崩潰
         if (res is! Map<String, dynamic>) {
           throw "Invalid data:\nExpected: Map\nGot: ${res.runtimeType}";
         }
@@ -958,22 +874,17 @@ class ComicSourceParser {
     );
 
     Future<Res<T>> retryZone<T>(Future<Res<T>> Function() func) async {
-      final source = ComicSource.find(_key!)!;
-      // A source may keep its session in JS/cookies, but account credentials
-      // entered through the App live in source.data. Try that login first when
-      // available, without blocking sources that implement their own auto-login.
-      if (!source.isLogged) {
-        await source.reLogin();
+      if (!ComicSource.find(_key!)!.isLogged) {
+        return const Res.error("Not login");
       }
       var res = await func();
-      final message = res.errorMessage ?? '';
-      if (res.error &&
-          (message.contains("Login expired") ||
-              message.contains("Not login") ||
-              message.contains("請先登入") ||
-              message.contains("请先登入"))) {
-        final reLoginRes = await source.reLogin();
-        if (reLoginRes) return func();
+      if (res.error && res.errorMessage!.contains("Login expired")) {
+        var reLoginRes = await ComicSource.find(_key!)!.reLogin();
+        if (!reLoginRes) {
+          return const Res.error("Login expired and re-login failed");
+        } else {
+          return func();
+        }
       }
       return res;
     }
@@ -1018,7 +929,6 @@ class ComicSourceParser {
                 (index) => Comic.fromJson(res["comics"][index], _key!),
               ),
               subData: res["maxPage"],
-              total: res["total"] is num ? (res["total"] as num).toInt() : null,
             );
           } catch (e, s) {
             Log.error("Network", "$e\n$s");

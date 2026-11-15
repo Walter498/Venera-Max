@@ -2,8 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
-import 'package:venera/foundation/app.dart';
-import 'package:venera/foundation/image_translation/rate_limiter.dart';
 import 'package:venera/foundation/image_translation/inpaint.dart';
 import 'package:venera/foundation/image_translation/llm_translator.dart';
 import 'package:venera/foundation/image_translation/page_renderer.dart';
@@ -18,18 +16,9 @@ import 'package:venera/utils/opencc.dart';
 /// already being in the target language) — the service uses the votes to
 /// lock a comic's dominant language.
 class PageAnalysis {
-  PageAnalysis(
-    this.regions,
-    this.languageVotes, [
-    this.newGlossary = const {},
-    this.incomplete = false,
-  ]);
+  PageAnalysis(this.regions, this.languageVotes, [this.newGlossary = const {}]);
 
   final List<TranslatedRegion> regions;
-
-  /// True when the model left out lines this page needed. The page is shown
-  /// untranslated and retried later rather than cached half-translated.
-  final bool incomplete;
   final Map<String, int> languageVotes;
 
   /// Name/proper-noun translations the model reported for this page, to be
@@ -64,16 +53,6 @@ class PageOcr {
 class PageTranslationPipeline {
   PageTranslationPipeline();
 
-  // API concurrency does not multiply decoded RGBA buffers. Shared by reader
-  // and background jobs: at most 2 heavy stages on mobile / 3 on desktop.
-  static final _pixelGate = ConcurrencyGate((_) => App.isDesktop ? 3 : 2);
-
-  Future<T> _withPixels<T>(Future<T> Function() work) async {
-    await _pixelGate.acquire('pixels', maxWait: const Duration(minutes: 10));
-    try { return await work(); }
-    finally { _pixelGate.release('pixels'); }
-  }
-
   /// OCR + translation. Returns render-ready regions; an empty list means
   /// the page has no text worth translating.
   Future<PageAnalysis> analyzePage(
@@ -100,12 +79,7 @@ class PageTranslationPipeline {
       ...ocr.ready,
       ...regionsFromTranslation(ocr.pending, result.texts),
     ];
-    return PageAnalysis(
-      regions,
-      ocr.languageVotes,
-      result.glossary,
-      result.missingIds.isNotEmpty,
-    );
+    return PageAnalysis(regions, ocr.languageVotes, result.glossary);
   }
 
   /// Whether the OCR isolate already holds its models — see
@@ -122,44 +96,47 @@ class PageTranslationPipeline {
     Uint8List imageBytes, {
     required String sourceLang,
     required String targetLang,
-  }) => _withPixels(() => _ocrPagePixels(imageBytes,
-      sourceLang: sourceLang, targetLang: targetLang));
-
-  Future<PageOcr> _ocrPagePixels(Uint8List imageBytes, {
-    required String sourceLang, required String targetLang,
   }) async {
     var image = await _decode(imageBytes);
-    var paths = TranslationModels.workerPaths();
+    var paths = TranslationModels.workerPaths(sourceLang);
     var blocks = await TranslationWorker.instance.ocrPage(
       image,
       sourceLang: sourceLang,
       paths: paths,
     );
     blocks = blocks.where((b) => _isTranslatable(b.text)).toList();
+    // The worker labels all Han text 'zh'; tell Traditional apart so it is
+    // not mistaken for an already-Simplified page, and so a Traditional
+    // comic locks as such.
+    var langs = [
+      for (var b in blocks)
+        b.language == 'zh' && OpenCC.isMostlyTraditional(b.text)
+            ? 'zh-TW'
+            : b.language,
+    ];
     var votes = <String, int>{};
-    for (var block in blocks) {
-      votes[block.language] = (votes[block.language] ?? 0) + 1;
+    for (var lang in langs) {
+      votes[lang] = (votes[lang] ?? 0) + 1;
     }
     if (blocks.isEmpty) {
       return PageOcr(const [], const [], votes);
     }
 
-    var targetBase = targetLang == 'zh-TW' ? 'zh' : targetLang;
     var ready = <TranslatedRegion>[];
     var pending = <OcrBlock>[];
-    for (var block in blocks) {
-      if (block.language == targetBase) {
-        // Already in the target language. The only useful transform left is
-        // the simplified/traditional conversion.
-        if (targetLang == 'zh-TW' && block.language == 'zh') {
+    for (var i = 0; i < blocks.length; i++) {
+      var block = blocks[i];
+      switch (sameLanguageAction(langs[i], targetLang)) {
+        case SameLanguageAction.translate:
+          pending.add(block);
+        case SameLanguageAction.toTraditional:
           var converted = OpenCC.simplifiedToTraditional(block.text);
           if (converted != block.text) {
             ready.add(_region(block, converted));
           }
-        }
-        continue;
+        case SameLanguageAction.skip:
+          break;
       }
-      pending.add(block);
     }
     return PageOcr(ready, pending, votes);
   }
@@ -189,10 +166,7 @@ class PageTranslationPipeline {
     Uint8List imageBytes,
     List<TranslatedRegion> regions, {
     InpaintMode mode = InpaintMode.smart,
-  }) => _withPixels(() => _renderPagePixels(imageBytes, regions, mode: mode));
-
-  Future<Uint8List> _renderPagePixels(Uint8List imageBytes,
-    List<TranslatedRegion> regions, {required InpaintMode mode}) async {
+  }) async {
     var image = await _decode(imageBytes);
     if (mode != InpaintMode.patch && regions.isNotEmpty) {
       TextInpainter.erase(image, [
@@ -219,7 +193,7 @@ class PageTranslationPipeline {
     // Pure digits/punctuation (page numbers, sfx dashes) are not worth a
     // translation pass.
     return text.runes.any((r) {
-      return r > 0x2E80 || (r >= 0x41 && r <= 0x7A);
+      return r > 0x2E80 || (r >= 0x41 && r <= 0x7A) || isScriptLetter(r);
     });
   }
 
@@ -272,6 +246,21 @@ class PageTranslationPipeline {
   Future<void> release() async {
     TranslationWorker.instance.release();
   }
+}
+
+enum SameLanguageAction { translate, toTraditional, skip }
+
+/// What to do with a block already labeled [blockLang] when translating into
+/// [targetLang]. Simplified into Traditional is a lossless table lookup;
+/// Traditional into Simplified still goes to the model, because the bundled
+/// table only maps Simplified to Traditional and mangles the reverse
+/// (開 -> 𫔭, 為/裡/髮 untouched).
+SameLanguageAction sameLanguageAction(String blockLang, String targetLang) {
+  if (blockLang == targetLang) return SameLanguageAction.skip;
+  if (targetLang == 'zh-TW' && blockLang == 'zh') {
+    return SameLanguageAction.toTraditional;
+  }
+  return SameLanguageAction.translate;
 }
 
 /// Kept for logging clarity when a page fails half-way; the worker reports

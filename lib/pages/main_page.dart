@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/pages/categories_page.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
-import 'package:venera/pages/community/community_page.dart';
 import 'package:venera/pages/random_comic_draw_dialog.dart';
 import 'package:venera/pages/search_page.dart';
 import 'package:venera/pages/settings/settings_page.dart';
@@ -12,11 +11,14 @@ import 'package:venera/utils/translations.dart';
 import '../components/components.dart';
 import '../foundation/app.dart';
 import 'explore_page.dart';
-import 'favorites/shelf_page.dart';
+import 'favorites/favorites_page.dart';
 import 'home_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
+
+  /// Position of the favorites tab; also the stored `initialPage` value.
+  static const favoritesIndex = 1;
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -50,8 +52,8 @@ class _MainPageState extends State<MainPage> {
 
   final _pages = [
     const HomePage(),
-    const ShelfPage(key: PageStorageKey('favorites')),
-    const CommunityPage(),
+    const FavoritesPage(key: PageStorageKey('favorites')),
+    const ExplorePage(key: PageStorageKey('explore')),
     const CategoriesPage(key: PageStorageKey('categories')),
   ];
 
@@ -75,9 +77,9 @@ class _MainPageState extends State<MainPage> {
           activeIcon: Icons.local_activity,
         ),
         PaneItemEntry(
-          label: '社區',
-          icon: Icons.forum_outlined,
-          activeIcon: Icons.forum,
+          label: 'Explore'.tl,
+          icon: Icons.explore_outlined,
+          activeIcon: Icons.explore,
         ),
         PaneItemEntry(
           label: 'Categories'.tl,

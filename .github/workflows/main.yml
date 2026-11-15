@@ -18,6 +18,11 @@ on:
           - windows
           - macos
           - linux
+          - harmonyos
+      appimage_run_id:
+        description: "Existing build run to test AppImages without rebuilding (platform: linux)"
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -37,7 +42,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version-file: pubspec.yaml
+          flutter-version: '3.44.3'
           architecture: x64
       - run: sudo xcode-select --switch /Applications/Xcode_16.4.app
       - run: flutter pub get
@@ -88,16 +93,21 @@ jobs:
           name: macos_build
           path: result/
   Build_IOS:
-    runs-on: macos-15
+    # The iOS 27.1 SDK enables the full iPhone Duo display.
+    runs-on: xcode-27
     if: ${{ github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'ios' }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version-file: pubspec.yaml
-          architecture: x64
-      - run: sudo xcode-select --switch /Applications/Xcode_16.4.app
+          flutter-version: '3.44.3'
+          architecture: arm64
+      - name: Select Xcode 27.1
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_27.1.app
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
       - run: flutter pub get
       - run: flutter build ios --release --no-codesign
       - run: |
@@ -123,32 +133,21 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version-file: pubspec.yaml
+          flutter-version: '3.44.3'
           architecture: x64
-      - name: Select Android build mode
-        id: android_mode
+      - name: Verify Android signing secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            test -n "$KEYSTORE_BASE64" || { echo "ANDROID_KEYSTORE_BASE64 secret is missing for release"; exit 1; }
-            test -n "$KEYSTORE_PASSWORD" || { echo "ANDROID_KEYSTORE_PASSWORD secret is missing for release"; exit 1; }
-            test -n "$KEY_ALIAS" || { echo "ANDROID_KEY_ALIAS secret is missing for release"; exit 1; }
-            test -n "$KEY_PASSWORD" || { echo "ANDROID_KEY_PASSWORD secret is missing for release"; exit 1; }
-            echo "mode=release" >> "$GITHUB_OUTPUT"
-          elif [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] &&
-               [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "mode=release" >> "$GITHUB_OUTPUT"
-          else
-            echo "mode=test-release" >> "$GITHUB_OUTPUT"
-            echo "Android signing secrets are absent; producing an optimized Release APK signed with a test certificate."
-          fi
+            set -euo pipefail
+            test -n "$KEYSTORE_BASE64" || { echo "ANDROID_KEYSTORE_BASE64 secret is missing"; exit 1; }
+            test -n "$KEYSTORE_PASSWORD" || { echo "ANDROID_KEYSTORE_PASSWORD secret is missing"; exit 1; }
+            test -n "$KEY_ALIAS" || { echo "ANDROID_KEY_ALIAS secret is missing"; exit 1; }
+            test -n "$KEY_PASSWORD" || { echo "ANDROID_KEY_PASSWORD secret is missing"; exit 1; }
       - name: Decode and install Android signing files
-        if: steps.android_mode.outputs.mode == 'release'
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -169,22 +168,7 @@ jobs:
       - name: Check rust-toolchain.toml
         run: rustup show
       - run: flutter pub get
-      - name: Build optimized Android APK
-        env:
-          VENERA_TEST_SIGNING: ${{ steps.android_mode.outputs.mode == 'test-release' && '1' || '0' }}
-        run: flutter build apk --release
-      - name: Validate APK outputs and signature
-        run: |
-          set -euo pipefail
-          version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml)
-          version="${version%%+*}"
-          for suffix in "" "-arm64-v8a"; do
-            apk="build/app/outputs/apk/release/VeneraX-${version}${suffix}.apk"
-            test -s "$apk"
-            unzip -l "$apk" | grep -q 'AndroidManifest.xml'
-          done
-          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
-          "$signer" verify --verbose "build/app/outputs/apk/release/VeneraX-${version}.apk"
+      - run: flutter build apk --release
       - name: Verify Android signature continuity
         if: github.event_name == 'push'
         env:
@@ -270,7 +254,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version-file: pubspec.yaml
+          flutter-version: '3.44.3'
           architecture: x64
       - name: build
         run: |
@@ -282,19 +266,26 @@ jobs:
           path: build/windows/VeneraX-*
   Build_Linux:
     runs-on: ubuntu-22.04
-    if: ${{ github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux' }}
+    if: ${{ !inputs.appimage_run_id && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux') }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version-file: pubspec.yaml
+          flutter-version: '3.44.3'
           architecture: x64
       - run: |
           sudo apt-get update -y
-          sudo apt-get install -y ninja-build libgtk-3-dev webkit2gtk-4.1 libayatana-appindicator3-dev
+          sudo apt-get install -y ninja-build libgtk-3-dev webkit2gtk-4.1 libayatana-appindicator3-dev librsvg2-dev libglib2.0-bin glib-networking
           dart pub global activate -s git https://github.com/venera-app/flutter_to_debian.git
       - run: python3 debian/build.py x64
+      - name: Build AppImage
+        run: python3 linux/appimage/build.py x64
+      - uses: actions/upload-artifact@v7
+        with:
+          name: appimage_build
+          path: build/linux/x64/release/appimage/*.AppImage
+          if-no-files-found: error
       - run: dart run flutter_to_arch
       - run: |
           sudo rm -rf build/linux/arch/app.tar.gz
@@ -328,22 +319,29 @@ jobs:
           path: build/linux/arch/
   Build_Linux_ARM64:
     runs-on: ubuntu-22.04-arm
-    if: ${{ github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux' }}
+    if: ${{ !inputs.appimage_run_id && (github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'linux') }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: 'master'
-          flutter-version-file: pubspec.yaml
+          flutter-version: '3.44.3'
       - run: |
           flutter pub get
           sudo apt-get update -y
-          sudo apt-get install -y ninja-build libgtk-3-dev webkit2gtk-4.1 libayatana-appindicator3-dev
+          sudo apt-get install -y ninja-build libgtk-3-dev webkit2gtk-4.1 libayatana-appindicator3-dev librsvg2-dev libglib2.0-bin glib-networking
           dart pub global activate -s git https://github.com/venera-app/flutter_to_debian.git
       - name: "Patch font"
         run: |
           dart run patch/font.dart
       - run: python3 debian/build.py arm64
+      - name: Build AppImage
+        run: python3 linux/appimage/build.py arm64
+      - uses: actions/upload-artifact@v7
+        with:
+          name: appimage_arm64_build
+          path: build/linux/arm64/release/appimage/*.AppImage
+          if-no-files-found: error
       - name: Rename Linux packages
         run: |
           set -euo pipefail
@@ -357,9 +355,75 @@ jobs:
           name: deb_arm64_build
           path: build/linux/x64/release/debian # This is a bug related to flutter_to_debian, but it's not a big deal.
 
+  Build_HarmonyOS:
+    # Register a one-job runner with this label and the isolated OH toolchain.
+    runs-on: [venerax-harmonyos]
+    if: ${{ github.event_name == 'push' || inputs.platform == 'all' || inputs.platform == 'harmonyos' }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build HarmonyOS release packages
+        shell: powershell
+        run: |
+          & .github/scripts/build-harmonyos.ps1 `
+            -Checkout $env:VENERAX_OHOS_CHECKOUT `
+            -SourceRepository $env:GITHUB_WORKSPACE `
+            -Commit $env:GITHUB_SHA `
+            -FlutterSdk $env:FLUTTER_OHOS_SDK `
+            -DevEcoStudio $env:DEVECO_STUDIO `
+            -OutputDirectory (Join-Path $env:GITHUB_WORKSPACE 'result')
+      - uses: actions/upload-artifact@v7
+        with:
+          name: harmonyos_build
+          path: result/*.hap
+          if-no-files-found: error
+
+  Test_AppImage:
+    needs: [Build_Linux, Build_Linux_ARM64]
+    if: ${{ !cancelled() && ((inputs.platform == 'linux' && inputs.appimage_run_id != '') || (needs.Build_Linux.result == 'success' && needs.Build_Linux_ARM64.result == 'success')) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-22.04
+            artifact: appimage_build
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+            artifact: appimage_arm64_build
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.artifact }}
+          path: build/appimage
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.appimage_run_id || github.run_id }}
+      - name: Test AppImage GUI and WebView
+        timeout-minutes: 10
+        run: |
+          chmod +x build/appimage/*.AppImage
+          bash linux/appimage/smoke_test.sh build/appimage/*.AppImage
+      - name: Upload AppImage runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: appimage_smoke_${{ matrix.arch }}
+          path: build/appimage/smoke-test/
+          if-no-files-found: ignore
+
   Release:
     runs-on: ubuntu-22.04
-    needs: [Build_MacOS, Build_IOS, Build_Android, Build_Windows, Build_Linux, Build_Linux_ARM64]
+    needs: [Build_MacOS, Build_IOS, Build_Android, Build_Windows, Build_Linux, Build_Linux_ARM64, Build_HarmonyOS, Test_AppImage]
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     outputs:
       prerelease: ${{ steps.release_meta.outputs.prerelease }}
@@ -393,6 +457,18 @@ jobs:
         with:
           name: deb_arm64_build
           path: outputs
+      - uses: actions/download-artifact@v8
+        with:
+          name: appimage_build
+          path: outputs
+      - uses: actions/download-artifact@v8
+        with:
+          name: appimage_arm64_build
+          path: outputs
+      - uses: actions/download-artifact@v8
+        with:
+          name: harmonyos_build
+          path: outputs
 
       - name: Validate release inputs
         id: release_meta
@@ -424,6 +500,7 @@ jobs:
           files=(
             outputs/*.ipa outputs/*.dmg outputs/*.apk outputs/*.zip
             outputs/*.exe outputs/*.deb outputs/*.zst outputs/*.AppImage
+            outputs/*.hap
           )
           test "${#files[@]}" -gt 0 || { echo "No release assets found"; exit 1; }
           cp -- "${files[@]}" release-assets/
@@ -434,17 +511,22 @@ jobs:
               exit 1
             }
           }
-          require_asset 'release-assets/*.ipa'
-          require_asset 'release-assets/*.dmg'
-          require_asset 'release-assets/*.apk'
+          require_asset "release-assets/VeneraX-ios-${app_version}.ipa"
+          require_asset "release-assets/VeneraX-${app_version}.dmg"
           require_asset "release-assets/VeneraX-${version}.apk"
-          require_asset 'release-assets/*.deb'
-          require_asset 'release-assets/*.zst'
-          if ! compgen -G 'release-assets/*.exe' > /dev/null &&
-             ! compgen -G 'release-assets/*.zip' > /dev/null; then
-            echo "Missing Windows installer/archive"
-            exit 1
-          fi
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            require_asset "release-assets/VeneraX-${version}-${abi}.apk"
+          done
+          for arch in amd64 arm64; do
+            require_asset "release-assets/VeneraX-${version}-${arch}.deb"
+          done
+          require_asset "release-assets/VeneraX-${version}-${app_version##*+}-x86_64.pkg.tar.zst"
+          require_asset "release-assets/VeneraX-${version}-x86_64.AppImage"
+          require_asset "release-assets/VeneraX-${version}-aarch64.AppImage"
+          require_asset "release-assets/VeneraX-${version}-windows.zip"
+          require_asset "release-assets/VeneraX-${version}-windows-installer.exe"
+          require_asset "release-assets/VeneraX-${app_version}-harmonyos-arm64-unsigned.hap"
+          require_asset "release-assets/VeneraX-${app_version}-harmonyos-x64-emulator-unsigned.hap"
           while IFS= read -r asset; do
             test -s "$asset" || { echo "Empty release asset: $asset"; exit 1; }
           done < <(find release-assets -maxdepth 1 -type f -print)
@@ -591,7 +673,7 @@ jobs:
           DOWNLOAD_URL: ${{ steps.meta.outputs.download_url }}
           SIZE: ${{ steps.meta.outputs.size }}
           PUB_DATE: ${{ steps.meta.outputs.pub_date }}
-          MIN_OS: '14.0'
+          MIN_OS: '15.1'
         run: |
           set -euo pipefail
           if [ -f "release-notes/${TAG}.en.md" ]; then
@@ -609,6 +691,45 @@ jobs:
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add altstore-source.json
           git commit -m "chore: 更新 AltStore 安装清单至 ${{ github.ref_name }}"
+          git push origin HEAD:master
+
+  # Rebuilds CHANGELOG.md / CHANGELOG_EN.md from release-notes/ after a stable
+  # release. Runs after the AltStore job so the two pushes to master don't race,
+  # and still runs when that job failed.
+  Update_Changelog:
+    runs-on: ubuntu-22.04
+    needs: [Release, Update_AltStore_Source]
+    if: ${{ !cancelled() && needs.Release.result == 'success' && needs.Release.outputs.prerelease == 'false' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+      - name: Regenerate changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          export RELEASES_FILE="$RUNNER_TEMP/releases.tsv"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | "\(.tag_name)\t\(.published_at)"' \
+            > "$RELEASES_FILE"
+          node .github/scripts/gen-changelog.mjs
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain -- CHANGELOG.md CHANGELOG_EN.md)" ]; then
+            echo "Changelog unchanged; nothing to commit"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add CHANGELOG.md CHANGELOG_EN.md
+          git commit -m "chore: update changelog for ${{ github.ref_name }}"
           git push origin HEAD:master
 
   # Beta counterpart of Update_AltStore_Source: pre-releases update ONLY the
@@ -667,7 +788,7 @@ jobs:
           DOWNLOAD_URL: ${{ steps.meta.outputs.download_url }}
           SIZE: ${{ steps.meta.outputs.size }}
           PUB_DATE: ${{ steps.meta.outputs.pub_date }}
-          MIN_OS: '14.0'
+          MIN_OS: '15.1'
         run: |
           set -euo pipefail
           if [ -f "release-notes/${TAG}.en.md" ]; then

@@ -11,6 +11,7 @@ import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/follow_update_scope.dart';
 import 'package:venera/foundation/follow_update_tasks.dart';
+import 'package:venera/foundation/ohos_follow_scheduler.dart';
 import 'package:venera/utils/data_sync.dart';
 import 'package:venera/utils/translations.dart';
 import '../foundation/global_state.dart';
@@ -297,7 +298,43 @@ class _FollowUpdateProgressBarState extends State<FollowUpdateProgressBar> {
 }
 
 class FollowUpdatesPage extends StatefulWidget {
-  const FollowUpdatesPage({super.key});
+  const FollowUpdatesPage({super.key, this.showAll = false});
+
+  final bool showAll;
+
+  static Future<void> openSettings(BuildContext context) async {
+    final applied = await showDialog<_SettingsChoice>(
+      context: context,
+      builder: (context) => const _FollowUpdateSettingsDialog(),
+    );
+    if (applied == null) return;
+    await FollowUpdateScope.saveSchedule(
+      intervalHours: applied.intervalHours,
+      checkOnStart: applied.checkOnStart,
+      fixedTime: applied.fixedTime,
+    );
+    final previous = FollowUpdateScope.folders().toSet();
+    FollowUpdatesService._cancelChecking?.call();
+    await FollowUpdateScope.save(
+      allFolders: applied.allFolders,
+      folders: applied.folders,
+    );
+    await OhosFollowScheduler.sync();
+    final next = FollowUpdateScope.folders();
+    for (final folder in previous.difference(next.toSet())) {
+      FollowUpdateTaskManager.instance.cancelForFolder(folder);
+    }
+    for (final folder in next) {
+      LocalFavoritesManager().prepareTableForFollowUpdates(folder, false);
+    }
+    updateFollowUpdatesUI();
+    if (next.any((folder) => !previous.contains(folder))) {
+      unawaited(maybePromptBatteryOptimization());
+      FollowUpdatesService._cancelChecking?.call();
+      FollowUpdateTaskManager.instance.startCheck(next, manual: true);
+      if (context.mounted) context.showMessage(message: 'Task started'.tl);
+    }
+  }
 
   @override
   State<FollowUpdatesPage> createState() => _FollowUpdatesPageState();
@@ -642,6 +679,14 @@ class _FollowUpdatesPageState extends AutomaticGlobalState<FollowUpdatesPage> {
   }
 
   Widget buildConfiguredTabs(BuildContext context) {
+    if (widget.showAll) {
+      return Column(
+        children: [
+          buildSummary(context),
+          Expanded(child: buildComicsTab(allComics, emptyText: 'No comics'.tl)),
+        ],
+      );
+    }
     return DefaultTabController(
       length: 3,
       child: Column(
@@ -893,55 +938,7 @@ class _FollowUpdatesPageState extends AutomaticGlobalState<FollowUpdatesPage> {
   /// Opens the follow-updates settings: which folders are followed, and how
   /// often each comic is re-checked. Returns the chosen scope, or null when the
   /// user dismissed the dialog.
-  void showSettings() async {
-    var applied = await showDialog<_SettingsChoice>(
-      context: App.rootContext,
-      builder: (context) => const _FollowUpdateSettingsDialog(),
-    );
-    if (applied == null) {
-      return;
-    }
-    await FollowUpdateScope.saveSchedule(
-      intervalHours: applied.intervalHours,
-      checkOnStart: applied.checkOnStart,
-      fixedTime: applied.fixedTime,
-    );
-    await applyScope(allFolders: applied.allFolders, folders: applied.folders);
-  }
-
-  Future<void> applyScope({
-    required bool allFolders,
-    required List<String> folders,
-  }) async {
-    var previous = this.folders.toSet();
-    FollowUpdatesService._cancelChecking?.call();
-    // Persisted without a sync upload: the scope is device-local, and uploading
-    // here could push a transient (pre-check) state over good data on other
-    // devices. Real update marks travel with the normal data-change syncs.
-    await FollowUpdateScope.save(allFolders: allFolders, folders: folders);
-    var next = this.folders;
-    // A folder dropped from the scope is an explicit cancellation: its pending
-    // resumable check must not come back on the next launch.
-    for (final folder in previous) {
-      if (!next.contains(folder)) {
-        FollowUpdateTaskManager.instance.cancelForFolder(folder);
-      }
-    }
-    // Do NOT clear has_new_update here. Choosing the scope is a configuration
-    // action; wiping the flags would discard update marks just synced from
-    // another device. Read marks are cleared by the read path, and real new
-    // chapters are written by the check itself.
-    for (final folder in next) {
-      LocalFavoritesManager().prepareTableForFollowUpdates(folder, false);
-    }
-    // Refreshes this page (via updateComics) as well as the home badge.
-    updateFollowUpdatesUI();
-    if (next.any((f) => !previous.contains(f))) {
-      // Newly followed folders have never been checked; get their first pass
-      // going instead of leaving the list empty until the periodic check.
-      checkNow(silent: true);
-    }
-  }
+  void showSettings() => FollowUpdatesPage.openSettings(App.rootContext);
 
   void checkNow({bool silent = false}) async {
     final List<String> scope = folders;
@@ -979,6 +976,7 @@ abstract class FollowUpdatesService {
   static bool _cancelRequested = false;
 
   static Timer? _checkerTimer;
+  static AppLifecycleListener? _lifecycle;
 
   static void _check() async {
     if (_isChecking) {
@@ -1060,6 +1058,17 @@ abstract class FollowUpdatesService {
   static void initChecker() {
     if (_isInitialized) return;
     _isInitialized = true;
+    unawaited(OhosFollowScheduler.sync());
+    if (App.isOhos) {
+      _lifecycle ??= AppLifecycleListener(onResume: () {
+        unawaited(OhosFollowScheduler.sync());
+        if (FollowUpdateScope.checkOnStart && FollowUpdateScope.isPastFixedTime(
+          FollowUpdateScope.fixedTime, DateTime.now(),
+        )) {
+          _check();
+        }
+      });
+    }
     FollowUpdateTaskManager.instance.onTaskFinished = (_) {
       updateFollowUpdatesUI();
     };
@@ -1070,7 +1079,10 @@ abstract class FollowUpdatesService {
     if (FollowUpdateScope.checkOnStart) {
       _check();
     }
-    DataSync().addListener(updateFollowUpdatesUI);
+    DataSync().addListener(() {
+      updateFollowUpdatesUI();
+      unawaited(OhosFollowScheduler.sync());
+    });
     // Polling this often is cheap: the per-comic interval decides what actually
     // gets fetched, so a tick with nothing due starts no task at all.
     _checkerTimer ??= Timer.periodic(const Duration(minutes: 10), (timer) {
@@ -1230,6 +1242,11 @@ class _FollowUpdateSettingsDialogState
           ],
         ),
         const SizedBox(height: 8),
+        if (App.isOhos)
+          Text(
+            "HarmonyOS schedules background checks when resources allow. Checks may be delayed and continue in later runs. Opening the app can check sooner.".tl,
+            style: ts.s12.withColor(context.colorScheme.onSurfaceVariant),
+          ),
       ],
     );
   }

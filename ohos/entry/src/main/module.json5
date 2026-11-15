@@ -1,0 +1,77 @@
+
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "EntryAbility",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    "querySchemes": ["http", "https"],
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
+        "description": "$string:EntryAbility_desc",
+        "icon": "$media:icon_default",
+        "label": "$string:EntryAbility_label",
+        "startWindowIcon": "$media:startup_placeholder",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "launchType": "singleton",
+        "backgroundModes": ["dataTransfer"],
+        "metadata": [{"name": "ohos.ability.shortcuts", "resource": "$profile:shortcuts_config"}],
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "action.system.home"
+            ]
+          },
+          {
+            "actions": ["ohos.want.action.viewData"],
+            "entities": ["entity.system.browsable"],
+            "uris": [{"scheme": "http"}, {"scheme": "https"}]
+          },
+          {
+            "actions": ["ohos.want.action.sendData"],
+            "uris": [
+              {"scheme": "file", "utd": "general.plain-text", "maxFileSupported": 8},
+              {"scheme": "file", "utd": "general.hyperlink", "maxFileSupported": 8}
+            ]
+          }
+        ]
+      }
+    ],
+    "extensionAbilities": [
+      {
+        "name": "ReadingFormAbility",
+        "srcEntry": "./ets/widget/ReadingFormAbility.ets",
+        "type": "form",
+        "exported": true,
+        "metadata": [{"name": "ohos.extension.form", "resource": "$profile:reading_form"}]
+      },
+      {
+        "name": "FollowUpdatesAbility",
+        "srcEntry": "./ets/followupdates/FollowUpdatesAbility.ets",
+        "type": "workScheduler",
+        "exported": false
+      }
+    ],
+    "requestPermissions": [
+      {"name" :  "ohos.permission.INTERNET"},
+      {"name" :  "ohos.permission.GET_NETWORK_INFO"},
+      {"name" :  "ohos.permission.ACCESS_BIOMETRIC"},
+      {"name" :  "ohos.permission.FILE_ACCESS_PERSIST"},
+      {"name" :  "ohos.permission.KEEP_BACKGROUND_RUNNING"},
+    ]
+  }
+}

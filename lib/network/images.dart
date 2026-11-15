@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/image_translation/rate_limiter.dart';
 import 'package:venera/foundation/js_engine.dart';
 import 'package:venera/foundation/consts.dart';
 import 'package:venera/utils/translations.dart';
+import 'package:venera/utils/file_type.dart';
 import 'package:venera/utils/image.dart';
 import 'package:venera/foundation/image_provider/avif_fallback.dart';
 
@@ -15,7 +17,49 @@ import 'app_dio.dart';
 
 const _imageStreamIdleTimeout = Duration(seconds: 30);
 
+/// rhttp only bounds connection setup, so a server that accepts the connection
+/// but never answers would hang the request forever. Bound the header wait;
+/// the body is bounded separately by [_imageStreamIdleTimeout].
+const _imageResponseHeaderTimeout = Duration(seconds: 30);
+
+@visibleForTesting
+Future<Response<ResponseBody>> requestImageWithHeaderTimeout(
+  AppDio dio,
+  String url, {
+  Object? data,
+  Duration headerTimeout = _imageResponseHeaderTimeout,
+}) async {
+  final cancelToken = CancelToken();
+  var timedOut = false;
+  final timer = Timer(headerTimeout, () {
+    timedOut = true;
+    cancelToken.cancel();
+  });
+  try {
+    return await dio.request<ResponseBody>(
+      url,
+      data: data,
+      cancelToken: cancelToken,
+    );
+  } on DioException catch (e) {
+    if (timedOut && e.type == DioExceptionType.cancel) {
+      throw TimeoutException("No response from server", headerTimeout);
+    }
+    rethrow;
+  } finally {
+    timer.cancel();
+  }
+}
+
+/// Whether [data] can be stored as a downloaded page. A source may answer 200
+/// with an HTML error page or a truncated body.
+bool isValidDownloadedImage(Uint8List data) {
+  return data.length >= 100 && detectFileType(data).mime.startsWith('image/');
+}
+
 abstract class ImageDownloader {
+  static const thumbnailCacheDuration = Duration(days: 90);
+
   /// Disk cache key for a thumbnail/cover. Callers that may need to evict a
   /// corrupted entry must build the key through this, not by hand: a key that
   /// differs from the one used to write makes eviction a no-op, and bad bytes
@@ -41,6 +85,9 @@ abstract class ImageDownloader {
     String? sourceKey, [
     String? cid,
   ]) async* {
+    // Apply AVIF fallback if this URL previously failed to decode.
+    url = AvifFallbackRegistry.instance.applyFallback(url);
+
     // A locally stored cover (a collection's custom cover, or one borrowed from
     // a downloaded member) can't go through the HTTP client: it rejects the
     // file scheme, which failed the whole download task (#206).
@@ -59,7 +106,10 @@ abstract class ImageDownloader {
     }
 
     final cacheKey = thumbnailCacheKey(url, sourceKey, cid);
-    final cache = await CacheManager().findCache(cacheKey);
+    final cache = await CacheManager().findCache(
+      cacheKey,
+      thumbnailCacheDuration.inMilliseconds,
+    );
 
     if (cache != null) {
       var data = await cache.readAsBytes();
@@ -68,6 +118,7 @@ abstract class ImageDownloader {
         totalBytes: data.length,
         imageBytes: data,
       );
+      return;
     }
 
     var configs = <String, dynamic>{};
@@ -104,7 +155,8 @@ abstract class ImageDownloader {
     if (requestUrl.startsWith('//')) {
       requestUrl = 'https:$requestUrl';
     }
-    var req = await dio.request<ResponseBody>(
+    var req = await requestImageWithHeaderTimeout(
+      dio,
       requestUrl,
       data: configs['data'],
     );
@@ -141,7 +193,11 @@ abstract class ImageDownloader {
       (configs['onResponse'] as JSInvokable).free();
     }
 
-    await CacheManager().writeCache(cacheKey, buffer);
+    await CacheManager().writeCache(
+      cacheKey,
+      buffer,
+      thumbnailCacheDuration.inMilliseconds,
+    );
     yield ImageDownloadProgress(
       currentBytes: buffer.length,
       totalBytes: buffer.length,
@@ -169,8 +225,6 @@ abstract class ImageDownloader {
     String eid, {
     void Function(Duration? retryAfter)? onRateLimited,
   }) {
-    // AVIF 曾解碼失敗 → 自動改用 WebP
-    imageKey = AvifFallbackRegistry.instance.applyFallback(imageKey);
     final cacheKey = imageCacheKey(imageKey, sourceKey, cid, eid);
     if (_loadingImages.containsKey(cacheKey)) {
       return _loadingImages[cacheKey]!.stream;
@@ -204,22 +258,29 @@ abstract class ImageDownloader {
     bool forDownload = false,
     void Function(Duration? retryAfter)? onRateLimited,
   ]) async* {
-    // AVIF 曾解碼失敗 → 自動改用 WebP
+    // Apply AVIF fallback if this URL previously failed to decode.
     imageKey = AvifFallbackRegistry.instance.applyFallback(imageKey);
+
     final cacheKey = imageCacheKey(imageKey, sourceKey, cid, eid);
     final cache = await CacheManager().findCache(cacheKey);
 
     if (cache != null) {
       var data = await cache.readAsBytes();
-      yield ImageDownloadProgress(
-        currentBytes: data.length,
-        totalBytes: data.length,
-        imageBytes: data,
-      );
-      // A download reuses an already-cached image instead of re-fetching it,
-      // and never re-caches (avoids double-writing the bytes to disk and
-      // evicting the reader's prefetch cache) — see #4 / #17.
-      if (forDownload) return;
+      if (forDownload && !isValidDownloadedImage(data)) {
+        // A poisoned entry (e.g. a cached HTML error page) would otherwise be
+        // served to every download retry. Drop it and fetch from the network.
+        await CacheManager().delete(cacheKey);
+      } else {
+        yield ImageDownloadProgress(
+          currentBytes: data.length,
+          totalBytes: data.length,
+          imageBytes: data,
+        );
+        // A download reuses an already-cached image instead of re-fetching it,
+        // and never re-caches (avoids double-writing the bytes to disk and
+        // evicting the reader's prefetch cache) — see #4 / #17.
+        if (forDownload) return;
+      }
     }
 
     Future<Map<String, dynamic>?> Function()? onLoadFailed;
@@ -237,27 +298,9 @@ abstract class ImageDownloader {
     }
     var retryLimit = 5;
     var netRetries = 3;
-    // 泛用修復（栗子方案的推廣）：這次載入是否已經重新向源要過頁面清單。
-    var refreshedPageList = false;
     while (true) {
       try {
-        // 統一帶 UA：原本用 ??= ，只要源回傳的 headers 不是 null（例如回空 map
-        // 或只帶自己的 header），UA 就補不上 → 下載內頁變成裸請求 → CDN 回
-        // 403/404（閱讀走源 headers 所以正常）。這裡改成「缺 UA 就補」，
-        // 讓閱讀與下載走完全相同的請求形狀。
-        configs['headers'] ??= <String, dynamic>{};
-        var headers = Map<String, dynamic>.from(configs['headers'] as Map);
-        var hasUA = false;
-        for (var key in headers.keys) {
-          if (key.toString().toLowerCase() == 'user-agent') {
-            hasUA = true;
-            break;
-          }
-        }
-        if (!hasUA) {
-          headers['user-agent'] = webUA;
-        }
-        configs['headers'] = headers;
+        configs['headers'] ??= {'user-agent': webUA};
 
         if (configs['onLoadFailed'] is JSInvokable) {
           onLoadFailed = () async {
@@ -278,7 +321,8 @@ abstract class ImageDownloader {
           ),
         );
 
-        var req = await dio.request<ResponseBody>(
+        var req = await requestImageWithHeaderTimeout(
+          dio,
           configs['url'] ?? imageKey,
           data: configs['data'],
         );
@@ -380,29 +424,6 @@ abstract class ImageDownloader {
           }
           await Future.delayed(backoff(2 - netRetries, retryAfter: ra));
           continue;
-        }
-        // 403/404 這類客戶端錯誤，多半是「源給的頁面清單過期」——例如舊版
-        // 探測把 CDN 占位圖當真圖而高估頁數（栗子下載 404 的根因）。
-        // 這裡給一次機會：重新向源要一次本章頁面清單，用新清單裡的同位置
-        // URL 再試一次。只做一次，避免無限重試；不影響其他錯誤的快速失敗。
-        if ((status == 403 || status == 404) &&
-            !refreshedPageList &&
-            sourceKey != null &&
-            cid != null &&
-            eid != null) {
-          refreshedPageList = true;
-          final refreshed = await _refreshComicPageUrl(
-            sourceKey!,
-            cid!,
-            eid!,
-            imageKey,
-          );
-          if (refreshed != null && refreshed != imageKey) {
-            // 只換 URL，保留源原本的 headers / hooks
-            configs = Map<String, dynamic>.from(configs)
-              ..['url'] = refreshed;
-            continue;
-          }
         }
         // 4xx（非 429）或重试次数耗尽：重试无益，快速失败。
         rethrow;
@@ -506,37 +527,4 @@ class ImageDownloadProgress {
     required this.totalBytes,
     this.imageBytes,
   });
-}
-
-/// 重新向漫畫源要一次「本章頁面清單」，回傳 [imageKey] 這一頁的新 URL。
-///
-/// 用途：圖片回 403/404 時，通常是源快取下來的頁面清單已經過期（頁數被高估、
-/// 或圖片線路換了）。與其直接失敗，重新解析一次往往就能拿到正確 URL。
-/// 找不到對應頁面時回傳 null，呼叫端照原本的錯誤處理走。
-Future<String?> _refreshComicPageUrl(
-  String sourceKey,
-  String cid,
-  String eid,
-  String imageKey,
-) async {
-  try {
-    final source = ComicSource.find(sourceKey);
-    final loader = source?.loadComicPages;
-    if (loader == null) return null;
-    final res = await loader(cid, eid);
-    if (!res.success) return null;
-    final list = res.data;
-    if (list.isEmpty) return null;
-    // 先按原本的位置對應
-    final index = list.indexOf(imageKey);
-    if (index >= 0) return list[index];
-    // 位置對不上（清單長度變了）：用檔名比對
-    final name = imageKey.split('/').last;
-    for (final url in list) {
-      if (url.endsWith('/$name')) return url;
-    }
-    return null;
-  } catch (_) {
-    return null;
-  }
 }
