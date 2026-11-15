@@ -414,7 +414,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
       hasServerLoader: _searchData?.loadWithFilters != null,
       group: group,
       params: params,
-      declaredGroups: source?.categoryComicsData?.multiSelectGroups,
+      declaredGroups: source?.categoryComicsData?.multiSelectGroups?.toSet(),
     );
   }
 

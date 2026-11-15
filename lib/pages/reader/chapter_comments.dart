@@ -492,13 +492,6 @@ class _ProviderChapterFeed extends CommentsController {
     super.addListener(listener);
   }
 
-  final bool scrollWithReader;
-  final Widget? chapterNavigation;
-
-  /// A tap, at its global position, on the page rather than on one of its
-  /// controls: the input box, the buttons, loading more comments.
-  final void Function(Offset position)? onPageTap;
-
   @override
   void addListener(VoidCallback listener) {
     super.addListener(listener);

@@ -472,6 +472,20 @@ class CacheManager {
         .replaceAll('_', '\\_');
   }
 
+  /// Delete cache entries whose key contains [substring].
+  Future<int> deleteBySubstring(String substring) async {
+    final rows = _db.select(
+      'SELECT key FROM cache WHERE key LIKE ? ESCAPE \'\\\\\'',
+      ['%${_escapeLike(substring)}%'],
+    );
+    var removed = 0;
+    for (final row in rows) {
+      await delete(row[0] as String);
+      removed++;
+    }
+    return removed;
+  }
+
   /// Delete all cache.
   Future<void> clear() async {
     await Directory(cachePath).delete(recursive: true);

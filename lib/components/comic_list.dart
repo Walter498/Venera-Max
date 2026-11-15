@@ -5,6 +5,7 @@ class ComicList extends StatefulWidget {
     super.key,
     this.loadPage,
     this.loadNext,
+    this.loadWithFilters,
     this.leadingSliver,
     this.trailingSliver,
     this.errorLeading,
@@ -26,6 +27,8 @@ class ComicList extends StatefulWidget {
   final Future<Res<List<Comic>>> Function(int page)? loadPage;
 
   final Future<Res<List<Comic>>> Function(String? next)? loadNext;
+
+  final Future<Res<List<Comic>>> Function(int page)? loadWithFilters;
 
   final Widget? leadingSliver;
 
