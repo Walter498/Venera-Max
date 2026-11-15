@@ -833,50 +833,42 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       ),
     ];
 
-    // The slider consumes 48px plus the top 8px. Measure the actual label
-    // font/scaler: a fixed105px left only41px inside each button's padding,
-    // less than its icon+gap+label even at100% on the real CJK font.
-    var buttonHeight = 48.0;
-    for (final item in items) {
-      final label = TextPainter(
-        text: TextSpan(text: item.label,
-            style: DefaultTextStyle.of(context).style.merge(
-                const TextStyle(fontSize: 11))),
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-        maxLines: 1,
-      )..layout();
-      buttonHeight = math.max(buttonHeight, 22 + 4 + label.height + 8);
-      label.dispose();
+    void turnChapter(bool forward) {
+      final reader = context.reader;
+      final target = reader.visibleChapterFrom(
+        reader.chapter,
+        forward ? 1 : -1,
+      );
+      if (target != null) {
+        reader.toChapter(target);
+      } else {
+        reader.toPage(forward ? reader.maxPage : 1);
+      }
     }
-    Widget child = SizedBox(
-      height: math.max(kBottomBarHeight, (56 + buttonHeight + 1).ceilToDouble()),
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              // 兩端大按鈕（first_page/last_page）已按用戶要求刪除（2026-09-17），
-              // 只留進度條 + 百分比；上下話用下方文字按鈕。
-              Expanded(child: buildSlider()),
-              // 阅读进度百分比（可在阅读设置中关闭）；点击可跳页
-              if (showPercent)
-                GestureDetector(
-                  onTap: showPageJumpDialog,
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    alignment: Alignment.center,
-                    constraints: const BoxConstraints(minWidth: 52),
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Text(
-                      percentText,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 8),
-            ],
+
+    final prevChapterButton = IconButton.filledTonal(
+      onPressed: () => turnChapter(isReversed),
+      icon: const Icon(Icons.first_page),
+    );
+
+    final nextChapterButton = IconButton.filledTonal(
+      onPressed: () => turnChapter(!isReversed),
+      icon: const Icon(Icons.last_page),
+    );
+
+    final pageIndicator = GestureDetector(
+      onTap: showPageJumpDialog,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 13),
           ),
         ),
       ),

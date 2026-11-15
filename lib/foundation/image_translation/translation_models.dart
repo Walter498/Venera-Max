@@ -113,21 +113,6 @@ abstract class TranslationModels {
     ],
   );
 
-  /// Chinese OCR covering Simplified and Traditional text (PP-OCRv5 mobile).
-  static const ocrZhV5 = ModelComponent(
-    id: 'ocr_zh_v5',
-    approxSizeBytes: 16700000,
-    files: [
-      ModelFile('rec.onnx', [
-        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx',
-        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ch_PP-OCRv5_rec.onnx',
-      ]),
-      ModelFile('dict.txt', [
-        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt',
-        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ppocrv5_dict.txt',
-      ]),
-    ],
-  );
   /// English OCR (PP-OCRv3 rec).
   static const ocrEn = ModelComponent(
     id: 'ocr_en',
@@ -220,11 +205,6 @@ abstract class TranslationModels {
     var custom = TranslationSources.find(sourceLang);
     if (custom != null) {
       add(custom.engine, custom.component, custom.code, custom.inputHeight);
-    }
-    if (ocrZhV5.isInstalled) {
-      recModels['zh-TW'] = ocrZhV5.filePath('rec.onnx');
-      recDicts['zh-TW'] = ocrZhV5.filePath('dict.txt');
-      recHeights['zh-TW'] = 48;
     }
     var hasJa = ocrJa.isInstalled;
     return WorkerModelPaths(

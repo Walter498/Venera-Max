@@ -823,7 +823,6 @@ class ComicSource {
       DataSync().requestAutoUpload();
       return;
     }
-    }
     if (_haveWaitingTask) return;
     while (_isSaving) {
       _haveWaitingTask = true;

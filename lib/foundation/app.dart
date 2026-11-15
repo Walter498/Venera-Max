@@ -136,7 +136,6 @@ class _App {
         );
       }
     }
-    }
     if (isAndroid) {
       externalStoragePath = (await getExternalStorageDirectory())!.path;
     }
