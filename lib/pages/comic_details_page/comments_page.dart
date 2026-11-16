@@ -266,6 +266,7 @@ class _CommentsPageState extends State<CommentsPage> {
           ],
         ).paddingLeft(16).paddingRight(4),
       ),
+      ),
     );
   }
 }

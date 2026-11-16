@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/js_engine.dart';
+import 'package:venera/utils/translations.dart';
 
 import 'components.dart';
 

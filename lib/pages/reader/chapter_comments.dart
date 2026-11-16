@@ -201,6 +201,7 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
           ],
         ).paddingLeft(16).paddingRight(4),
       ),
+      ),
     );
   }
 }
