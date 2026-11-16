@@ -824,6 +824,11 @@ class _GalleryModeState extends State<_GalleryMode>
   void syncAutoScroll() {} // gallery always turns pages on the reader's countdown
 
   @override
+  void onCommentsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   bool get isImageZoomed {
     // 每页各自一个 PhotoViewController，取当前页的判断缩放；评论页等无控制器视为未缩放。
     final controller = photoViewControllers[reader.page];

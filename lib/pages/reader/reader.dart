@@ -12,6 +12,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/components/custom_slider.dart';
@@ -42,6 +43,7 @@ import 'package:venera/foundation/image_provider/reader_image.dart';
 import 'package:venera/foundation/image_translation/translation_config.dart';
 import 'package:venera/foundation/image_translation/translation_service.dart';
 import 'package:venera/foundation/image_translation/translation_types.dart';
+import 'package:venera/foundation/image_translation/pre_translation_tasks.dart';
 import 'package:venera/foundation/local.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/foundation/read_later.dart';
@@ -207,6 +209,36 @@ class _ReaderState extends State<Reader>
     setState(() {});
   }
 
+  /// 在当前阅读器章节启动完整预翻译任务，跳过已完成页面。
+  void translateCurrentChapter() {
+    if (!ImageTranslationService.isEnabledForComic(cid, type.sourceKey)) {
+      context.showMessage(message: "Enable AI translation for this comic first".tl);
+      return;
+    }
+    if (!ImageTranslationService.isReadyForComic(cid, type.sourceKey)) {
+      context.showMessage(message: "Translation models or provider are not ready".tl);
+      return;
+    }
+    final task = PreTranslationTaskManager.instance.start(
+      cid: cid,
+      sourceKey: type.sourceKey,
+      comicType: type,
+      title: widget.name,
+      cover: widget.history.cover,
+      chapters: [
+        PreTranslationChapter(
+          eid: eid,
+          title: widget.chapters?.titles.elementAtOrNull(chapter - 1) ?? widget.name,
+        ),
+      ],
+    );
+    context.showMessage(
+      message: task == null
+          ? "A translation task is already running".tl
+          : "Chapter translation started".tl,
+    );
+  }
+
   /// The maximum page number for images only (excluding chapter comments page).
   /// This is used for display purposes and history recording.
   @override
@@ -303,21 +335,16 @@ class _ReaderState extends State<Reader>
     if (!mode.isGallery) {
       return false;
     }
-    if (!chapterCommentsEnabled) return false;
+    return showChapterCommentsAtEnd;
+  }
+
+  bool get showChapterCommentsAtEnd {
+    if (widget.chapters == null) return false;
     var source = ComicSource.find(type.sourceKey);
-    if (source?.hasChapterComments != true || !chapterCommentsAvailable(eid)) return false;
-    return appdata.settings.getReaderSetting(
-              cid,
-              type.sourceKey,
-              'showChapterComments',
-            ) ==
-            true &&
-        appdata.settings.getReaderSetting(
-              cid,
-              type.sourceKey,
-              'showChapterCommentsAtEnd',
-            ) ==
-            true;
+    if (source?.chapterCommentsLoader == null) return false;
+    return effectiveSetting('showChapterComments') == true &&
+        (mode.isContinuous ||
+            effectiveSetting('showChapterCommentsAtEnd') == true);
   }
 
   @override
@@ -651,18 +678,12 @@ class _ReaderState extends State<Reader>
         initialEntries: [
           OverlayEntry(
             builder: (context) {
-              return Material(
-                type: MaterialType.transparency,
-                child: _ReaderScaffold(
-                  child: _ReaderGestureDetector(
-                    child: _ReaderImages(
-                      // Seamless mode keeps a constant key so cross-chapter
-                      // scrolling doesn't remount. The nonce forces a one-off
-                      // remount when an explicit jump targets an unloaded chapter.
-                      key: _isSeamlessContinuous
-                          ? Key('seamless_$chapterJumpNonce')
-                          : Key(chapter.toString()),
-                    ),
+              return _ReaderScaffold(
+                child: _ReaderGestureDetector(
+                  child: _ReaderImages(
+                    // Explicit chapter/mode changes remount once. Seamless
+                    // scrolling and initial layout detection keep this key.
+                    key: Key('reader_$chapterJumpNonce'),
                   ),
                 ),
               );
@@ -1197,10 +1218,6 @@ abstract mixin class _VolumeListener {
 }
 
 abstract mixin class _ReaderLocation {
-  bool get chapterEndReached;
-  /// 當前閱讀模式（由宿主 _ReaderState 提供）
-  ReaderMode get mode;
-
   int _page = 1;
   int? _pendingPage;
 
@@ -1504,31 +1521,136 @@ abstract mixin class _AutoPageTurner {
     appdata.settings.getReaderSetting(
       cid,
       type.sourceKey,
-      'autoPageTurningInterval',
-    );
-    autoPageTurningTimer = Timer.periodic(Duration(seconds: interval), (_) {
-      // 翻頁用動畫過渡（500ms），比瞬移順；到章末自動進下一話，
-      // 既沒下一頁也沒下一話就整體停下。
-      _autoTurnPage().then((ok) {
-        if (!ok && chapterEndReached && !toNextChapter()) {
-          stopAutoReading();
-        }
-      });
-    });
+      'autoPageTurningMode',
+    ),
+  );
+
+  /// Whether the continuous view should be scrolling right now.
+  bool get autoScrollRunning => _autoTurnActive && _autoTurnScrolls;
+
+  /// A popup over the reader (context menu, drawer, dialog). Those never
+  /// reach the route observer, so turning is skipped while one is up rather
+  /// than paused, and carries on once it closes.
+  bool get _autoTurnInterrupted =>
+      _autoTurnHeld || !(_readingRoute?.isCurrent ?? true);
+
+  void toggleAutoPageTurning() {
+    autoPageTurning = !autoPageTurning;
+    _syncAutoTurn(restartCountdown: true);
+  }
+
+  void stopAutoPageTurning({String? message}) {
+    if (!autoPageTurning) return;
+    autoPageTurning = false;
+    _syncAutoTurn();
+    if (message != null && mounted) {
+      context.showMessage(message: message);
+    }
     update();
   }
 
-  /// 帶過渡動畫的翻頁（自動閱讀用）
-  Future<bool> _autoTurnPage() async {
-    final vc = _imageViewController;
-    if (vc == null) return false;
-    if (vc.turnPage(true)) return true; // 連續模式自己處理
-    final target = page + 1;
-    if (target > totalPages) return false;
-    page = target;
-    update();
-    await vc.animateToPage(target, duration: const Duration(milliseconds: 500));
-    return true;
+  void _onMenuToggled(bool open) {
+    _readerMenuOpen = open;
+    // Closing the menu gives the page a fresh interval.
+    _syncAutoTurn(restartCountdown: true);
+  }
+
+  /// Brings the countdown, the view's scrolling and the screen lock in line
+  /// with the current state. Called on every change that can affect them.
+  void _syncAutoTurn({bool restartCountdown = false}) {
+    if (!_autoTurnActive || _autoTurnScrolls) {
+      _autoTurnTimer?.cancel();
+      _autoTurnTimer = null;
+    } else if (_autoTurnTimer == null || restartCountdown) {
+      _armAutoTurn();
+    }
+    _imageViewController?.syncAutoScroll();
+    _syncScreenOn();
+  }
+
+  /// On while the reader is visible and auto turning, or always while
+  /// reading when the user asked for it.
+  void _syncScreenOn() {
+    _keepScreenOn(
+      _readerRouteVisible &&
+          (autoPageTurning ||
+              appdata.settings.getReaderSetting(
+                    cid,
+                    type.sourceKey,
+                    'readerKeepScreenOn',
+                  ) ==
+                  true),
+    );
+  }
+
+  void _armAutoTurn() {
+    _autoTurnTimer?.cancel();
+    final interval = autoTurnIntervalOf(
+      appdata.settings.getReaderSetting(
+        cid,
+        type.sourceKey,
+        'autoPageTurningInterval',
+      ),
+    );
+    _autoTurnTimer = Timer(Duration(seconds: interval), _onAutoTurnTick);
+  }
+
+  void _restartAutoTurnCountdown() {
+    if (_autoTurnTimer != null) _armAutoTurn();
+  }
+
+  void _onAutoTurnTick() {
+    _autoTurnTimer = null;
+    if (!mounted || !_autoTurnActive || _autoTurnScrolls) return;
+    // A chapter still loading re-arms once its images arrive.
+    if (isLoading) return;
+    if (_autoTurnInterrupted) {
+      _armAutoTurn();
+      return;
+    }
+    if (images == null) {
+      stopAutoPageTurning(message: "Auto page turning stopped".tl);
+      return;
+    }
+    if (toNextPage() || toNextChapter()) {
+      _armAutoTurn();
+    } else {
+      stopAutoPageTurning(
+        message: "Reached the end. Auto page turning stopped".tl,
+      );
+    }
+  }
+
+  /// A chapter opened during auto turning starts its countdown only once
+  /// its pages can actually be shown.
+  void _onChapterImagesLoaded() => _syncAutoTurn(restartCountdown: true);
+
+  void _onChapterLoadFailed() {
+    stopAutoPageTurning(message: "Auto page turning stopped".tl);
+  }
+
+  void _disposeAutoPageTurning() {
+    _autoTurnTimer?.cancel();
+    _autoTurnTimer = null;
+    _keepScreenOn(false);
+  }
+
+  void _keepScreenOn(bool on) {
+    if (!App.isMobile) return;
+    final wasOn = _screenOnHolders.isNotEmpty;
+    if (on) {
+      _screenOnHolders.add(this);
+    } else {
+      _screenOnHolders.remove(this);
+    }
+    final isOn = _screenOnHolders.isNotEmpty;
+    if (wasOn == isOn) return;
+    // The two native handlers read their argument differently.
+    _screenChannel
+        .invokeMethod('setScreenOn', App.isAndroid ? {'set': isOn} : isOn)
+        .catchError((e) {
+          Log.error("Reader", "Failed to keep the screen on: $e");
+        });
   }
 }
 

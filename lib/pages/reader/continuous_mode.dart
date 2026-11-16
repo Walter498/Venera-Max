@@ -765,6 +765,11 @@ class _ContinuousModeState extends State<_ContinuousMode>
     }
   }
 
+  @override
+  void onCommentsChanged() {
+    if (mounted) setState(() {});
+  }
+
   void _stopAutoScroll() {
     _autoScrollResumeTimer?.cancel();
     _autoScrollResumeTimer = null;

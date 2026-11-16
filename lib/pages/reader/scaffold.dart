@@ -129,6 +129,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     // Refresh the translation status badge as pages start/finish/fail; the
     // top bar lives in an OverlayEntry that a parent setState won't rebuild.
     ImageTranslationService.instance.addListener(_onTranslationStatusChanged);
+    PreTranslationTaskManager.instance.addListener(_onPreTranslationChanged);
     Future.delayed(const Duration(milliseconds: 200), addDragListener);
     context.reader._scaffoldState = this;
   }
@@ -137,11 +138,67 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     if (mounted) setState(() {});
   }
 
+  void _onPreTranslationChanged() {
+    if (mounted) setState(() {});
+  }
+
+  PreTranslationTask? get _chapterTranslationTask =>
+      PreTranslationTaskManager.instance.runningTaskFor(
+        context.reader.cid,
+        context.reader.type.sourceKey,
+      );
+
+  Widget _buildChapterTranslationChip() {
+    final task = _chapterTranslationTask;
+    if (task == null) return const SizedBox.shrink();
+    final activity = PreTranslationTaskManager.instance.activityOf(task.id);
+    final progress = activity?.liveProgress(task) ?? task.progress;
+    final processed = activity?.liveProcessed(task) ?? task.done + task.failed;
+    final total = task.total;
+    final label = total > 0 ? '$processed/$total' : '…';
+    final elapsed = DateTime.now().difference(task.createdAt).inSeconds;
+    final remaining = processed > 0 && total > processed
+        ? (elapsed * (total - processed) / processed).round()
+        : null;
+    final eta = remaining == null ? '估算中' : '约 ${remaining}s';
+    return Material(
+      color: context.colorScheme.surfaceContainerHigh,
+      elevation: 4,
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                value: progress <= 0 ? null : progress,
+                strokeWidth: 2.4,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Text('翻译本章 $label · $eta', style: ts.s12),
+            if (task.failed > 0) ...[
+              const SizedBox(width: 5),
+              Text(
+                '失败 ${task.failed}',
+                style: TextStyle(color: context.colorScheme.error, fontSize: 11),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     ImageTranslationService.instance.removeListener(
       _onTranslationStatusChanged,
     );
+    PreTranslationTaskManager.instance.removeListener(_onPreTranslationChanged);
     // The orientation lock belongs to the reader only: hand the device back to
     // the platform default so other pages stay unaffected.
     if (rotation != null) {
@@ -246,6 +303,12 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             !isOnChapterCommentsPage)
           buildPageInfoText(),
         if (!isOnChapterCommentsPage) buildStatusInfo(),
+        if (_chapterTranslationTask != null)
+          Positioned(
+            right: 16,
+            bottom: 112,
+            child: IgnorePointer(child: _buildChapterTranslationChip()),
+          ),
         Positioned(
           right: 16,
           bottom: 36,
@@ -363,7 +426,24 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                     onPressed: openChapterComments,
                   ),
                 ),
+              if (canDownloadFromReader())
+                Tooltip(
+                  message: "Download".tl,
+                  child: IconButton(
+                    icon: const Icon(Icons.download_outlined),
+                    onPressed: downloadFromReader,
+                  ),
+                ),
               ...buildTranslationControls(),
+              if (ImageTranslationService.isEnabledForComic(
+                    context.reader.cid, context.reader.type.sourceKey))
+                Tooltip(
+                  message: "Translate current chapter".tl,
+                  child: IconButton(
+                    icon: const Icon(Icons.translate_rounded),
+                    onPressed: context.reader.translateCurrentChapter,
+                  ),
+                ),
               MenuButton(entries: buildMoreMenuEntries()),
               Tooltip(
                 message: "Settings".tl,
@@ -833,50 +913,42 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       ),
     ];
 
-    // The slider consumes 48px plus the top 8px. Measure the actual label
-    // font/scaler: a fixed105px left only41px inside each button's padding,
-    // less than its icon+gap+label even at100% on the real CJK font.
-    var buttonHeight = 48.0;
-    for (final item in items) {
-      final label = TextPainter(
-        text: TextSpan(text: item.label,
-            style: DefaultTextStyle.of(context).style.merge(
-                const TextStyle(fontSize: 11))),
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-        maxLines: 1,
-      )..layout();
-      buttonHeight = math.max(buttonHeight, 22 + 4 + label.height + 8);
-      label.dispose();
+    void turnChapter(bool forward) {
+      final reader = context.reader;
+      final target = reader.visibleChapterFrom(
+        reader.chapter,
+        forward ? 1 : -1,
+      );
+      if (target != null) {
+        reader.toChapter(target);
+      } else {
+        reader.toPage(forward ? reader.maxPage : 1);
+      }
     }
-    Widget child = SizedBox(
-      height: math.max(kBottomBarHeight, (56 + buttonHeight + 1).ceilToDouble()),
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              // 兩端大按鈕（first_page/last_page）已按用戶要求刪除（2026-09-17），
-              // 只留進度條 + 百分比；上下話用下方文字按鈕。
-              Expanded(child: buildSlider()),
-              // 阅读进度百分比（可在阅读设置中关闭）；点击可跳页
-              if (showPercent)
-                GestureDetector(
-                  onTap: showPageJumpDialog,
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    alignment: Alignment.center,
-                    constraints: const BoxConstraints(minWidth: 52),
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Text(
-                      percentText,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 8),
-            ],
+
+    final prevChapterButton = IconButton.filledTonal(
+      onPressed: () => turnChapter(isReversed),
+      icon: const Icon(Icons.first_page),
+    );
+
+    final nextChapterButton = IconButton.filledTonal(
+      onPressed: () => turnChapter(!isReversed),
+      icon: const Icon(Icons.last_page),
+    );
+
+    final pageIndicator = GestureDetector(
+      onTap: showPageJumpDialog,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 13),
           ),
         ),
       ),
