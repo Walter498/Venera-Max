@@ -1,59 +1,47 @@
 
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/cache_scan_index_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/cache_scan_index_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/cache_scan_index_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/cache_scan_index_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -78,61 +66,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/cached_image_loading_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/cached_image_loading_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/cached_image_loading_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/cached_image_loading_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -157,61 +133,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/chapter_modified_times_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/chapter_modified_times_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/chapter_modified_times_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/chapter_modified_times_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -236,61 +200,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/comic_cache_directory_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/comic_cache_directory_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/comic_cache_directory_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/comic_cache_directory_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -315,62 +267,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/customization_settings_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/customization_settings_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/customization_settings_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/customization_settings_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -394,61 +334,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/epub_export_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/epub_export_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/epub_export_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/epub_export_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -473,62 +401,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/home_comic_hero_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/home_comic_hero_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/home_comic_hero_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/home_comic_hero_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -552,62 +468,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/llm_provider_editor_layout_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/llm_provider_editor_layout_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/llm_provider_editor_layout_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/llm_provider_editor_layout_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -631,61 +535,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/pdf_import_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/pdf_import_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/pdf_import_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/pdf_import_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -710,61 +602,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/script_translator_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/script_translator_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/script_translator_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/script_translator_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -789,62 +669,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/settings_menu_order_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/settings_menu_order_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/settings_menu_order_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/settings_menu_order_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -868,62 +736,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/settings_navigation_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/settings_navigation_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/settings_navigation_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/settings_navigation_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -947,62 +803,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/settings_scope_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/settings_scope_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/settings_scope_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/settings_scope_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1026,62 +870,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/settings_slider_save_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/settings_slider_save_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/settings_slider_save_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/settings_slider_save_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1105,62 +937,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/task_list_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/task_list_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/task_list_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/task_list_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1184,62 +1004,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/tasks_page_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/tasks_page_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/tasks_page_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/tasks_page_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1269,62 +1077,50 @@ dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/filter_group_capability_test.dart: plain loader or empty group is not server multi-filter capability
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/filter_group_capability_test.dart: native category keys must not accidentally enable same-row multi-select
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/filter_group_capability_test.dart: all selected values reach category and search requests on every page
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/lizi_api_client_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1396,33 +1192,27 @@ test/reader_customizations_test.dart:96:11: Error: Undefined name 'tester'.
 test/reader_customizations_test.dart:96:5: Error: 'await' can only be used in 'async' or 'async*' methods.
     await tester.pumpWidget(const SizedBox.shrink());
     ^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart":
 Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/reader_customizations_test.dart: test/reader_customizations_test.dart:98:4: Error: Expected a declaration, but got ')'.
@@ -1473,33 +1263,27 @@ test/reader_customizations_test.dart:96:11: Error: Undefined name 'tester'.
 test/reader_customizations_test.dart:96:5: Error: 'await' can only be used in 'async' or 'async*' methods.
     await tester.pumpWidget(const SizedBox.shrink());
     ^^^^^
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1523,62 +1307,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_performance_config_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1617,62 +1389,50 @@ dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: ConcurrencyGate no maxWait keeps the original unbounded behavior
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController starts at max, halves on rate limit, grows after cooldown
 ✅ /Users/runner/work/Venera-Max/Venera-Max/test/image_translation_rate_limiter_test.dart: AimdController never drops below min
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_config_per_comic_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1696,61 +1456,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/translation_store_schema_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -1775,61 +1523,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_fallback_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -1854,62 +1590,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/avif_frame_decode_guard_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
@@ -1933,61 +1657,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/collection_download_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -2012,61 +1724,49 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/webdav_saf_upload_test.dart: lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
         ^^^^^^^^^^^^^^
 .
 
@@ -2091,62 +1791,50 @@ dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
 dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
 dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
 ::endgroup::
-lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 ::group::❌ loading /Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart (failed)
 Failed to load "/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart":
-Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/reader/reader.dart:1330:7: Error: The method 'effectiveSetting' isn't defined for the type '_ReaderLocation'.
- - '_ReaderLocation' is from 'package:venera/pages/reader/reader.dart' ('lib/pages/reader/reader.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'effectiveSetting'.
-      effectiveSetting('einkRipplePageTurn') == true &&
-      ^^^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'title' must be provided.
+Compilation failed for testPath=/Users/runner/work/Venera-Max/Venera-Max/test/add_to_collection_test.dart: lib/pages/settings/reader.dart:887:29: Error: Required named parameter 'interval' must be provided.
               _SliderSetting(
                             ^
 lib/pages/settings/setting_components.dart:578:9: Context: Found this candidate, but the arguments don't match.
   const _SliderSetting({
         ^^^^^^^^^^^^^^
-lib/pages/settings/reader.dart:1183:29: Error: Required named parameter 'title' must be provided.
-              _SwitchSetting(
-                            ^
-lib/pages/settings/setting_components.dart:4:9: Context: Found this candidate, but the arguments don't match.
-  const _SwitchSetting({
-        ^^^^^^^^^^^^^^
-lib/pages/reader/night_mode_button.dart:49:5: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+lib/pages/reader/night_mode_button.dart:127:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-    _save();
-    ^^^^^
-lib/pages/reader/night_mode_button.dart:145:41: Error: The method '_save' isn't defined for the type '_ReaderNightModeButtonState'.
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting(
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:132:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
  - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
-Try correcting the name to the name of an existing method, or defining a method named '_save'.
-                    onChangeEnd: (_) => _save(),
-                                        ^^^^^
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightMode', true);
+                        ^^^^^^^^^^^
+lib/pages/reader/night_mode_button.dart:133:25: Error: The method '_setSetting' isn't defined for the type '_ReaderNightModeButtonState'.
+ - '_ReaderNightModeButtonState' is from 'package:venera/pages/reader/night_mode_button.dart' ('lib/pages/reader/night_mode_button.dart').
+Try correcting the name to the name of an existing method, or defining a method named '_setSetting'.
+                        _setSetting('readerNightModeFollowSystem', false);
+                        ^^^^^^^^^^^
 .
 
 ::endgroup::
