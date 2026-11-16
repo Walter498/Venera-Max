@@ -161,6 +161,8 @@ class ComicTile extends StatelessWidget {
     this.heroID,
     this.forceBriefMode = false,
     this.forceDetailedMode = false,
+    this.chaptersText,
+    this.lastReadTimeText,
   });
 
   final Comic comic;
@@ -181,6 +183,10 @@ class ComicTile extends StatelessWidget {
 
   final bool forceBriefMode;
   final bool forceDetailedMode;
+
+  /// 旧定制卡片资料：章节数与最近阅读时间。
+  final String? chaptersText;
+  final String? lastReadTimeText;
 
   static final _chapterProgressLoads =
       <String, Future<ComicChapterProgressInfo>>{};
@@ -820,6 +826,8 @@ class ComicTile extends StatelessWidget {
                         pagesText: _showPageCount
                             ? displayInfo.pagesText
                             : null,
+                        chaptersText: this.chaptersText,
+                        lastReadTimeText: this.lastReadTimeText,
                       ),
                     ),
                   ],

@@ -459,16 +459,20 @@ class _GalleryModeState extends State<_GalleryMode>
     var chapters = reader.widget.chapters;
     if (source == null || chapters == null) return const SizedBox();
     var chapterIndex = reader.chapter - 1;
-    final gestures = context.readerScaffold._gestureDetectorState;
-    final comments = EmbeddedChapterCommentsPage(
+    final comments = ChapterCommentsPreview(
       comicId: reader.cid,
       epId: chapters.ids.elementAt(chapterIndex),
       source: source,
       comicTitle: reader.widget.name,
       chapterTitle: chapters.titles.elementAt(chapterIndex),
-      onPageTap: gestures?.onChapterCommentsTap,
+      horizontal: reader.mode != ReaderMode.galleryTopToBottom,
+      reverse: reader.mode == ReaderMode.galleryRightToLeft,
+      sharedFeed: reader.chapterCommentsFeed(
+        source,
+        chapters.ids.elementAt(chapterIndex),
+      ),
     );
-    return gestures?.wrapChapterComments(comments) ?? comments;
+    return comments;
   }
 
   /// Fires once the pager stops moving, whether it got there by swipe, jump or

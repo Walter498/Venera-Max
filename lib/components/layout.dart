@@ -80,11 +80,13 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
     this.forceBriefMode = false,
     this.forceDetailedMode = false,
     this.forceColumns,
+    this.detailedItemHeight,
   });
 
   final bool forceBriefMode;
   final bool forceDetailedMode;
   final int? forceColumns;
+  final double? detailedItemHeight;
 
   bool get useBriefMode => forceBriefMode
       ? true
@@ -100,7 +102,9 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
       final columns = math.max(1, forceColumns!);
       final width = constraints.crossAxisExtent;
       final cross = width / columns;
-      final height = useBriefMode ? cross / 0.64 : 168 * scale;
+      final height = useBriefMode
+          ? cross / 0.64
+          : (detailedItemHeight ?? 168 * scale);
       return SliverGridRegularTileLayout(
         crossAxisCount: columns,
         mainAxisStride: height,
@@ -122,7 +126,7 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
     double scale,
   ) {
     const minCrossAxisExtent = 360;
-    final itemHeight = 168 * scale;
+    final itemHeight = detailedItemHeight ?? 168 * scale;
     final width = constraints.crossAxisExtent;
     var crossItems = width ~/ minCrossAxisExtent;
     crossItems = math.max(1, crossItems);
@@ -172,7 +176,8 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
         oldDelegate.useBriefMode != useBriefMode ||
         oldDelegate.forceColumns != forceColumns ||
         oldDelegate.forceBriefMode != forceBriefMode ||
-        oldDelegate.forceDetailedMode != forceDetailedMode) {
+        oldDelegate.forceDetailedMode != forceDetailedMode ||
+        oldDelegate.detailedItemHeight != detailedItemHeight) {
       return true;
     }
     return false;

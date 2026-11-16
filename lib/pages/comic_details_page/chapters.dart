@@ -1,5 +1,38 @@
 part of 'comic_page.dart';
 
+/// 從章節標題解析話號（「第123话」「第123話」…），解析不到回傳 -1。
+int _chapterNumberOf(String? title) {
+  if (title == null) return -1;
+  final m = RegExp(r'第\s*(\d+)\s*[话話]').firstMatch(title);
+  if (m == null) return -1;
+  return int.tryParse(m.group(1)!) ?? -1;
+}
+
+/// 「按話號排序」開啟時重排顯示清單。
+///
+/// 用途：來源給的順序不可靠時的保險。最典型的情況是源用「章節 id」當 key ——
+/// JS 物件對整數字串 key 一律按【數值升序】列舉，補更/重傳的章節 id 較大，
+/// 就會被搬到後面（實測「魔皇大管家」73/83/86~88/90 話跑到 91 話之後）。
+/// 只重排顯示用的 index 清單，章節索引不被改寫，閱讀、下載、歷史不受影響。
+/// 解析不到話號的章節排最後，並保持原本相對順序。
+List<int> _sortByChapterNumber(List<int> visible, List<String> titles) {
+  if (appdata.settings['chapterSortByNumber'] != true) return visible;
+  final nums = <int, int>{};
+  final pos = <int, int>{};
+  for (var p = 0; p < visible.length; p++) {
+    final i = visible[p];
+    final n = _chapterNumberOf(i < titles.length ? titles[i] : null);
+    nums[i] = n <= 0 ? 1 << 30 : n;
+    pos[i] = p;
+  }
+  final out = List<int>.from(visible);
+  out.sort((a, b) {
+    final d = nums[a]! - nums[b]!;
+    return d != 0 ? d : pos[a]! - pos[b]!;
+  });
+  return out;
+}
+
 class _ComicChapters extends StatelessWidget {
   const _ComicChapters({this.history, required this.groupedMode});
 
@@ -40,11 +73,10 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
   final GlobalKey _chapterGridKey = GlobalKey();
   int? _locatedChapter;
 
-  /// Reveal and highlight the chapter recorded by the reader history.
   void locateLastChapter() {
     if (!mounted || pageState.history == null) return;
     final h = pageState.history!;
-    var local = h.ep - 1;
+    int local = h.ep - 1;
     int slot;
     bool reversed;
     if (this is _GroupedComicChaptersState) {
@@ -68,6 +100,7 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
       view.tabController.index = groupIndex;
       slot = view.visible.indexOf(local);
       reversed = view.reverse;
+      if (reversed && slot >= 0) slot = view.visible.length - 1 - slot;
     } else {
       final view = this as _NormalComicChaptersState;
       setState(() {
@@ -77,10 +110,8 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
       });
       slot = view.visible.indexOf(local);
       reversed = view.reverse;
+      if (reversed && slot >= 0) slot = view.visible.length - 1 - slot;
     }
-    if (reversed && slot >= 0) slot = (this is _GroupedComicChaptersState
-        ? (this as _GroupedComicChaptersState).visible.length
-        : (this as _NormalComicChaptersState).visible.length) - 1 - slot;
     if (slot < 0) {
       context.showMessage(message: '上次閱讀章節已被隱藏或移除');
       return;
@@ -98,6 +129,7 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
       final target = (base + geometry.scrollOffset - context.padding.top - 76)
           .clamp(controller.position.minScrollExtent, controller.position.maxScrollExtent)
           .toDouble();
+      // Direct positioning: no long animation across hundreds of chapters.
       controller.jumpTo(target);
     });
   }
@@ -260,18 +292,20 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// The trailing controls of the title row when NOT selecting.
+  /// 預覽封面（切換封面網格） + 顯示全部/收起（箭頭）
   Widget buildNormalTitle(
     BuildContext context, {
     required bool reverse,
     required VoidCallback onToggleOrder,
-    required VoidCallback onCustomizeOrder,
+    required bool showAll,
+    required VoidCallback onToggleShowAll,
   }) {
+    final gridMode = appdata.settings['chapterCoverGrid'] == true;
+    final sortByNumber = appdata.settings['chapterSortByNumber'] == true;
     return _ComicSectionHeader(
       icon: Icons.view_list_rounded,
       title: "Chapters".tl,
       horizontalPadding: 0,
-      // The list on screen came from cache/local data while the real request
-      // is still running; make the ongoing refresh visible.
       titleBadge: pageState.isDetailsLoading
           ? const _ChaptersUpdatingIndicator()
           : null,
@@ -286,30 +320,67 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
             },
           ),
           Tooltip(
-            message: "Batch manage".tl,
+            message: "Preview covers".tl,
             child: IconButton(
-              icon: const Icon(Icons.checklist_rounded),
-              onPressed: enterSelectMode,
+              icon: Icon(
+                gridMode ? Icons.view_list_rounded : Icons.grid_view_rounded,
+              ),
+              onPressed: () {
+                setState(() {
+                  appdata.settings['chapterCoverGrid'] = !gridMode;
+                });
+                appdata.saveData();
+              },
+            ),
+          ),
+          // 按話號排序：來源順序不可靠時的保險（例如源用章節 id 當 key，
+          // 被 JS 按數值重排 → 補更的章節跑到後面）。預設關閉 = 用來源順序。
+          Tooltip(
+            message: sortByNumber
+                ? "Use source order".tl
+                : "Sort by chapter number".tl,
+            child: IconButton(
+              icon: Icon(
+                sortByNumber
+                    ? Icons.format_list_numbered_rounded
+                    : Icons.sort_rounded,
+              ),
+              onPressed: () {
+                setState(() {
+                  appdata.settings['chapterSortByNumber'] = !sortByNumber;
+                });
+                appdata.saveData();
+              },
             ),
           ),
           Tooltip(
-            message: "Order".tl,
+            message: (showAll ? "Collapse" : "Expand").tl,
+            child: IconButton(
+              icon: Icon(
+                showAll
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+              ),
+              onPressed: onToggleShowAll,
+            ),
+          ),
+          // 倒序：按一下從第一話開始顯示，再按一下從最後一話開始顯示
+          Tooltip(
+            message: (reverse ? "Oldest first" : "Newest first").tl,
             child: IconButton(
               icon: Icon(
                 reverse
                     ? Icons.arrow_upward_rounded
                     : Icons.arrow_downward_rounded,
               ),
-              onPressed: onToggleOrder,
+              onPressed: () {
+                onToggleOrder();
+                appdata.settings["reverseChapterOrder"] = !reverse;
+                appdata.saveData();
+              },
             ),
           ),
-          Tooltip(
-            message: "Customize chapter order".tl,
-            child: IconButton(
-              icon: const Icon(Icons.reorder_rounded),
-              onPressed: onCustomizeOrder,
-            ),
-          ),
+
         ],
       ),
     );
@@ -360,28 +431,11 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     final hidden = state.hideDuplicateChapters
         ? state.duplicateChapterIndices
         : const <int>{};
-    final ordered = ChapterOrderPrefs.orderedIndices(
-      chapters,
-      state.comic.id,
-      state.comic.sourceKey,
-    );
     visible = [
-      for (final i in ordered)
+      for (var i = 0; i < chapters.length; i++)
         if (!hidden.contains(i)) i,
     ];
-  }
-
-  Future<void> _customizeOrder() async {
-    final changed = await showChapterOrderEditor(
-      context: context,
-      chapters: chapters,
-      comicId: state.comic.id,
-      sourceKey: state.comic.sourceKey,
-    );
-    if (changed == true && mounted) {
-      setState(_computeVisible);
-      state.update();
-    }
+    visible = _sortByChapterNumber(visible, chapters.titles.toList());
   }
 
   @override
@@ -394,7 +448,6 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
   @override
   void didChangeDependencies() {
     state = context.findAncestorStateOfType<_ComicPageState>()!;
-    state.jumpToLastReadChapter = locateLastChapter;
     chapters = state.comic.chapters!;
     _computeVisible();
     super.didChangeDependencies();
@@ -403,7 +456,6 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
   @override
   void didUpdateWidget(covariant _NormalComicChapters oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _history = widget.history;
     // A background details refresh can replace the chapter map while this
     // widget stays mounted (cache-first load). Freeze it during multi-select:
     // selection keys are chapter indices, so a list that grows or reorders
@@ -413,6 +465,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
       setState(() {
         chapters = state.comic.chapters!;
         _computeVisible();
+        _history = widget.history;
       });
     }
   }
@@ -572,6 +625,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     // update() on the page state — recompute here so the change lands without
     // waiting for a details refresh.
     _computeVisible();
+    pageState.jumpToLastReadChapter = locateLastChapter;
     return SliverLayoutBuilder(
       builder: (context, constrains) {
         final gridMode = appdata.settings['chapterCoverGrid'] == true;
@@ -580,17 +634,22 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
         int length = visible.length;
         bool canShowAll = showAll || selectMode;
         if (!canShowAll) {
-          var width = constrains.crossAxisExtent - 16;
-          var crossItems = width ~/ 200;
-          if (width % 200 != 0) {
-            crossItems += 1;
-          }
-          length = math.min(length, crossItems * 8);
-          if (length == visible.length) {
-            canShowAll = true;
+          if (gridMode) {
+            if (visible.length <= coverLimit) {
+              canShowAll = true;
+            }
+          } else {
+            var width = constrains.crossAxisExtent - 16;
+            var crossItems = width ~/ 200;
+            if (width % 200 != 0) {
+              crossItems += 1;
+            }
+            length = math.min(length, crossItems * 8);
+            if (length == visible.length) {
+              canShowAll = true;
+            }
           }
         }
-
         return SliverMainAxisGroup(
           slivers: [
             SliverToBoxAdapter(
@@ -600,10 +659,20 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                       context,
                       reverse: reverse,
                       onToggleOrder: () => setState(() => reverse = !reverse),
-                      onCustomizeOrder: _customizeOrder,
+                      showAll: showAll,
+                      onToggleShowAll: () => setState(() => showAll = !showAll),
                     ),
             ),
-            SliverGrid(
+            if (gridMode)
+              buildChapterCoverGrid(
+                context,
+                pageState.comic,
+                limit: canShowAll ? 0 : coverLimit,
+              ),
+            if (gridMode)
+              const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
+            if (!gridMode)
+              SliverGrid(
               key: _chapterGridKey,
               delegate: SliverChildBuilderDelegate(childCount: length, (
                 context,
@@ -623,7 +692,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 bool visited = (_history?.readEpisode ?? const {}).contains(
                   epKey,
                 );
-                bool isSelected = selected.contains(epKey);
+                bool isSelected = selected.contains(epKey) || _locatedChapter == i;
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
                   child: Material(
@@ -659,6 +728,8 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                 itemHeight: ChapterCardLayout.textExtent(context),
               ),
             ).sliverPadding(EdgeInsets.zero),
+            // 「顯示全部」按鈕：文字模式與封面模式都要出現
+            //（原本只有 !gridMode 才渲染 → 封面模式永遠沒有按鈕）
             if (!canShowAll)
               SliverToBoxAdapter(
                 child: Align(
@@ -818,34 +889,16 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
       visible = const [];
       return;
     }
+    final group = chapters.getGroupByIndex(index);
     final hidden = state.hideDuplicateChapters
         ? state.duplicateChapterIndices
         : const <int>{};
     final offset = _groupOffset;
-    final ordered = ChapterOrderPrefs.orderedIndicesForGroup(
-      chapters,
-      state.comic.id,
-      state.comic.sourceKey,
-      index,
-    );
     visible = [
-      for (final i in ordered)
+      for (var i = 0; i < group.length; i++)
         if (!hidden.contains(offset + i)) i,
     ];
-  }
-
-  Future<void> _customizeOrder() async {
-    final changed = await showChapterOrderEditor(
-      context: context,
-      chapters: chapters,
-      comicId: state.comic.id,
-      sourceKey: state.comic.sourceKey,
-      initialGroupIndex: index,
-    );
-    if (changed == true && mounted) {
-      setState(_computeVisible);
-      state.update();
-    }
+    visible = _sortByChapterNumber(visible, group.values.toList());
   }
 
   /// Selectable keys = ONLY the current group's visible chapters, in reader
@@ -869,7 +922,6 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
   @override
   void didChangeDependencies() {
     state = context.findAncestorStateOfType<_ComicPageState>()!;
-    state.jumpToLastReadChapter = locateLastChapter;
     chapters = state.comic.chapters!;
     _syncTabController();
     _computeVisible();
@@ -914,7 +966,6 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
   @override
   void didUpdateWidget(covariant _GroupedComicChapters oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _history = widget.history;
     // The chapter map is re-read on every rebuild, not just captured on first
     // mount: renaming/reordering a collection's members, or a background
     // details refresh adding chapters/tabs, reloads the detail in place, and a
@@ -926,6 +977,9 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
       chapters = state.comic.chapters!;
       _syncTabController();
       _computeVisible();
+      setState(() {
+        _history = widget.history;
+      });
     }
   }
 
@@ -985,6 +1039,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
     // update() on the page state — recompute here so the change lands without
     // waiting for a details refresh.
     _computeVisible();
+    pageState.jumpToLastReadChapter = locateLastChapter;
     return SliverLayoutBuilder(
       builder: (context, constrains) {
         var group = chapters.getGroupByIndex(index);
@@ -1011,7 +1066,8 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
                       context,
                       reverse: reverse,
                       onToggleOrder: () => setState(() => reverse = !reverse),
-                      onCustomizeOrder: _customizeOrder,
+                      showAll: showAll,
+                      onToggleShowAll: () => setState(() => showAll = !showAll),
                     ),
             ),
             SliverToBoxAdapter(
@@ -1059,7 +1115,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
                       _history!.readEpisode.contains(groupedIndex) ||
                       _history!.readEpisode.contains(rawIndex);
                 }
-                bool isSelected = selected.contains(groupedIndex);
+                bool isSelected = selected.contains(groupedIndex) || _locatedChapter == i;
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
                   child: Material(
@@ -1128,36 +1184,6 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
   }
 }
 
-class _LazyChapterCover extends StatelessWidget {
-  const _LazyChapterCover({
-    required this.coverUrl,
-    required this.placeholderIndex,
-    required this.sourceKey,
-    required this.comicId,
-    required this.epId,
-  });
-
-  final String? coverUrl;
-  final int placeholderIndex;
-  final String sourceKey;
-  final String comicId;
-  final String epId;
-
-  @override
-  Widget build(BuildContext context) {
-    final url = coverUrl;
-    if (url == null || url.isEmpty) {
-      return ColoredBox(
-        color: context.colorScheme.surfaceContainerHighest,
-        child: Center(child: Text('$placeholderIndex')),
-      );
-    }
-    return AnimatedImage(
-      image: CachedImageProvider(url, sourceKey: sourceKey, cid: comicId),
-    );
-  }
-}
-
 /// "Updating" text + spinner next to the "Chapters" title while the background
 /// details fetch refreshes a chapter list that is already on screen.
 class _ChaptersUpdatingIndicator extends StatelessWidget {
@@ -1182,6 +1208,101 @@ class _ChaptersUpdatingIndicator extends StatelessWidget {
           style: ts.s12.withColor(context.colorScheme.outline),
         ),
       ],
+    );
+  }
+}
+
+/// 章節封面圖：優先用源提供的封面 / 縮圖；都沒有就惰性地向源要
+/// 該話的第一頁當封面（解決非栗子源沒有 chapterCovers 時整片灰格）。
+/// 只有格子可見時才會觸發（SliverGrid 惰性構建），結果在記憶體快取，
+/// 同一話不重複請求；失敗則維持序號佔位。
+class _LazyChapterCover extends StatefulWidget {
+  const _LazyChapterCover({
+    required this.coverUrl,
+    required this.placeholderIndex,
+    required this.sourceKey,
+    required this.comicId,
+    required this.epId,
+  });
+
+  final String? coverUrl;
+  final int placeholderIndex;
+  final String sourceKey;
+  final String comicId;
+  final String epId;
+
+  @override
+  State<_LazyChapterCover> createState() => _LazyChapterCoverState();
+}
+
+class _LazyChapterCoverState extends State<_LazyChapterCover> {
+  /// 'sourceKey:comicId:epId' -> 第一頁圖片 URL（null = 已試過但沒有）
+  static final Map<String, String?> _lazyCache = {};
+
+  String? _url;
+
+  @override
+  void initState() {
+    super.initState();
+    _url =
+        (widget.coverUrl != null && widget.coverUrl!.isNotEmpty)
+            ? widget.coverUrl
+            : null;
+    if (_url == null) _lazyLoad();
+  }
+
+  Future<void> _lazyLoad() async {
+    final cacheKey = '${widget.sourceKey}:${widget.comicId}:${widget.epId}';
+    if (_lazyCache.containsKey(cacheKey)) {
+      final v = _lazyCache[cacheKey];
+      if (v != null && mounted) setState(() => _url = v);
+      return;
+    }
+    try {
+      final source = ComicSource.find(widget.sourceKey);
+      final loader = source?.loadComicPages;
+      if (loader == null) {
+        _lazyCache[cacheKey] = null;
+        return;
+      }
+      final res = await loader(widget.comicId, widget.epId);
+      final first =
+          (res.success && res.data.isNotEmpty) ? res.data.first : null;
+      _lazyCache[cacheKey] = first;
+      if (first != null && mounted) setState(() => _url = first);
+    } catch (_) {
+      _lazyCache[cacheKey] = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final url = _url;
+    if (url == null || url.isEmpty) {
+      return Container(
+        color: context.colorScheme.surfaceContainerHighest,
+        child: Center(
+          child: Text(
+            "${widget.placeholderIndex}",
+            style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+          ),
+        ),
+      );
+    }
+    return Image(
+      image: CachedImageProvider(
+        url,
+        sourceKey: widget.sourceKey,
+        cid: widget.comicId,
+      ),
+      fit: BoxFit.cover,
+      errorBuilder: (c, e, st) => Container(
+        color: context.colorScheme.surfaceContainerHighest,
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: context.colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }

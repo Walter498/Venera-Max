@@ -146,7 +146,7 @@ class _CommentsPageState extends State<CommentsPage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: Appbar(
-        title: Text(widget.replyComment == null ? "Comments".tl : "评论详情"),
+        title: Text(widget.replyComment == null ? "Comments".tl : "Comment details".tl),
         actions: [CommentProviderSelector(source: widget.source)],
         style: AppbarStyle.shadow,
       ),
@@ -167,15 +167,18 @@ class _CommentsPageState extends State<CommentsPage> {
       controller: feed,
       onSortSelected: (sort) async {
         try { await widget.source.setPreferredCommentSort(sort); }
-        catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
+        catch (_) { if (mounted) context.showMessage(message: 'Failed to save comment sort'.tl); }
       },
       sorts: widget.source.availableCommentSorts(provider: feed.effectiveProvider),
-      totalLabel: widget.replyComment == null ? '评论' : '回复',
+      totalLabel: widget.replyComment == null ? 'Comments'.tl : 'Replies'.tl,
       parent: widget.replyComment == null ? null : Column(
         crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           tile(widget.replyComment!, actions: false),
           const Divider(height: 1),
-          const Padding(padding: EdgeInsets.all(16), child: Text('回复列表')),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('Replies list'.tl),
+          ),
         ]),
       itemBuilder: (comment) => tile(comment))), buildBottom(context)]);
   }

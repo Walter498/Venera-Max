@@ -19,6 +19,9 @@ class SliverGridComics extends StatefulWidget {
     this.forceBriefMode = false,
     this.forceDetailedMode = false,
     this.forceColumns,
+    this.chapterCountBuilder,
+    this.lastReadTimeBuilder,
+    this.detailedItemHeight,
   });
 
   final List<Comic> comics;
@@ -30,6 +33,9 @@ class SliverGridComics extends StatefulWidget {
   final bool forceBriefMode;
   final bool forceDetailedMode;
   final int? forceColumns;
+  final String? Function(Comic)? chapterCountBuilder;
+  final String? Function(Comic)? lastReadTimeBuilder;
+  final double? detailedItemHeight;
 
   final Map<Comic, bool>? selections;
 
@@ -143,6 +149,9 @@ class _SliverGridComicsState extends State<SliverGridComics> {
       forceBriefMode: widget.forceBriefMode,
       forceDetailedMode: widget.forceDetailedMode,
       forceColumns: widget.forceColumns,
+      chapterCountBuilder: widget.chapterCountBuilder,
+      lastReadTimeBuilder: widget.lastReadTimeBuilder,
+      detailedItemHeight: widget.detailedItemHeight,
     );
   }
 }
@@ -165,6 +174,9 @@ class _SliverGridComics extends StatelessWidget {
     this.forceBriefMode = false,
     this.forceDetailedMode = false,
     this.forceColumns,
+    this.chapterCountBuilder,
+    this.lastReadTimeBuilder,
+    this.detailedItemHeight,
   });
 
   final List<Comic> comics;
@@ -196,6 +208,9 @@ class _SliverGridComics extends StatelessWidget {
   final bool forceBriefMode;
   final bool forceDetailedMode;
   final int? forceColumns;
+  final String? Function(Comic)? chapterCountBuilder;
+  final String? Function(Comic)? lastReadTimeBuilder;
+  final double? detailedItemHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -230,6 +245,8 @@ class _SliverGridComics extends StatelessWidget {
           heroID: enableHero ? heroIDs[index] : null,
           forceBriefMode: forceBriefMode,
           forceDetailedMode: forceDetailedMode,
+          chaptersText: chapterCountBuilder?.call(comics[index]),
+          lastReadTimeText: lastReadTimeBuilder?.call(comics[index]),
         );
         Widget tile = comic;
         if (selection != null) {

@@ -1018,17 +1018,19 @@ class _ContinuousModeState extends State<_ContinuousMode>
     if (entry.chapter > 0 && reader.showChapterCommentsAtEnd) {
       final chapters = reader.widget.chapters!;
       final vertical = reader.mode == ReaderMode.continuousTopToBottom;
-      final gestures = context.readerScaffold._gestureDetectorState;
-      final comments = EmbeddedChapterCommentsPage(
+      final comments = ChapterCommentsPreview(
         key: ValueKey('chapter-comments-${entry.chapter}'),
         comicId: reader.cid,
         epId: chapters.ids.elementAt(entry.chapter - 1),
         source: reader.type.comicSource!,
         comicTitle: reader.widget.name,
         chapterTitle: _chapterTitle(entry.chapter),
-        scrollWithReader: vertical,
-        chapterNavigation: _buildCommentsNavigation(entry),
-        onPageTap: gestures?.onChapterCommentsTap,
+        horizontal: !vertical,
+        reverse: reader.mode == ReaderMode.continuousRightToLeft,
+        sharedFeed: reader.chapterCommentsFeed(
+          reader.type.comicSource!,
+          chapters.ids.elementAt(entry.chapter - 1),
+        ),
       );
       return KeyedSubtree(
         key: _itemKeyFor(entry.chapter, 0),

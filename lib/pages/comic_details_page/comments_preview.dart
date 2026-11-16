@@ -55,7 +55,7 @@ class _CommentsPartState extends State<_CommentsPart> {
                   CommentSortSelector(sorts: widget.source.availableCommentSorts(provider: widget.feed.effectiveProvider),
                     value: widget.feed.sort, onSelected: (sort) async {
                       try { await widget.source.setPreferredCommentSort(sort); }
-                      catch (_) { if (mounted) context.showMessage(message: '评论排序保存失败'); }
+                      catch (_) { if (mounted) context.showMessage(message: 'Failed to save comment sort'.tl); }
                     }),
                 ])),
               CommentContextStats(context: widget.feed.commentContext),
