@@ -16,6 +16,9 @@ class SliverGridComics extends StatefulWidget {
     this.enableContextMenu = true,
     this.swipeActionBuilder,
     this.hideBlocked = true,
+    this.forceBriefMode = false,
+    this.forceDetailedMode = false,
+    this.forceColumns,
   });
 
   final List<Comic> comics;
@@ -23,6 +26,10 @@ class SliverGridComics extends StatefulWidget {
   /// Library pages pass false: their items live on this device, and a hidden
   /// one could no longer be opened or deleted (issues #323, #324).
   final bool hideBlocked;
+
+  final bool forceBriefMode;
+  final bool forceDetailedMode;
+  final int? forceColumns;
 
   final Map<Comic, bool>? selections;
 
@@ -133,6 +140,9 @@ class _SliverGridComicsState extends State<SliverGridComics> {
       onLongPressed: widget.onLongPressed,
       onLongPressedWithIndex: widget.onLongPressedWithIndex,
       swipeActionBuilder: widget.swipeActionBuilder,
+      forceBriefMode: widget.forceBriefMode,
+      forceDetailedMode: widget.forceDetailedMode,
+      forceColumns: widget.forceColumns,
     );
   }
 }
@@ -152,6 +162,9 @@ class _SliverGridComics extends StatelessWidget {
     this.onLongPressedWithIndex,
     this.selection,
     this.swipeActionBuilder,
+    this.forceBriefMode = false,
+    this.forceDetailedMode = false,
+    this.forceColumns,
   });
 
   final List<Comic> comics;
@@ -179,6 +192,10 @@ class _SliverGridComics extends StatelessWidget {
   final void Function(Comic, int heroID, int index)? onLongPressedWithIndex;
 
   final SwipePanes Function(Comic)? swipeActionBuilder;
+
+  final bool forceBriefMode;
+  final bool forceDetailedMode;
+  final int? forceColumns;
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +228,8 @@ class _SliverGridComics extends StatelessWidget {
               ? () => onLongPressed!(comics[index], heroIDs[index])
               : null,
           heroID: enableHero ? heroIDs[index] : null,
+          forceBriefMode: forceBriefMode,
+          forceDetailedMode: forceDetailedMode,
         );
         Widget tile = comic;
         if (selection != null) {
@@ -243,7 +262,11 @@ class _SliverGridComics extends StatelessWidget {
         }
         return tile;
       }, childCount: comics.length),
-      gridDelegate: SliverGridDelegateWithComics(),
+      gridDelegate: SliverGridDelegateWithComics(
+        forceBriefMode: forceBriefMode,
+        forceDetailedMode: forceDetailedMode,
+        forceColumns: forceColumns,
+      ),
     );
   }
 }

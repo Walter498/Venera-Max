@@ -76,14 +76,40 @@ class SliverGridDelegateWithFixedHeight extends SliverGridDelegate {
 }
 
 class SliverGridDelegateWithComics extends SliverGridDelegate {
-  SliverGridDelegateWithComics();
+  SliverGridDelegateWithComics({
+    this.forceBriefMode = false,
+    this.forceDetailedMode = false,
+    this.forceColumns,
+  });
 
-  final bool useBriefMode = appdata.settings['comicDisplayMode'] == 'brief';
+  final bool forceBriefMode;
+  final bool forceDetailedMode;
+  final int? forceColumns;
+
+  bool get useBriefMode => forceBriefMode
+      ? true
+      : forceDetailedMode
+      ? false
+      : appdata.settings['comicDisplayMode'] == 'brief';
 
   final double scale = (appdata.settings['comicTileScale'] as num).toDouble();
 
   @override
   SliverGridLayout getLayout(SliverConstraints constraints) {
+    if (forceColumns != null) {
+      final columns = math.max(1, forceColumns!);
+      final width = constraints.crossAxisExtent;
+      final cross = width / columns;
+      final height = useBriefMode ? cross / 0.64 : 168 * scale;
+      return SliverGridRegularTileLayout(
+        crossAxisCount: columns,
+        mainAxisStride: height,
+        crossAxisStride: cross,
+        childMainAxisExtent: height,
+        childCrossAxisExtent: cross,
+        reverseCrossAxis: false,
+      );
+    }
     if (useBriefMode) {
       return getBriefModeLayout(constraints, scale);
     } else {
@@ -143,7 +169,10 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
   bool shouldRelayout(covariant SliverGridDelegate oldDelegate) {
     if (oldDelegate is! SliverGridDelegateWithComics) return true;
     if (oldDelegate.scale != scale ||
-        oldDelegate.useBriefMode != useBriefMode) {
+        oldDelegate.useBriefMode != useBriefMode ||
+        oldDelegate.forceColumns != forceColumns ||
+        oldDelegate.forceBriefMode != forceBriefMode ||
+        oldDelegate.forceDetailedMode != forceDetailedMode) {
       return true;
     }
     return false;

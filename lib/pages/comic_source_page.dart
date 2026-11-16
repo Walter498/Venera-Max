@@ -457,7 +457,7 @@ class _BodyState extends State<_Body> {
     if (sorting == null) return;
     ComicSourceManager().setSourceOrder(sorting.map((e) => e.key).toList());
     _exitSortMode();
-    // Explore/search/category tabs are built from the source order, so they
+    // Search/category pages are built from the source order, so they
     // have to be rebuilt for the new arrangement to show up outside this page.
     App.forceRebuild();
   }
@@ -912,14 +912,9 @@ class _WebdavLibrariesCardState extends State<_WebdavLibrariesCard> {
 }
 
 void _validatePages() {
-  List explorePages = appdata.settings['explore_pages'];
   List categoryPages = appdata.settings['categories'];
   List networkFavorites = appdata.settings['favorites'];
 
-  var totalExplorePages = ComicSource.all()
-      .map((e) => e.explorePages.map((e) => e.title))
-      .expand((element) => element)
-      .toList();
   var totalCategoryPages = ComicSource.all()
       .map((e) => e.categoryData?.key)
       .where((element) => element != null)
@@ -931,11 +926,6 @@ void _validatePages() {
       .map((e) => e!)
       .toList();
 
-  for (var page in List.from(explorePages)) {
-    if (!totalExplorePages.contains(page)) {
-      explorePages.remove(page);
-    }
-  }
   for (var page in List.from(categoryPages)) {
     if (!totalCategoryPages.contains(page)) {
       categoryPages.remove(page);
@@ -947,7 +937,6 @@ void _validatePages() {
     }
   }
 
-  appdata.settings['explore_pages'] = explorePages.toSet().toList();
   appdata.settings['categories'] = categoryPages.toSet().toList();
   appdata.settings['favorites'] = networkFavorites.toSet().toList();
 
@@ -955,18 +944,10 @@ void _validatePages() {
 }
 
 void _addAllPagesWithComicSource(ComicSource source) {
-  var explorePages = appdata.settings['explore_pages'];
   var categoryPages = appdata.settings['categories'];
   var networkFavorites = appdata.settings['favorites'];
   var searchPages = appdata.settings['searchSources'];
 
-  if (source.explorePages.isNotEmpty) {
-    for (var page in source.explorePages) {
-      if (!explorePages.contains(page.title)) {
-        explorePages.add(page.title);
-      }
-    }
-  }
   if (source.categoryData != null &&
       !categoryPages.contains(source.categoryData!.key)) {
     categoryPages.add(source.categoryData!.key);
@@ -979,7 +960,6 @@ void _addAllPagesWithComicSource(ComicSource source) {
     searchPages.add(source.key);
   }
 
-  appdata.settings['explore_pages'] = explorePages.toSet().toList();
   appdata.settings['categories'] = categoryPages.toSet().toList();
   appdata.settings['favorites'] = networkFavorites.toSet().toList();
   appdata.settings['searchSources'] = searchPages.toSet().toList();

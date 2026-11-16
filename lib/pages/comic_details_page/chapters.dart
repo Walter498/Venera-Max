@@ -37,6 +37,71 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
   /// Normal: every chapter. Grouped: only the current group's chapters.
   Set<String> get selectableKeys;
 
+  final GlobalKey _chapterGridKey = GlobalKey();
+  int? _locatedChapter;
+
+  /// Reveal and highlight the chapter recorded by the reader history.
+  void locateLastChapter() {
+    if (!mounted || pageState.history == null) return;
+    final h = pageState.history!;
+    var local = h.ep - 1;
+    int slot;
+    bool reversed;
+    if (this is _GroupedComicChaptersState) {
+      final view = this as _GroupedComicChaptersState;
+      int groupIndex;
+      if (h.group != null) {
+        groupIndex = (h.group! - 1).clamp(0, view.chapters.groupCount - 1).toInt();
+      } else {
+        groupIndex = 0;
+        while (groupIndex + 1 < view.chapters.groupCount &&
+            local >= view.chapters.getGroupByIndex(groupIndex).length) {
+          local -= view.chapters.getGroupByIndex(groupIndex++).length;
+        }
+      }
+      setState(() {
+        view.index = groupIndex;
+        view.showAll = true;
+        view._computeVisible();
+        view._locatedChapter = local;
+      });
+      view.tabController.index = groupIndex;
+      slot = view.visible.indexOf(local);
+      reversed = view.reverse;
+    } else {
+      final view = this as _NormalComicChaptersState;
+      setState(() {
+        view.showAll = true;
+        view._computeVisible();
+        view._locatedChapter = local;
+      });
+      slot = view.visible.indexOf(local);
+      reversed = view.reverse;
+    }
+    if (reversed && slot >= 0) slot = (this is _GroupedComicChaptersState
+        ? (this as _GroupedComicChaptersState).visible.length
+        : (this as _NormalComicChaptersState).visible.length) - 1 - slot;
+    if (slot < 0) {
+      context.showMessage(message: '上次閱讀章節已被隱藏或移除');
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final render = _chapterGridKey.currentContext?.findRenderObject();
+      if (render is! RenderSliverGrid) return;
+      final viewport = RenderAbstractViewport.of(render);
+      final base = viewport.getOffsetToReveal(render, 0).offset;
+      final geometry = render.gridDelegate.getLayout(render.constraints)
+          .getGeometryForChildIndex(slot);
+      final controller = pageState.scrollController;
+      if (!controller.hasClients) return;
+      final target = (base + geometry.scrollOffset - context.padding.top - 76)
+          .clamp(controller.position.minScrollExtent, controller.position.maxScrollExtent)
+          .toDouble();
+      controller.jumpTo(target);
+    });
+  }
+
   void enterSelectMode() {
     setState(() {
       selectMode = true;
@@ -329,6 +394,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
   @override
   void didChangeDependencies() {
     state = context.findAncestorStateOfType<_ComicPageState>()!;
+    state.jumpToLastReadChapter = locateLastChapter;
     chapters = state.comic.chapters!;
     _computeVisible();
     super.didChangeDependencies();
@@ -538,6 +604,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                     ),
             ),
             SliverGrid(
+              key: _chapterGridKey,
               delegate: SliverChildBuilderDelegate(childCount: length, (
                 context,
                 slot,
@@ -802,6 +869,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
   @override
   void didChangeDependencies() {
     state = context.findAncestorStateOfType<_ComicPageState>()!;
+    state.jumpToLastReadChapter = locateLastChapter;
     chapters = state.comic.chapters!;
     _syncTabController();
     _computeVisible();
@@ -968,6 +1036,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
             ),
             SliverPadding(padding: const EdgeInsets.only(top: 8)),
             SliverGrid(
+              key: _chapterGridKey,
               delegate: SliverChildBuilderDelegate(childCount: length, (
                 context,
                 slot,

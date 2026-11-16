@@ -125,9 +125,9 @@ void main() {
         activeIcon: Icons.home,
       ),
       PaneItemEntry(
-        label: 'Explore',
-        icon: Icons.explore_outlined,
-        activeIcon: Icons.explore,
+        label: 'Shelf',
+        icon: Icons.bookmark_outline,
+        activeIcon: Icons.bookmark,
       ),
     ];
 
@@ -144,15 +144,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The top bar keeps the current page title; destinations in the bottom
-    // bar are represented by icons only, matching the desktop navigation.
+    // The bottom bar keeps destination labels alongside their icons.
     expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Explore'), findsNothing);
-    expect(find.byIcon(Icons.explore_outlined), findsAtLeastNWidgets(1));
+    expect(find.text('Shelf'), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark_outlined), findsAtLeastNWidgets(1));
     expect(find.text('Page 0'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byIcon(Icons.explore_outlined).last);
+    await tester.tap(find.byIcon(Icons.bookmark_outlined).last);
     await tester.pumpAndSettle();
 
     expect(find.text('Page 1'), findsOneWidget);
@@ -175,9 +174,9 @@ void main() {
         activeIcon: Icons.home,
       ),
       PaneItemEntry(
-        label: 'Explore',
-        icon: Icons.explore_outlined,
-        activeIcon: Icons.explore,
+        label: 'Shelf',
+        icon: Icons.bookmark_outline,
+        activeIcon: Icons.bookmark,
       ),
       PaneItemEntry(
         label: 'Library',
@@ -204,13 +203,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The current page title remains in the top bar, but bottom labels are
-    // omitted so all four destinations retain a comfortable icon target.
+    // Labels remain visible even when four destinations are cramped.
     expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Explore'), findsNothing);
-    expect(find.text('Library'), findsNothing);
-    expect(find.text('Settings'), findsNothing);
-    expect(find.byIcon(Icons.explore_outlined), findsWidgets);
+    expect(find.text('Shelf'), findsOneWidget);
+    expect(find.text('Library'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark_outlined), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }

@@ -23,7 +23,7 @@ const _categories = <int, (String, Type)>{
   1: ('reader', ReaderSettings),
   2: ('favorites', LocalFavoritesSettings),
   3: ('sync', DataSyncSettings),
-  4: ('browsing', ExploreSettings),
+  4: ('browsing', BrowsingSettings),
   5: ('network', NetworkSettings),
   7: ('about', AboutSettings),
   8: ('translation', ReaderSettings),

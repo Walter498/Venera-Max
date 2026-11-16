@@ -1,17 +1,17 @@
 part of 'settings_page.dart';
 
-class ExploreSettings extends StatefulWidget {
-  const ExploreSettings({super.key, this.section});
+class BrowsingSettings extends StatefulWidget {
+  const BrowsingSettings({super.key, this.section});
 
   final String? section;
 
   @override
-  State<ExploreSettings> createState() => _ExploreSettingsState();
+  State<BrowsingSettings> createState() => _BrowsingSettingsState();
 }
 
-class _ExploreSettingsState extends State<ExploreSettings> {
+class _BrowsingSettingsState extends State<BrowsingSettings> {
   Future<void> _openSection(String section) async {
-    await context.to(() => ExploreSettings(section: section));
+    await context.to(() => BrowsingSettings(section: section));
     if (mounted) setState(() {});
   }
 
@@ -176,13 +176,9 @@ class _ExploreSettingsState extends State<ExploreSettings> {
         _SettingsSection(
           title: 'Browsing pages',
           subtitle:
-              'Explore, categories, network favorites and the initial page',
+              'Categories, network favorites and the initial page',
           icon: Icons.auto_stories_outlined,
           children: [
-            _PopupWindowSetting(
-              title: "Explore Pages".tl,
-              builder: setExplorePagesWidget,
-            ),
             _PopupWindowSetting(
               title: "Category Pages".tl,
               builder: setCategoryPagesWidget,
@@ -197,7 +193,7 @@ class _ExploreSettingsState extends State<ExploreSettings> {
               optionTranslation: {
                 '0': "Home Page".tl,
                 '1': "Favorites Page".tl,
-                '2': "Explore Page".tl,
+                '2': "Community Page".tl,
                 '3': "Categories Page".tl,
               },
             ),
@@ -365,20 +361,6 @@ class _ManageBlockListViewState extends State<_ManageBlockListView> {
       },
     );
   }
-}
-
-Widget setExplorePagesWidget() {
-  var pages = <String, String>{};
-  for (var c in ComicSource.all()) {
-    for (var page in c.explorePages) {
-      pages[page.title] = page.title.ts(c.key);
-    }
-  }
-  return _MultiPagesFilter(
-    title: "Explore Pages".tl,
-    settingsIndex: "explore_pages",
-    pages: pages,
-  );
 }
 
 Widget setCategoryPagesWidget() {

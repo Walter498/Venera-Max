@@ -862,6 +862,41 @@ class ComicSourceParser {
       options = [];
     }
 
+    CategoryFilterLoader? loadWithFilters;
+    if (_checkExists("categoryComics.loadWithFilters")) {
+      loadWithFilters = (request) async {
+        try {
+          final res = await JsEngine().runCode("""
+              ComicSource.sources.$_key.categoryComics.loadWithFilters(
+                ${jsonEncode(request.toJson())})
+            """);
+          return Res(
+            List.generate(
+              res["comics"].length,
+              (index) => Comic.fromJson(res["comics"][index], _key!),
+            ),
+            subData: res["maxPage"],
+            total: res["total"] is num ? (res["total"] as num).toInt() : null,
+          );
+        } catch (e, s) {
+          Log.error("Network", "$e\\n$s");
+          return Res.error(e.toString());
+        }
+      };
+    }
+
+    Set<String>? multiSelectGroups;
+    if (_checkExists("categoryComics.multiSelectGroups")) {
+      try {
+        multiSelectGroups = {
+          for (final group in _getValue("categoryComics.multiSelectGroups"))
+            group.toString(),
+        };
+      } catch (_) {
+        multiSelectGroups = null;
+      }
+    }
+
     return CategoryComicsData(
       options: options,
       optionsLoader: optionLoader,
@@ -888,6 +923,8 @@ class ComicSourceParser {
         }
       },
       rankingData: rankingData,
+      loadWithFilters: loadWithFilters,
+      multiSelectGroups: multiSelectGroups,
     );
   }
 

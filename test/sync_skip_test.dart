@@ -63,9 +63,9 @@ void main() {
   test('saved value still lists every key for older installs', () {
     final saved = SyncSkipSelection.parse(
       '',
-    ).withCategory(_cat('explore'), true).serialize();
+    ).withCategory(_cat('browsing'), true).serialize();
     final entries = saved.split(',').map((e) => e.trim()).toSet();
-    expect(entries, containsAll(_cat('explore').keys));
+    expect(entries, containsAll(_cat('browsing').keys));
   });
 
   test('deselecting a category clears its keys and legacy signature', () {

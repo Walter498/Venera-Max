@@ -205,11 +205,11 @@ class _HomeBackdrop extends StatelessWidget {
   Widget build(BuildContext context) => IgnorePointer(
     child: LayoutBuilder(
       builder: (context, size) {
-        const destinations = ['Home', 'Favorites', 'Explore', 'Categories'];
+        const destinations = ['Home', 'Favorites', 'Community', 'Categories'];
         const icons = [
           Icons.home_outlined,
           Icons.bookmark_outline,
-          Icons.explore_outlined,
+          Icons.forum_outlined,
           Icons.category_outlined,
         ];
         final body = Padding(

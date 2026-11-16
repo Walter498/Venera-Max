@@ -337,6 +337,12 @@ class Appdata with Init, ChangeNotifier {
         }
       }
       var loadedSettings = json['settings'] as Map<String, dynamic>;
+      // Explore was an independent destination in older builds. Its source
+      // data is still used by HomeSourceFeed, but its user-facing page and
+      // ordering setting are gone; don't carry the obsolete setting forward.
+      final removedExploreSetting =
+          settings._data.remove('explore_pages') != null;
+      if (removedExploreSetting) await saveData(false);
       if (!loadedSettings.containsKey('imageTranslationPerformancePreset')) {
         var usedOldDefaults =
             settings['imageTranslationPreBatchPages'] == 1 &&
@@ -395,7 +401,6 @@ class Settings with ChangeNotifier {
     'newFavoriteAddTo': 'end', // start, end
     'moveFavoriteAfterRead': 'none', // none, end, start
     'proxy': 'system', // direct, system, proxy string
-    'explore_pages': [],
     'categories': [],
     'favorites': [],
     'searchSources': null,

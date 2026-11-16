@@ -24,6 +24,8 @@ import 'package:venera/pages/webdav_library_page.dart';
 import 'package:venera/pages/comic_source_page.dart';
 import 'package:venera/pages/downloading_page.dart';
 import 'package:venera/pages/follow_updates_page.dart';
+import 'package:venera/pages/home_source_feed.dart';
+import 'package:venera/pages/rank_updates_page.dart';
 import 'package:venera/pages/guide_page.dart';
 import 'package:venera/pages/history_page.dart';
 import 'package:venera/pages/read_later_page.dart';
@@ -216,6 +218,7 @@ class _HomePageState extends State<HomePage> {
   /// preserves the per-section [State] (these widgets hold data and listeners).
   Widget _sectionWidget(String id) {
     return switch (id) {
+      'sourceHome' => const HomeSourceFeed(key: ValueKey('sourceHome')),
       'history' => const _History(key: ValueKey('history')),
       'readLater' => const _ReadLater(key: ValueKey('readLater')),
       'translatedComics' => const _TranslatedComics(
@@ -264,15 +267,78 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// 首页 / 更新 / 排行三页签，保留我们的源内容入口，同时继续使用3.0首页布局。
+  int homeTab = 0;
+
+  Widget _buildHomeTabs() {
+    Widget tab(String text, int index) {
+      final active = homeTab == index;
+      return InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => setState(() => homeTab = index),
+        child: Container(
+          margin: const EdgeInsets.only(right: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? context.colorScheme.primaryContainer : null,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              color: active
+                  ? context.colorScheme.onPrimaryContainer
+                  : context.colorScheme.onSurface,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 38,
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          tab('首页', 0),
+          tab('更新', 1),
+          tab('排行', 2),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     var slivers = <Widget>[
       SliverPadding(padding: EdgeInsets.only(top: context.padding.top)),
+      SliverToBoxAdapter(child: _buildHomeTabs()),
       _SearchBar(
         editing: editMode,
         onEdit: editMode ? _exitEditMode : _enterEditMode,
       ),
     ];
+    if (!editMode && homeTab != 0) {
+      slivers.add(
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          sliver: SliverToBoxAdapter(
+            child: homeTab == 1
+                ? const HomeUpdatesView(key: ValueKey('updates'))
+                : const HomeRankView(key: ValueKey('rank')),
+          ),
+        ),
+      );
+      slivers.add(
+        SliverPadding(padding: EdgeInsets.only(top: context.padding.bottom)),
+      );
+      return SmoothCustomScrollView(
+        scrollbarTopPadding: context.padding.top,
+        slivers: slivers,
+      );
+    }
     if (editMode) {
       slivers.add(
         _HomeEditBanner(onDone: _exitEditMode, onReset: _resetLayout),

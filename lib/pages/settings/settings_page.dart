@@ -65,7 +65,7 @@ part 'llm_providers_settings.dart';
 part 'translation_script_settings.dart';
 part 'translation_prompt_settings.dart';
 part 'translation_languages_settings.dart';
-part 'explore_settings.dart';
+part 'browsing_settings.dart';
 part 'setting_components.dart';
 part 'launcher_icon_settings.dart';
 part 'keyboard_shortcuts_settings.dart';
@@ -102,7 +102,7 @@ const _settingsCategoryIcons = <IconData>[
   Icons.menu_book_outlined,
   Icons.favorite_border,
   Icons.cloud_outlined,
-  Icons.explore_outlined,
+  Icons.tune_outlined,
   Icons.public,
   Icons.bug_report_outlined,
   Icons.info_outline,
@@ -515,7 +515,7 @@ class _SettingsDetailPage extends StatelessWidget {
       1 => const ReaderSettings(),
       2 => const LocalFavoritesSettings(),
       3 => const DataSyncSettings(),
-      4 => const ExploreSettings(),
+      4 => const BrowsingSettings(),
       5 => const NetworkSettings(),
       6 => const DebugPage(),
       7 => const AboutSettings(),

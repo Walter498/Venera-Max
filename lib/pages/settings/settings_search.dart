@@ -3,7 +3,7 @@ part of 'settings_page.dart';
 /// Searchable index of all settings (issue #75).
 ///
 /// IMPORTANT: this list mirrors the settings rendered by the category pages
-/// (explore_settings.dart, reader.dart, local_favorites.dart, data_sync.dart,
+/// (browsing_settings.dart, reader.dart, local_favorites.dart, data_sync.dart,
 /// app.dart, network.dart, about.dart, debug.dart). When you add, rename, or
 /// remove a setting on those pages, update the matching entry here so it stays
 /// searchable.
@@ -197,7 +197,6 @@ class _SettingsSearchEntry {
         'Auto Language Filters' ||
         'Language Filter Sources' ||
         'Search Sources' => 'Search preferences',
-        'Explore Pages' ||
         'Category Pages' ||
         'Network Favorite Pages' ||
         'Initial Page' => 'Browsing pages',
@@ -289,7 +288,7 @@ class _SettingsSearchEntry {
 /// The full index. Built once; `visible` guards are evaluated lazily at match
 /// time so this is safe to construct before [App] is initialized.
 final _settingsSearchIndex = <_SettingsSearchEntry>[
-  // --- 4: Explore ---
+  // --- 4: Browsing & filters ---
   _SettingsSearchEntry(
     'Clear reading progress when deleting a single history entry',
     4,
@@ -298,7 +297,6 @@ final _settingsSearchIndex = <_SettingsSearchEntry>[
   _SettingsSearchEntry("Auto clean reading history", 4),
   _SettingsSearchEntry("Display mode of comic tile", 4),
   _SettingsSearchEntry("Size of comic tile", 4),
-  _SettingsSearchEntry("Explore Pages", 4),
   _SettingsSearchEntry("Category Pages", 4),
   _SettingsSearchEntry("Network Favorite Pages", 4),
   _SettingsSearchEntry("Search Sources", 4),

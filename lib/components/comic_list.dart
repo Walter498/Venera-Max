@@ -5,6 +5,7 @@ class ComicList extends StatefulWidget {
     super.key,
     this.loadPage,
     this.loadNext,
+    this.loadWithFilters,
     this.leadingSliver,
     this.trailingSliver,
     this.errorLeading,
@@ -17,11 +18,18 @@ class ComicList extends StatefulWidget {
     this.enableSelection = false,
     this.scrollbar = true,
     this.scrollbarTopPadding = 0,
+    this.filterTags = const <String>{},
+    this.emptyFilterText,
+    this.onAvailableTags,
+    this.onResultCount,
+    this.emptyText,
   });
 
   final Future<Res<List<Comic>>> Function(int page)? loadPage;
 
   final Future<Res<List<Comic>>> Function(String? next)? loadNext;
+
+  final Future<Res<List<Comic>>> Function(int page)? loadWithFilters;
 
   final Widget? leadingSliver;
 
@@ -61,6 +69,12 @@ class ComicList extends StatefulWidget {
   /// Top inset for the scrollbar thumb so it clears a top app bar (e.g. a
   /// pinned [Appbar] when [Scaffold.extendBodyBehindAppBar] is used).
   final double scrollbarTopPadding;
+
+  final Set<String> filterTags;
+  final String? emptyFilterText;
+  final ValueChanged<Set<String>>? onAvailableTags;
+  final void Function(int? total, int loaded)? onResultCount;
+  final String? emptyText;
 
   @override
   State<ComicList> createState() => ComicListState();
@@ -309,8 +323,20 @@ class ComicListState extends State<ComicList> {
 
   /// SliverGridComics configured for the current (normal / selecting) mode.
   Widget _buildGrid(List<Comic> comics, {void Function()? onLastItemBuild}) {
+    final available = <String>{
+      for (final comic in comics) ...?comic.tags,
+    };
+    widget.onAvailableTags?.call(available);
+    final visible = widget.filterTags.isEmpty
+        ? comics
+        : comics.where((comic) {
+            final tags = comic.tags ?? const <String>[];
+            return widget.filterTags.every((filter) => tags.any((tag) =>
+                tag == filter || tag.endsWith(':$filter') || tag.endsWith('@$filter')));
+          }).toList();
+    widget.onResultCount?.call(_maxPage, visible.length);
     return SliverGridComics(
-      comics: comics,
+      comics: visible,
       enableContextMenu: !_selecting,
       onLastItemBuild: onLastItemBuild,
       menuBuilder: _selecting

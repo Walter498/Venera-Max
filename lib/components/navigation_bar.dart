@@ -177,11 +177,9 @@ class NaviPaneState extends State<NaviPane>
     onRebuild(context);
     // Aspect-scoped reads: the shell must not rebuild on every keyboard
     // inset frame (#107), so avoid a full MediaQuery.of subscription here.
-    // Keep Android portrait content full width beside back-gesture regions.
     final sideInsets =
-        (App.isIOS ||
-            (App.isAndroid &&
-                MediaQuery.orientationOf(context) == Orientation.landscape))
+        (App.isMobile &&
+            MediaQuery.orientationOf(context) == Orientation.landscape)
         ? EdgeInsets.only(
             left: math.max(
               MediaQuery.viewPaddingOf(context).left,
@@ -224,19 +222,7 @@ class NaviPaneState extends State<NaviPane>
             ],
           );
           if (sideInsets != EdgeInsets.zero) {
-            final paneContent = content;
-            content = Padding(
-              padding: sideInsets,
-              // Keep keyboard-inset subscriptions outside the shell builder.
-              child: Builder(
-                builder: (context) => MediaQuery.removeViewPadding(
-                  context: context,
-                  removeLeft: true,
-                  removeRight: true,
-                  child: paneContent,
-                ),
-              ),
-            );
+            content = Padding(padding: sideInsets, child: content);
           }
           return content;
         },
@@ -312,6 +298,56 @@ class NaviPaneState extends State<NaviPane>
   }
 
   Widget buildBottom() {
+    // Liquid Glass：全寬毛玻璃條（含底部安全區，不留黑色空隙）
+    if (appdata.settings['ui_style'] == 'glass') {
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            // 高度含安全區，由本組件自己吃（外層不再 paddingBottom）
+            height: _kBottomBarHeight + context.padding.bottom,
+            padding: EdgeInsets.only(bottom: context.padding.bottom),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHigh
+                  .withOpacity(0.55),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(22)),
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outlineVariant
+                      .withOpacity(0.35),
+                  width: 0.6,
+                ),
+              ),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              textStyle: Theme.of(context).textTheme.labelSmall,
+              child: Row(
+                children:
+                    List<Widget>.generate(widget.paneItems.length, (index) {
+                  return Expanded(
+                    child: _SingleBottomNaviWidget(
+                      enabled: currentPage == index,
+                      entry: widget.paneItems[index],
+                      onTap: () {
+                        updatePage(index);
+                      },
+                      key: ValueKey(index),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Material(
       textStyle: Theme.of(context).textTheme.labelSmall,
       elevation: 0,
@@ -636,14 +672,33 @@ class _SingleBottomNaviWidgetState extends State<_SingleBottomNaviWidget>
         ),
       ),
     );
-    final content = Center(child: iconSlot);
+    final content = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        iconSlot,
+        const SizedBox(height: 2),
+        Text(
+          widget.entry.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.0,
+            color: widget.enabled
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
     return Semantics(
       button: true,
       label: widget.entry.label,
       selected: widget.enabled,
       child: Tooltip(
         message: widget.entry.label,
-        child: SizedBox(width: double.infinity, height: 52, child: content),
+        child: SizedBox(width: double.infinity, height: 60, child: content),
       ),
     );
   }
@@ -791,7 +846,9 @@ class _NaviMainViewState extends State<_NaviMainView> {
           ),
         ),
         if (shouldShowAppBar)
-          state.buildBottom().paddingBottom(context.padding.bottom),
+          appdata.settings['ui_style'] == 'glass'
+              ? state.buildBottom()
+              : state.buildBottom().paddingBottom(context.padding.bottom),
       ],
     );
   }

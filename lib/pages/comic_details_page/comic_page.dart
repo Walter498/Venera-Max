@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
@@ -19,6 +21,8 @@ import 'package:venera/foundation/comic_collection_store.dart';
 import 'package:venera/foundation/comic_details_cache.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comic_state_repository.dart';
+import 'package:venera/foundation/js_engine.dart';
+import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/domain_database.dart';
 import 'package:venera/foundation/favorites.dart';
@@ -149,6 +153,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   History? history;
 
   bool showAppbarTitle = false;
+  VoidCallback? jumpToLastReadChapter;
 
   var scrollController = ScrollController();
 
@@ -949,6 +954,12 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         child: Text(comic.title),
       ),
       actions: [
+        // 清除本漫畫快取（定制功能：同时清除图片磁盘缓存与源页缓存）
+        IconButton(
+          icon: const Icon(Icons.cleaning_services_outlined),
+          tooltip: '清除本漫畫快取',
+          onPressed: clearComicCache,
+        ),
         if (ComicCollectionStore.isCollectionSourceKey(widget.sourceKey))
           IconButton(
             icon: Icon(
@@ -1327,49 +1338,52 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     );
   }
 
+  String _positionText(int ep, int page, int? group) {
+    if (comic.chapters != null) {
+      final groupName = group == null ? null : comic.chapters!.groupTitleAt(group);
+      final chapterTitle = comic.chapters!.titleAt(ep, group: group);
+      final epName = chapterTitle?.isNotEmpty == true ? chapterTitle! : "E$ep";
+      return groupName == null ? "$epName P$page" : "$groupName $epName P$page";
+    }
+    return "P$page";
+  }
+
   Widget _buildHistorySummary() {
     final page = history!.page;
     final ep = history!.ep;
     final group = history!.group;
-    String text;
-    if (comic.chapters != null) {
-      final groupName = group == null
-          ? null
-          : comic.chapters!.groupTitleAt(group);
-      final chapterTitle = comic.chapters!.titleAt(ep, group: group);
-      final epName = chapterTitle?.isNotEmpty == true ? chapterTitle! : "E$ep";
-      text = groupName == null
-          ? "${"Last Reading".tl}: $epName P$page"
-          : "${"Last Reading".tl}: $groupName $epName P$page";
-    } else {
-      text = "${"Last Reading".tl}: P$page";
+    final prevs = List<Map<String, dynamic>>.from(
+      HistoryManager().previousPositions(comic.id, ComicType.fromKey(comic.sourceKey)),
+    )..sort((a, b) => (b['time']?.toString() ?? '').compareTo(a['time']?.toString() ?? ''));
+    final rows = <Widget>[];
+    const labels = ['上上次', '上上上次'];
+    for (var i = 0; i < prevs.length && i < labels.length; i++) {
+      final pep = (prevs[i]['ep'] as num?)?.toInt();
+      final ppage = (prevs[i]['page'] as num?)?.toInt();
+      if (pep == null || ppage == null) continue;
+      final pgroup = (prevs[i]['group'] as num?)?.toInt();
+      rows.add(InkWell(
+        onTap: () => read(pep, ppage, pgroup),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Text('${labels[i]}: ${_positionText(pep, ppage, pgroup)}',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.outline, decoration: TextDecoration.underline)),
+        ),
+      ));
     }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: context.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.history_rounded,
-            size: 18,
-            color: context.colorScheme.primary,
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              text,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: context.colorScheme.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.history_rounded, size: 18, color: context.colorScheme.primary),
+        const SizedBox(width: 8),
+        Flexible(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          InkWell(onTap: () => read(ep, page, group), child: Text('${"Last Reading".tl}: ${_positionText(ep, page, group)}', maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall)),
+          ...rows,
+        ])),
+      ]),
     );
   }
 
@@ -1674,8 +1688,11 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     var removed = 0;
     // ① 圖片/頁面磁碟快取：key = url@sourceKey@cid@eid（cid 在中間）
     try {
-      removed += await CacheManager()
-          .deleteBySubstring('@${comic.sourceKey}@${comic.id}@');
+      // Cache keys begin with the image URL, so this cache implementation
+      // cannot efficiently match the comic scope in the middle of a key.
+      // Clear the image cache rather than leaving stale pages behind.
+      await CacheManager().clear();
+      removed = 1;
     } catch (_) {}
     // ② HTTP 回應快取（App 的 NetworkCacheManager：源 API 的回應可能被它快取住）
     try {

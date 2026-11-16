@@ -145,11 +145,10 @@ const syncSkipCategories = <SyncSkipCategory>[
     [translationResultsField],
   ),
   SyncSkipCategory(
-    'explore',
-    "Explore",
-    "Explore pages, categories, search options and content filters",
+    'browsing',
+    "Browsing",
+    "Categories, search sources and content filters",
     [
-      "explore_pages",
       "categories",
       "searchSources",
       "defaultSearchTarget",
@@ -262,8 +261,7 @@ const _legacySignatures = <String, List<String>>{
     "preloadImageCount",
     "showChapterCommentsAtEnd",
   ],
-  'explore': [
-    "explore_pages",
+  'browsing': [
     "categories",
     "searchSources",
     "blockedWords",

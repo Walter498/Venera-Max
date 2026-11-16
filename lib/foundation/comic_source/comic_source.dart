@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:math' as math;
+
+import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/chapter_metadata.dart';
 
 import 'package:flutter/widgets.dart';
@@ -1093,6 +1095,9 @@ class SearchOptions {
   String get defaultValue => defaultVal ?? options.keys.firstOrNull ?? "";
 }
 
+typedef CategoryFilterLoader =
+    Future<Res<List<Comic>>> Function(CategoryFilterRequest request);
+
 typedef CategoryComicsLoader =
     Future<Res<List<Comic>>> Function(
       String category,
@@ -1122,11 +1127,19 @@ class CategoryComicsData {
 
   final RankingData? rankingData;
 
+  /// Optional source-native multi-condition category query.
+  final CategoryFilterLoader? loadWithFilters;
+
+  /// Source-declared groups whose values may be selected together.
+  final Set<String>? multiSelectGroups;
+
   const CategoryComicsData({
     this.options,
     this.optionsLoader,
     required this.load,
     this.rankingData,
+    this.loadWithFilters,
+    this.multiSelectGroups,
   });
 }
 
