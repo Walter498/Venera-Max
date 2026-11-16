@@ -1,5 +1,59 @@
 part of 'components.dart';
 
+/// Use Flutter's iOS system-rendered selection menu whenever the engine says it
+/// is available, while preserving the normal Flutter toolbar on iOS < 16 and
+/// on non-iOS platforms.
+///
+/// Material/TextField has the same default in Flutter 3.44.3. Keeping the
+/// builder explicit on Venera's search fields is intentional: it prevents a
+/// future theme or field-level override from silently switching these fields
+/// back to a Flutter-rendered menu. The system path owns Cut/Copy/Paste and
+/// Live Text, so clipboard behavior and the Scan Text action remain native.
+Widget veneraTextContextMenuBuilder(
+  BuildContext context,
+  EditableTextState editableTextState,
+) {
+  final systemSupported =
+      SystemContextMenu.isSupportedByField(editableTextState);
+  _probeSystemContextMenu(context, editableTextState, systemSupported);
+  if (systemSupported) {
+    return SystemContextMenu.editableText(
+      editableTextState: editableTextState,
+    );
+  }
+  return AdaptiveTextSelectionToolbar.editableText(
+    editableTextState: editableTextState,
+  );
+}
+
+bool _didProbeSystemContextMenu = false;
+
+/// Records the runtime conditions that select native vs Flutter rendering.
+/// This is deliberately emitted only on the first real menu invocation; it is
+/// useful in a device log without adding a visible diagnostic UI.
+void _probeSystemContextMenu(
+  BuildContext context,
+  EditableTextState editableTextState,
+  bool systemSupported,
+) {
+  if (_didProbeSystemContextMenu) return;
+  _didProbeSystemContextMenu = true;
+  final dispatcher = WidgetsBinding.instance.platformDispatcher;
+  final mediaQuerySupport =
+      MediaQuery.maybeSupportsShowingSystemContextMenu(context) ?? false;
+  final appLocale = Localizations.maybeLocaleOf(context);
+  Log.info(
+    'Text selection menu',
+    '${systemSupported ? 'renderer=SystemContextMenu' : 'renderer=AdaptiveTextSelectionToolbar'} '
+        'platform=${defaultTargetPlatform.name} '
+        'engineSupport=${dispatcher.supportsShowingSystemContextMenu} '
+        'mediaQuerySupport=$mediaQuerySupport '
+        'fieldSupport=${SystemContextMenu.isSupportedByField(editableTextState)} '
+        'appLocale=${appLocale?.toLanguageTag() ?? 'none'} '
+        'systemLocales=${dispatcher.locales.map((locale) => locale.toLanguageTag()).join(',')}',
+  );
+}
+
 class Appbar extends StatefulWidget implements PreferredSizeWidget {
   const Appbar({
     required this.title,
@@ -1107,6 +1161,7 @@ class _SliverSearchBarDelegate extends SliverPersistentHeaderDelegate {
               child: TextField(
                 focusNode: focusNode,
                 controller: editingController,
+                contextMenuBuilder: veneraTextContextMenuBuilder,
                 decoration: InputDecoration(
                   hintText: "Search".tl,
                   border: InputBorder.none,
@@ -1244,6 +1299,7 @@ class _SearchBarState extends State<AppSearchBar> with _SearchBarMixin {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: TextField(
                 controller: _editingController,
+                contextMenuBuilder: veneraTextContextMenuBuilder,
                 decoration: InputDecoration(
                   hintText: "Search".tl,
                   border: InputBorder.none,

@@ -462,11 +462,13 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                     SliverGridComics(
                       comics: items,
                       forceDetailedMode: true,
-                      // 加高卡片：完整显示作者、来源、状态、标签、章节与阅读资料。
+                      // Keep the historical compact detailed shelf card. The
+                      // metadata list is still complete; ComicDescription
+                      // clips rows to the available height instead of making
+                      // every card grow with the text scale.
                       forceColumns: 1,
                       hideBlocked: false,
-                      detailedItemHeight: 300 *
-                          MediaQuery.textScalerOf(context).scale(12) / 12,
+                      detailedItemHeight: 300,
                       // ComicTile resolves last-read and chapter count from the
                       // existing history/domain stores; no per-card requests.
                       selections: _editMode

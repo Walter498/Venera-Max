@@ -88,6 +88,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
             child: TextField(
               controller: _controller,
               autofocus: widget.autofocus,
+              contextMenuBuilder: veneraTextContextMenuBuilder,
               decoration: InputDecoration(
                 hintText: hint,
                 border: InputBorder.none,

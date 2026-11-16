@@ -811,9 +811,7 @@ class ComicTile extends StatelessWidget {
                         titleTrailing: App.isMobile && enableContextMenu
                             ? _menuButton(context)
                             : null,
-                        subtitle: comic is FavoriteItem
-                            ? ''
-                            : displayInfo.author ?? '',
+                        subtitle: displayInfo.author ?? '',
                         description: displayInfo.description ?? '',
                         badge: displayInfo.sourceName ?? comic.language,
                         tags: displayInfo.tags,

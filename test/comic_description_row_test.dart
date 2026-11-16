@@ -58,6 +58,74 @@ void main() {
     expect(find.text('A long synopsis'), findsOneWidget);
   });
 
+  testWidgets('detailed grid keeps the compact one-column contract', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomScrollView(
+          slivers: [
+            SliverGridComics(
+              comics: const [],
+              forceDetailedMode: true,
+              forceColumns: 1,
+              detailedItemHeight: 300,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
+    final delegate = grid.gridDelegate as SliverGridDelegateWithComics;
+    expect(delegate.forceColumns, 1);
+    expect(delegate.detailedItemHeight, 300);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('fixed shelf height keeps the reading metadata rows', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 320,
+            height: 300,
+            child: ComicDescription(
+              title: 'Favorite title',
+              subtitle: 'Favorite artist',
+              description: '',
+              badge: 'Fixture source',
+              enableTranslate: false,
+              chaptersText: '385',
+              lastReadTimeText: '2026-10-21 18:30',
+              updateText: '2026-10-20',
+              statusText: 'Completed',
+              tags: ['Adventure', 'language:Chinese'],
+              maxInfoRows: 12,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // A fixed 300 logical-pixel shelf tile must retain the fields added for
+    // the library (in particular chapter count and last-read time) without
+    // expanding with the device text scale. Less important trailing rows may
+    // be clipped by ComicDescription's height budget.
+    for (final value in [
+      'Favorite artist',
+      'Fixture source',
+      '385',
+      '2026-10-21 18:30',
+      '2026-10-20',
+    ]) {
+      expect(find.text(value), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the detail header drops the description row only', (
     tester,
   ) async {
