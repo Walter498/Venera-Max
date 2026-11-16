@@ -4,9 +4,8 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:math' as math;
-
-import 'package:venera/foundation/category_filter_plan.dart';
 import 'package:venera/foundation/chapter_metadata.dart';
+import 'package:venera/foundation/category_filter_plan.dart';
 
 import 'package:flutter/widgets.dart';
 import 'package:venera/foundation/app.dart';
@@ -548,6 +547,9 @@ class ComicSource {
 
   final String version;
 
+  /// Optional source-owned API transport used by the Lizi/Qingman bridges.
+  Future<Res<String>> Function(String path, [dynamic body])? apiFetch;
+
   final ({CommentCapabilities? work, CommentCapabilities? chapter}) _initialCommentCapabilities;
   final CommentCapabilities? Function(bool chapter)? resolveCommentCapabilities;
   CommentCapabilities? get commentCapabilities => resolveCommentCapabilities?.call(false) ?? _initialCommentCapabilities.work;
@@ -817,6 +819,13 @@ class ComicSource {
     if (_lastSavedCommentRevision != revision) {
       _lastSavedCommentRevision = revision;
       settingsChanges.changed();
+    }
+    if (App.isBackgroundTask) {
+      final file = File("${App.dataPath}/comic_source/$key.data");
+      file.parent.createSync(recursive: true);
+      writeStringAtomicSync(file.path, jsonEncode(data));
+      DataSync().requestAutoUpload();
+      return;
     }
     if (_haveWaitingTask) return;
     while (_isSaving) {
@@ -1095,9 +1104,6 @@ class SearchOptions {
   String get defaultValue => defaultVal ?? options.keys.firstOrNull ?? "";
 }
 
-typedef CategoryFilterLoader =
-    Future<Res<List<Comic>>> Function(CategoryFilterRequest request);
-
 typedef CategoryComicsLoader =
     Future<Res<List<Comic>>> Function(
       String category,
@@ -1127,18 +1133,14 @@ class CategoryComicsData {
 
   final RankingData? rankingData;
 
-  /// Optional source-native multi-condition category query.
-  final CategoryFilterLoader? loadWithFilters;
-
-  /// Source-declared groups whose values may be selected together.
-  final Set<String>? multiSelectGroups;
+  /// Source-declared groups that can be selected together in category filters.
+  final List<String>? multiSelectGroups;
 
   const CategoryComicsData({
     this.options,
     this.optionsLoader,
     required this.load,
     this.rankingData,
-    this.loadWithFilters,
     this.multiSelectGroups,
   });
 }

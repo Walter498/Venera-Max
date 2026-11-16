@@ -149,6 +149,11 @@ class ComicPage extends StatefulWidget {
 
 class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     with _ComicPageActions {
+  int _coverRefreshVersion = 0;
+
+  String get _coverUrl =>
+      comic.cover.isNotEmpty ? comic.cover : widget.cover ?? '';
+
   @override
   History? history;
 
@@ -1788,26 +1793,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       }));
   }
 
-  void _onCollectionChanged() {
-    if (mounted && ComicCollectionStore.isCollectionSourceKey(widget.sourceKey)) {
-      setState(() {});
-    }
-  }
-
-  ComicCollection? get _collection => ComicCollectionStore.find(widget.id);
-
-  /// 合集詳情：在「章節清單」與「封面網格」兩種視圖間切換
-  void _toggleCollectionDetailMode() {
-    final collection = _collection;
-    if (collection == null) return;
-    final mode = ComicCollectionStore.detailDisplayMode ==
-            CollectionDetailDisplayMode.chapters
-        ? CollectionDetailDisplayMode.covers
-        : CollectionDetailDisplayMode.chapters;
-    ComicCollectionStore.setDetailDisplayMode(mode);
-    ComicSourceManager().refreshCollectionSources();
-  }
-
   /// 合集成員以封面網格呈現（對應「封面」視圖模式）
   Widget _buildCollectionCovers() {
     final collection = _collection;
@@ -1954,63 +1939,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     return _ComicChapters(
       history: history,
       groupedMode: comic.chapters!.isGrouped,
-    );
-  }
-
-  Widget _buildCollectionCovers() {
-    final collection = _collection;
-    if (collection == null || collection.members.isEmpty) {
-      return const SliverPadding(padding: EdgeInsets.zero);
-    }
-    final comics = [
-      for (final member in collection.members)
-        Comic(
-          member.label,
-          member.cachedCover,
-          member.comicId,
-          member.cachedSubtitle.isEmpty ? null : member.cachedSubtitle,
-          const ['Collection member'],
-          '',
-          member.sourceKey,
-          null,
-          null,
-        ),
-    ];
-    return SliverMainAxisGroup(
-      slivers: [
-        SliverToBoxAdapter(
-          child: _ComicSectionHeader(
-            icon: Icons.collections_bookmark_outlined,
-            title: 'Comics in collection'.tl,
-            trailing: Text(
-              '${comics.length}',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: context.colorScheme.outline,
-              ),
-            ),
-          ),
-        ),
-        SliverGridComics(
-          comics: comics,
-          onTap: (comic, heroID) {
-            final member = collection.members.firstWhere(
-              (item) =>
-                  item.sourceKey == comic.sourceKey && item.comicId == comic.id,
-            );
-            context.to(
-              () => ComicPage(
-                id: member.comicId,
-                sourceKey: member.sourceKey,
-                cover: member.cachedCover,
-                title: member.label,
-                heroID: heroID,
-              ),
-            );
-          },
-          badgeBuilder: (comic) => ComicSource.find(comic.sourceKey)?.name,
-        ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
-      ],
     );
   }
 

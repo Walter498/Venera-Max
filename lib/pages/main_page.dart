@@ -17,6 +17,8 @@ import 'home_page.dart';
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
+  static const favoritesIndex = 1;
+
   @override
   State<MainPage> createState() => _MainPageState();
 }

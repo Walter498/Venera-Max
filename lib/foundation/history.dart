@@ -656,6 +656,26 @@ class HistoryManager with ChangeNotifier {
     return save;
   }
 
+  /// Clears progress after earlier reader saves, retaining reading statistics.
+  /// Returns the saved record for undo, independent of stale UI references.
+  Future<History?> clearReadingProgress(String id, ComicType type) {
+    if (!isInitialized) return Future<History?>.value(null);
+    final save = _historyWriteTail.then<History?>((_) {
+      final rows = _db.select(
+        'select * from history where id == ? and type == ?;',
+        [id, type.value],
+      );
+      final removed = rows.isEmpty ? null : History.fromRow(rows.first);
+      remove(id, type);
+      return removed;
+    });
+    _historyWriteTail = save.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
+    return save;
+  }
+
   /// Persists [newItem] without changing whether it shows in the history list.
   ///
   /// For maintenance writes that refresh a record's display fields on the app's

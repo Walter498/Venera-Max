@@ -113,21 +113,6 @@ abstract class TranslationModels {
     ],
   );
 
-  /// Chinese OCR covering Simplified and Traditional text (PP-OCRv5 mobile).
-  static const ocrZhV5 = ModelComponent(
-    id: 'ocr_zh_v5',
-    approxSizeBytes: 16700000,
-    files: [
-      ModelFile('rec.onnx', [
-        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx',
-        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ch_PP-OCRv5_rec.onnx',
-      ]),
-      ModelFile('dict.txt', [
-        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt',
-        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ppocrv5_dict.txt',
-      ]),
-    ],
-  );
   /// English OCR (PP-OCRv3 rec).
   static const ocrEn = ModelComponent(
     id: 'ocr_en',
@@ -158,6 +143,24 @@ abstract class TranslationModels {
     ],
   );
 
+  /// Chinese OCR covering Simplified and Traditional (PP-OCRv5 mobile rec,
+  /// 18k characters). The v4 dictionary lacks ~3.8k Traditional characters
+  /// (說/讓/從/幾 ...), which then come out as wrong look-alikes.
+  static const ocrZhV5 = ModelComponent(
+    id: 'ocr_zh_v5',
+    approxSizeBytes: 16700000,
+    files: [
+      ModelFile('rec.onnx', [
+        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx',
+        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ch_PP-OCRv5_rec.onnx',
+      ]),
+      ModelFile('dict.txt', [
+        'https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt',
+        '{hf}/webnn/PP-OCRv5-ONNX/resolve/main/ch_PP-OCRv5_dict.txt',
+      ]),
+    ],
+  );
+
   static const all = [detector, ocrJa, ocrZhV5, ocrZh, ocrEn, ocrKo];
 
   static ModelComponent? find(String id) {
@@ -167,19 +170,24 @@ abstract class TranslationModels {
     return null;
   }
 
-  /// The OCR component required for a source language.
-  static ModelComponent ocrFor(String sourceLang) {
-    return switch (sourceLang) {
-      'ja' => ocrJa,
-      'ko' => ocrKo,
-      'en' => ocrEn,
-      'zh-TW' => ocrZhV5,
-      _ => ocrZh,
-    };
+  /// Line-recognition engines (CTC models) by worker engine key. 'ja'
+  /// (manga-ocr) is handled separately by the worker.
+  static const _builtInRec = <String, (ModelComponent, String, int)>{
+    'zh5': (ocrZhV5, 'zh', 48),
+    'zh': (ocrZh, 'zh', 48),
+    'en': (ocrEn, 'en', 48),
+    'ko': (ocrKo, 'ko', 32),
+  };
+
+  /// The detector in use: the user's own once it passed its check, otherwise
+  /// the built-in one.
+  static ModelComponent get activeDetector {
+    var custom = TranslationSources.detector?.component;
+    return custom != null && custom.isInstalled ? custom : detector;
   }
 
   /// Model file paths for the worker isolate, containing only what is
-  /// actually installed.
+  /// actually installed, plus the engines to try for [sourceLang].
   static WorkerModelPaths workerPaths([String sourceLang = 'auto']) {
     var recModels = <String, String>{};
     var recDicts = <String, String>{};
@@ -197,11 +205,6 @@ abstract class TranslationModels {
     var custom = TranslationSources.find(sourceLang);
     if (custom != null) {
       add(custom.engine, custom.component, custom.code, custom.inputHeight);
-    }
-    if (ocrZhV5.isInstalled) {
-      recModels['zh-TW'] = ocrZhV5.filePath('rec.onnx');
-      recDicts['zh-TW'] = ocrZhV5.filePath('dict.txt');
-      recHeights['zh-TW'] = 48;
     }
     var hasJa = ocrJa.isInstalled;
     return WorkerModelPaths(
@@ -226,8 +229,13 @@ abstract class TranslationModels {
   static List<ModelComponent> requiredFor(String sourceLang) {
     var custom = TranslationSources.find(sourceLang);
     return [
-      detector,
-      if (sourceLang == 'zh-TW') ocrZhV5 else if (sourceLang != 'auto') ocrFor(sourceLang),
+      activeDetector,
+      if (custom != null) custom.component,
+      if (sourceLang == 'ja') ocrJa,
+      if (sourceLang == 'zh-TW') ocrZhV5,
+      if (sourceLang == 'zh') ocrZh.isInstalled ? ocrZh : ocrZhV5,
+      if (sourceLang == 'en') ocrEn,
+      if (sourceLang == 'ko') ocrKo,
     ];
   }
 
@@ -241,13 +249,18 @@ abstract class TranslationModels {
   }
 
   static bool _computeReady(String sourceLang) {
-    if (!detector.isInstalled) return false;
-    if (sourceLang == 'auto') {
-      return ocrJa.isInstalled ||
-          ocrZhV5.isInstalled ||
-          _recLangs.any((l) => ocrFor(l).isInstalled);
-    }
-    return ocrFor(sourceLang).isInstalled;
+    if (!activeDetector.isInstalled) return false;
+    return switch (sourceLang) {
+      'auto' =>
+        ocrJa.isInstalled || _builtInRec.values.any((e) => e.$1.isInstalled),
+      'ja' => ocrJa.isInstalled,
+      // v4 misreads Traditional text, so an explicit choice needs v5.
+      'zh-TW' => ocrZhV5.isInstalled,
+      'zh' => ocrZhV5.isInstalled || ocrZh.isInstalled,
+      'en' => ocrEn.isInstalled,
+      'ko' => ocrKo.isInstalled,
+      _ => TranslationSources.find(sourceLang)?.component.isInstalled ?? false,
+    };
   }
 
   static final _readyCache = <String, bool>{};
