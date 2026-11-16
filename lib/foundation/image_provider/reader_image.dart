@@ -260,7 +260,7 @@ class ReaderImageProvider
 
   @override
   String get key =>
-      "$imageKey@$sourceKey@$cid@$eid@$enableResize"
+      "$imageKey@$sourceKey@$cid@$eid@$page@$enableResize"
       "${translationKey == null ? '' : '@tr:$translated'}";
 
   /// [key] carries resize/translation state that never reaches the disk entry,
