@@ -885,8 +885,8 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   useDeviceSettings: useDeviceSpecificSettings,
                 ),
               _SliderSetting(
+                title: "Number of images preloaded".tl,
                 settingsIndex: "preloadImageCount",
-                interval: 1,
                 min: 1,
                 max: 16,
                 comicId: isEnabledSpecificSettings ? widget.comicId : null,
@@ -1181,6 +1181,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                 useDeviceSettings: useDeviceSpecificSettings,
               ),
               _SwitchSetting(
+                title: "Show Chapter Comments".tl,
                 settingKey: "showChapterComments",
                 onChanged: _onShowChapterCommentsChanged,
                 comicId: isEnabledSpecificSettings ? widget.comicId : null,

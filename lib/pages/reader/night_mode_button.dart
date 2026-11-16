@@ -60,17 +60,10 @@ class _ReaderNightModeButtonState extends State<ReaderNightModeButton> {
     return appdata.settings[key];
   }
 
-  void _setSetting(String key, dynamic value) {
-    if (widget.comicId != null && widget.sourceKey != null) {
-      appdata.settings.setEffectiveReaderSetting(
-        widget.comicId!,
-        widget.sourceKey!,
-        key,
-        value,
-      );
-    } else {
-      appdata.settings[key] = value;
-    }
+  void _save() {
+    if (!_needsSave) return;
+    _needsSave = false;
+    appdata.saveData();
   }
 
   @override

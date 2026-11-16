@@ -1327,7 +1327,12 @@ abstract mixin class _ReaderLocation {
   /// Ripple turns are on and the panel supports them in this mode.
   bool get _rippleActive =>
       mode.isGallery &&
-      effectiveSetting('einkRipplePageTurn') == true &&
+      appdata.settings.getReaderSetting(
+            cid,
+            type.sourceKey,
+            'einkRipplePageTurn',
+          ) ==
+          true &&
       EinkPanel.rippleSupported;
 
   /// Sweep for a ripple turn to [page], or null for a plain turn: no real
