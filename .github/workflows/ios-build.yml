@@ -34,7 +34,20 @@ jobs:
           CODE_SIGNING_ALLOWED: "NO"
           CODE_SIGNING_REQUIRED: "NO"
           CODE_SIGN_IDENTITY: ""
-        run: set -o pipefail; flutter build ios --release --no-codesign -v 2>&1 | tee ios_build.log
+          CARGO_BUILD_JOBS: "1"
+          CARGO_NET_RETRY: "10"
+          RUST_BACKTRACE: "1"
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            echo "iOS build attempt ${attempt}/3"
+            if flutter build ios --release --no-codesign -v 2>&1 | tee -a ios_build.log; then
+              exit 0
+            fi
+            echo "Build attempt ${attempt} failed; clearing transient iOS outputs"
+            rm -rf build/ios/iphoneos build/ios/Release-iphoneos
+          done
+          exit 1
       - name: Package IPA
         run: |
           mkdir -p build/ios/iphoneos/Payload
