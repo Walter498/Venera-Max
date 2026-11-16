@@ -159,6 +159,8 @@ class ComicTile extends StatelessWidget {
     this.onTap,
     this.onLongPressed,
     this.heroID,
+    this.forceBriefMode = false,
+    this.forceDetailedMode = false,
   });
 
   final Comic comic;
@@ -176,6 +178,9 @@ class ComicTile extends StatelessWidget {
   final VoidCallback? onLongPressed;
 
   final int? heroID;
+
+  final bool forceBriefMode;
+  final bool forceDetailedMode;
 
   static final _chapterProgressLoads =
       <String, Future<ComicChapterProgressInfo>>{};
@@ -452,7 +457,11 @@ class ComicTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var type = appdata.settings['comicDisplayMode'];
+    final type = forceBriefMode
+        ? 'brief'
+        : forceDetailedMode
+        ? 'detailed'
+        : appdata.settings['comicDisplayMode'];
 
     final comicType = ComicType.fromKey(comic.sourceKey);
     var isFavorite = appdata.settings['showFavoriteStatusOnTile']

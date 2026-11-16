@@ -313,6 +313,11 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
           final tb = history['${b.sourceKey}:${b.id}']?.time ??
               DateTime.fromMillisecondsSinceEpoch(0);
           return tb.compareTo(ta);
+        case LocalSortType.sizeAsc:
+        case LocalSortType.sizeDesc:
+          // Size sorting is implemented by the 3.0 local favorites page;
+          // preserve the legacy shelf option without breaking its data view.
+          return 0;
         case LocalSortType.defaultSort:
           return 0;
       }

@@ -22,6 +22,7 @@ class ComicList extends StatefulWidget {
     this.emptyFilterText,
     this.onAvailableTags,
     this.onResultCount,
+    this.emptyText,
   });
 
   final Future<Res<List<Comic>>> Function(int page)? loadPage;
@@ -73,6 +74,7 @@ class ComicList extends StatefulWidget {
   final String? emptyFilterText;
   final ValueChanged<Set<String>>? onAvailableTags;
   final void Function(int? total, int loaded)? onResultCount;
+  final String? emptyText;
 
   @override
   State<ComicList> createState() => ComicListState();
