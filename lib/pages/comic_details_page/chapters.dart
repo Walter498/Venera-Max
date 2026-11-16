@@ -34,7 +34,7 @@ List<int> _sortByChapterNumber(List<int> visible, List<String> titles) {
 }
 
 class _ComicChapters extends StatelessWidget {
-  const _ComicChapters({this.history, required this.groupedMode});
+  const _ComicChapters({super.key, this.history, required this.groupedMode});
 
   final History? history;
 
@@ -74,36 +74,40 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
   int? _locatedChapter;
   int _locateGeneration = 0;
 
-  void locateLastChapter() {
+  Future<void> locateLastChapter() async {
     if (!mounted || pageState.history == null) return;
+    final generation = ++_locateGeneration;
     final h = pageState.history!;
-    int local = h.ep - 1;
+    var local = h.ep - 1;
     int slot;
-    bool reversed;
-    int? targetGroupIndex;
     if (this is _GroupedComicChaptersState) {
       final view = this as _GroupedComicChaptersState;
-      int groupIndex;
-      if (h.group != null) {
-        groupIndex = (h.group! - 1).clamp(0, view.chapters.groupCount - 1).toInt();
-      } else {
-        groupIndex = 0;
-        while (groupIndex + 1 < view.chapters.groupCount &&
+      final count = view.chapters.groupCount;
+      if (count == 0) return;
+      var groupIndex = h.group == null ? 0 : h.group! - 1;
+      if (groupIndex < 0 || groupIndex >= count) {
+        context.showMessage(message: '上次閱讀章節已被隱藏或移除');
+        return;
+      }
+      if (h.group == null) {
+        // Legacy history stores a flat index; current history is group-local.
+        while (groupIndex + 1 < count &&
             local >= view.chapters.getGroupByIndex(groupIndex).length) {
-          local -= view.chapters.getGroupByIndex(groupIndex++).length;
+          local -= view.chapters.getGroupByIndex(groupIndex).length;
+          groupIndex++;
         }
       }
-      targetGroupIndex = groupIndex;
+      // Change the tab first: its listener collapses the old group. Expanding
+      // afterwards prevents that listener from undoing this locate request.
+      view.tabController.index = groupIndex;
       setState(() {
         view.index = groupIndex;
         view.showAll = true;
         view._computeVisible();
         view._locatedChapter = local;
       });
-      view.tabController.index = groupIndex;
       slot = view.visible.indexOf(local);
-      reversed = view.reverse;
-      if (reversed && slot >= 0) slot = view.visible.length - 1 - slot;
+      if (view.reverse && slot >= 0) slot = view.visible.length - 1 - slot;
     } else {
       final view = this as _NormalComicChaptersState;
       setState(() {
@@ -112,50 +116,23 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
         view._locatedChapter = local;
       });
       slot = view.visible.indexOf(local);
-      reversed = view.reverse;
-      if (reversed && slot >= 0) slot = view.visible.length - 1 - slot;
+      if (view.reverse && slot >= 0) slot = view.visible.length - 1 - slot;
     }
     if (slot < 0) {
       context.showMessage(message: '上次閱讀章節已被隱藏或移除');
       return;
     }
-    final generation = ++_locateGeneration;
-    void scheduleReveal(int attempt) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || generation != _locateGeneration) return;
-        if (this is _GroupedComicChaptersState && targetGroupIndex != null) {
-          final view = this as _GroupedComicChaptersState;
-          if (view.tabController.index != targetGroupIndex) {
-            view.tabController.index = targetGroupIndex!;
-            if (attempt < 8) scheduleReveal(attempt + 1);
-            return;
-          }
-        }
-        final render = _chapterGridKey.currentContext?.findRenderObject();
-        if (render is! RenderSliverGrid) {
-          if (attempt < 8) scheduleReveal(attempt + 1);
-          return;
-        }
-        final viewport = RenderAbstractViewport.of(render);
-        final base = viewport.getOffsetToReveal(render, 0).offset;
-        final geometry = render.gridDelegate.getLayout(render.constraints)
-            .getGeometryForChildIndex(slot);
-        final controller = pageState.scrollController;
-        if (!controller.hasClients) {
-          if (attempt < 8) scheduleReveal(attempt + 1);
-          return;
-        }
-        final target = (base + geometry.scrollOffset - context.padding.top - 76)
-            .clamp(
-              controller.position.minScrollExtent,
-              controller.position.maxScrollExtent,
-            )
-            .toDouble();
-        // Direct positioning: no long animation across hundreds of chapters.
-        controller.jumpTo(target);
-      });
+    final revealed = await revealChapterGrid(
+      gridKey: _chapterGridKey,
+      sectionKey: pageState._chapterSectionKey,
+      controller: pageState.scrollController,
+      slot: slot,
+      topInset: context.padding.top + 76,
+      isActive: () => mounted && generation == _locateGeneration,
+    );
+    if (!revealed && mounted && generation == _locateGeneration) {
+      context.showMessage(message: '無法定位上次閱讀章節');
     }
-    scheduleReveal(0);
   }
 
   /// Opens the per-comic chapter order editor. The editor stores raw chapter

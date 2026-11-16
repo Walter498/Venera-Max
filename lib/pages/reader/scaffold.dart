@@ -209,6 +209,9 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
   }
 
   void openOrClose() {
+    // Auto turning owns the bottom bar: hiding it would also hide the live
+    // speed/interval controls. Stop auto turning before closing the chrome.
+    if (_isOpen && context.reader.autoPageTurning) return;
     // Keep the platform chrome stable for the whole reading session. Changing
     // it here changes Android's viewport while an image stream may still be
     // resolving, which can strand the rebuilt page in its loading state (#210).
@@ -1133,9 +1136,9 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
   void toggleAutoPageTurning() {
     final reader = context.reader;
     reader.toggleAutoPageTurning();
-    // Starting means reading on: close the menu so the countdown or the
-    // scrolling begins right away.
-    if (reader.autoPageTurning && _isOpen) {
+    // Keep the chrome open while auto turning is active: the interval/speed
+    // controls are part of the bottom bar and must remain adjustable.
+    if (reader.autoPageTurning && !_isOpen) {
       openOrClose();
     } else {
       update();
@@ -1162,6 +1165,10 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         next,
       );
       appdata.saveData();
+      // Page mode uses a timer; changing its interval must restart the old
+      // countdown immediately. Continuous mode reads its speed on the native
+      // scroll driver's next frame, but syncing here also cancels stale work.
+      reader._syncAutoTurn(restartCountdown: true);
       update();
     }
 

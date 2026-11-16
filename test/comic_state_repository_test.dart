@@ -23,6 +23,46 @@ void main() {
     }
   });
 
+  test('structured favorite metadata survives tag splitting', () {
+    final favorite = FavoriteItem(
+      id: 'structured', name: 'Structured', coverPath: '', author: 'Legacy',
+      type: ComicType(999), tags: ['Adventure'],
+      authors: ['Artist A', 'Artist B'], status: 'Completed',
+      updateTimeMeta: '2026-10-20', extraMeta: {'language': 'Chinese'},
+    );
+    final display = const ComicStateRepository().displayInfoFor(favorite,
+      badge: 'Fixture source');
+    expect(display.author, 'Artist A, Artist B');
+    expect(display.status, 'Completed');
+    expect(display.updateTime, '2026-10-20');
+    expect(display.sourceName, 'Fixture source');
+    expect(display.tags, containsAll(['Adventure', 'language:Chinese']));
+  });
+
+  test('chapter count uses mirrored full chapter map without history or HTTP', () async {
+    final temp = Directory.systemTemp.createTempSync('favorite-chapter-count-');
+    final domain = DomainDatabase();
+    try {
+      await domain.init(temp.path);
+      final repo = ComicStateRepository(domain: domain);
+      final details = ComicDetails.fromJson({
+        'title': 'Known chapters', 'cover': '',
+        'sourceKey': 'Unknown:999', 'comicId': 'known',
+        'tags': <String, List<String>>{},
+        'chapters': {'a': 'First', 'b': 'Second', 'c': 'Third'},
+      });
+      repo.mirrorComicDetails(details);
+      final favorite = FavoriteItem(id: 'known', name: 'Known chapters',
+        coverPath: '', author: '', type: ComicType(999), tags: []);
+      expect(repo.chapterProgressFor(favorite, null).totalChapters, 3);
+      expect(repo.chapterProgressFromDetails(details, null).totalChapters, 3);
+      expect(repo.chapterProgressFor(favorite, null).latestTitle, 'Third');
+    } finally {
+      domain.close();
+      temp.deleteSync(recursive: true);
+    }
+  });
+
   test('creates stable canonical identity for local and remote comics', () {
     final repository = ComicStateRepository();
 

@@ -283,6 +283,7 @@ class _SliverGridComics extends StatelessWidget {
         forceBriefMode: forceBriefMode,
         forceDetailedMode: forceDetailedMode,
         forceColumns: forceColumns,
+        detailedItemHeight: detailedItemHeight,
       ),
     );
   }

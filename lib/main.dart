@@ -318,6 +318,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         localizationsDelegates: [
           GlobalMaterialLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
         ],
         locale: () {
           var lang = appdata.settings['language'];

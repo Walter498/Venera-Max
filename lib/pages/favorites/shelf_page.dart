@@ -176,12 +176,6 @@ class _ShelfFavTab extends StatefulWidget {
 
 class _ShelfFavTabState extends State<_ShelfFavTab> {
   // 資料夾選擇持久化：離開/退出 App 都保留（用戶要求 2026-09-17）
-  /// 歷史記錄 map：'sourceKey:id' → History（給卡片顯示最後閱讀時間）
-  Map<String, History> get _histMap => {
-        for (final h in HistoryManager().getAll())
-          '${h.sourceKey}:${h.id}': h,
-      };
-
   String? get _folder {
     final v = appdata.settings['shelf_folder'];
     return (v is String && v.isNotEmpty) ? v : null;
@@ -275,11 +269,13 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
   void initState() {
     super.initState();
     LocalFavoritesManager().addListener(_onChanged);
+    HistoryManager().addListener(_onChanged);
   }
 
   @override
   void dispose() {
     LocalFavoritesManager().removeListener(_onChanged);
+    HistoryManager().removeListener(_onChanged);
     super.dispose();
   }
 
@@ -467,14 +463,12 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                       comics: items,
                       forceDetailedMode: true,
                       // 加高卡片：完整显示作者、来源、状态、标签、章节与阅读资料。
-                      detailedItemHeight: 300,
-                      lastReadTimeBuilder: (c) {
-                        final h = _histMap['${c.sourceKey}:${c.id}'];
-                        if (h == null) return null;
-                        final t = h.time;
-                        return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')} '
-                            '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-                      },
+                      forceColumns: 1,
+                      hideBlocked: false,
+                      detailedItemHeight: 300 *
+                          MediaQuery.textScalerOf(context).scale(12) / 12,
+                      // ComicTile resolves last-read and chapter count from the
+                      // existing history/domain stores; no per-card requests.
                       selections: _editMode
                           ? {
                               for (final c in items)

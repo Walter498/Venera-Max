@@ -573,7 +573,8 @@ class ComicTile extends StatelessWidget {
       chapterProgress,
       maxWidth,
     );
-    if (history == null ||
+    if (comic is FavoriteItem ||
+        history == null ||
         comic.sourceKey == 'local' ||
         (chapterProgress.currentTitle != null &&
             chapterProgress.latestTitle != null) ||
@@ -723,7 +724,8 @@ class ComicTile extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constrains) {
         final height = math.max(0.0, constrains.maxHeight - 28);
-        final coverWidth = height * 0.68;
+        // Tall library rows must leave enough width for metadata on phones.
+        final coverWidth = math.min(height * 0.68, constrains.maxWidth * 0.30);
         final displayInfo = const ComicStateRepository().displayInfoFor(
           comic,
           badge: _effectiveBadge,
@@ -809,7 +811,9 @@ class ComicTile extends StatelessWidget {
                         titleTrailing: App.isMobile && enableContextMenu
                             ? _menuButton(context)
                             : null,
-                        subtitle: displayInfo.author ?? '',
+                        subtitle: comic is FavoriteItem
+                            ? ''
+                            : displayInfo.author ?? '',
                         description: displayInfo.description ?? '',
                         badge: displayInfo.sourceName ?? comic.language,
                         tags: displayInfo.tags,
@@ -826,8 +830,12 @@ class ComicTile extends StatelessWidget {
                         pagesText: _showPageCount
                             ? displayInfo.pagesText
                             : null,
-                        chaptersText: this.chaptersText,
-                        lastReadTimeText: this.lastReadTimeText,
+                        chaptersText: chaptersText ??
+                            chapterProgress.totalChapters?.toString(),
+                        lastReadTimeText: lastReadTimeText ??
+                            (history == null
+                                ? null
+                                : history.time.toLocal().toString().substring(0, 16)),
                         maxInfoRows: 12,
                       ),
                     ),

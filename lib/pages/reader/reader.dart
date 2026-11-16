@@ -1469,8 +1469,9 @@ abstract mixin class _ReaderLocation {
 }
 
 /// Auto turning: turns a page every interval, or in continuous modes set to
-/// scroll, scrolls the list at a steady speed (driven by the view). Pauses
-/// while the menu is open, the reader is covered or the app is hidden.
+/// scroll, scrolls the list at a steady speed (driven by the view). The
+/// controls remain visible while active so its speed/interval can be tuned;
+/// turning still pauses when the reader is covered or the app is hidden.
 /// Also owns keeping the screen awake, for auto turning and for the
 /// `readerKeepScreenOn` setting.
 abstract mixin class _AutoPageTurner {
@@ -1520,7 +1521,12 @@ abstract mixin class _AutoPageTurner {
   static const _screenChannel = MethodChannel("venera/method_channel");
 
   bool get _autoTurnActive =>
-      autoPageTurning && !_readerMenuOpen && _readerRouteVisible && _appVisible;
+      autoPageTurning &&
+      _appVisible &&
+      // Route observers are not guaranteed to receive didPush before the
+      // reader's first frame. Use the route itself when available so the
+      // first tap on Auto can arm the timer/scroll driver immediately.
+      (_readingRoute?.isCurrent ?? true);
 
   bool get _autoTurnScrolls => autoTurnScrolls(
     mode.key,

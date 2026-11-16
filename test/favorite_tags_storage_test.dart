@@ -91,6 +91,33 @@ void main() {
     }
   }
 
+  test('folder rows retain structured metadata and follow update fields', () {
+    final item = favorite()
+      ..authors = ['Artist A', 'Artist B']
+      ..status = 'Completed'
+      ..updateTimeMeta = '2026-10-20'
+      ..extraMeta = {'language': 'Chinese'}
+      ..lastUpdateTime = '2026-10-21'
+      ..lastCheckTime = 123456
+      ..hasNewUpdate = true;
+    expect(manager.addComic(_folder, item), isTrue);
+    final row = manager.getFolderComics(_folder).single;
+    expect(row.authors, ['Artist A', 'Artist B']);
+    expect(row.status, 'Completed');
+    expect(row.updateTimeMeta, '2026-10-20');
+    expect(row.extraMeta, {'language': 'Chinese'});
+    expect(row.lastUpdateTime, '2026-10-21');
+    expect(row.lastCheckTime, 123456);
+    expect(row.hasNewUpdate, isTrue);
+    final wrapped = FavoriteItemWithFolderInfo(row, _folder);
+    expect(wrapped.time, row.time);
+    expect(wrapped.lastUpdateTime, row.lastUpdateTime);
+    expect(wrapped.lastCheckTime, row.lastCheckTime);
+    expect(wrapped.hasNewUpdate, row.hasNewUpdate);
+    expect(FavoriteItemWithUpdateInfo(row, row.lastUpdateTime, true,
+      row.lastCheckTime).time, row.time);
+  });
+
   test('addComic preserves tags exactly across database reopen', () async {
     expect(manager.addComic(_folder, favorite(tags: _tags)), isTrue);
     expect(manager.getComic(_folder, 'comic', ComicType.local).tags, _tags);

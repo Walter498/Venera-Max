@@ -83,6 +83,12 @@ class FavoriteItem implements Comic {
       updateTimeMeta = _safeReadString(row, "update_time_meta"),
       extraMeta = _safeDecodeJsonMap(row, "extra_meta") {
     tags.remove("");
+    // These columns already arrive in the folder query. Preserve them here so
+    // a shelf card needn't query every folder again to recover its update row.
+    lastUpdateTime = _safeReadString(row, 'last_update_time');
+    lastCheckTime = int.tryParse(_safeReadString(row, 'last_check_time') ?? '');
+    final updateFlag = _safeReadString(row, 'has_new_update');
+    hasNewUpdate = updateFlag == null ? null : updateFlag == '1';
   }
 
   static List<String> _parseTagsColumn(Object? value) {
@@ -253,7 +259,12 @@ class FavoriteItemWithFolderInfo extends FavoriteItem {
         status: item.status,
         updateTimeMeta: item.updateTimeMeta,
         extraMeta: item.extraMeta,
-      );
+      ) {
+    time = item.time;
+    lastUpdateTime = item.lastUpdateTime;
+    hasNewUpdate = item.hasNewUpdate;
+    lastCheckTime = item.lastCheckTime;
+  }
 }
 
 class FavoriteItemWithUpdateInfo extends FavoriteItem {
@@ -280,6 +291,7 @@ class FavoriteItemWithUpdateInfo extends FavoriteItem {
         updateTimeMeta: item.updateTimeMeta,
         extraMeta: item.extraMeta,
       ) {
+    time = item.time;
     lastUpdateTime = updateTime;
     this.hasNewUpdate = hasNewUpdate;
     this.lastCheckTime = lastCheckTime;

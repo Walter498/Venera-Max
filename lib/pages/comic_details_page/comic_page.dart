@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
@@ -57,6 +56,7 @@ import 'package:venera/utils/translations.dart';
 import 'dart:math' as math;
 import 'package:venera/foundation/chapter_metadata.dart';
 import 'package:venera/foundation/chapter_metadata_session.dart';
+import 'package:venera/components/chapter_grid_locator.dart';
 import 'package:venera/components/chapter_metadata_line.dart';
 import 'package:venera/components/chapter_date_source_button.dart';
 
@@ -146,6 +146,21 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
   bool showAppbarTitle = false;
   VoidCallback? jumpToLastReadChapter;
+  final _chapterSectionKey = GlobalKey();
+
+  Future<void> locateLastReadChapter() async {
+    if (history == null || comic.chapters == null) return;
+    // A collection's covers view contains no chapter grid. Switch views in the
+    // same request rather than leaving an apparently working no-op button.
+    if (_collection != null && ComicCollectionStore.detailDisplayMode ==
+        CollectionDetailDisplayMode.covers) {
+      _toggleCollectionDetailMode();
+    }
+    WidgetsBinding.instance.ensureVisualUpdate();
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    jumpToLastReadChapter?.call();
+  }
 
   var scrollController = ScrollController();
 
@@ -237,7 +252,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
   @override
   void onReadEnd() {
-    history ??= _comicStateRepository.load(widget.sourceKey, widget.id).history;
+    history = _comicStateRepository.load(widget.sourceKey, widget.id).history;
     update();
   }
 
@@ -1101,7 +1116,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                   _ActionButton(
                     icon: const Icon(Icons.my_location_rounded),
                     text: 'Locate last chapter'.tl,
-                    onPressed: () => jumpToLastReadChapter?.call(),
+                    onPressed: locateLastReadChapter,
                   ),
                 if (source?.hasComments == true && !_hideCommentsEntry)
                   _ActionButton(
@@ -1826,6 +1841,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       return const SliverPadding(padding: EdgeInsets.zero);
     }
     return _ComicChapters(
+      key: _chapterSectionKey,
       history: history,
       groupedMode: comic.chapters!.isGrouped,
     );

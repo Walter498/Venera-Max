@@ -94,16 +94,17 @@ class ComicDescription extends StatelessWidget {
         )
       else if (authors != null)
         _infoRow(context, "Authors".tl, authors, Colors.lightBlue),
-      // Ahead of update/source/tags on purpose: only the first few rows survive
-      // the height budget below, and page count is what a reader filters on.
+      // Keep the detailed library order stable: pages → update → chapter/last
+      // read → source → tags. The first rows are the useful shelf summary.
       if (pages != null) _infoRow(context, "Pages".tl, pages, Colors.teal),
-      if (source != null) _infoRow(context, "Source".tl, source, Colors.cyan),
+      if (update != null) _infoRow(context, "Update".tl, update, Colors.cyan),
       if (chaptersText != null)
         _infoRow(context, "Chapters".tl, chaptersText!, Colors.amber),
       if (lastReadTimeText != null)
         _infoRow(context, "Last read".tl, lastReadTimeText!, Colors.deepPurple),
-      // High in the list for the same reason: a fixed-height tile draws only
-      // its first few rows, and language is worth a slot there (issue #288).
+      if (source != null) _infoRow(context, "Source".tl, source, Colors.cyan),
+      // Language remains before ordinary tags so a compact card can retain
+      // the source-provided language marker.
       if (languageItems.isNotEmpty && onTapTag != null)
         _actionRow(
           context,
@@ -125,7 +126,6 @@ class ComicDescription extends StatelessWidget {
           _tagText(languageItems)!,
           Colors.indigo,
         ),
-      if (update != null) _infoRow(context, "Update".tl, update, Colors.cyan),
       if (tagItems.isNotEmpty && onTapTag != null)
         _actionRow(
           context,
@@ -159,6 +159,7 @@ class ComicDescription extends StatelessWidget {
           softWrap: true,
         );
         final visibleRows = _visibleRowCount(
+          context,
           constraints.maxHeight,
           rating != null,
           totalRows: rows.length,
@@ -205,6 +206,7 @@ class ComicDescription extends StatelessWidget {
   /// clipping, so every row is drawn there; only a fixed-height tile has to
   /// choose.
   int _visibleRowCount(
+    BuildContext context,
     double maxHeight,
     bool hasRating, {
     required int totalRows,
@@ -214,11 +216,14 @@ class ComicDescription extends StatelessWidget {
     if (maxHeight.isInfinite) {
       return totalRows;
     }
+    final scaler = MediaQuery.textScalerOf(context);
+    final titleHeight = math.max(
+      titleTrailing == null ? 24.0 : 52.0, scaler.scale(14) * 1.4 + 4);
     final reservedHeight =
-        (showTitle ? (titleTrailing == null ? 24 : 52) : 0) +
-        (hasRating ? 20 : 0);
-    final count = ((maxHeight - reservedHeight) / 21).floor();
-    return math.max(1, math.min(maxRows + extraRows, count));
+        (showTitle ? titleHeight : 0) + (hasRating ? 20 : 0);
+    final rowHeight = math.max(18.0, scaler.scale(12) * 1.4) + 3;
+    final count = ((maxHeight - reservedHeight) / rowHeight).floor();
+    return math.max(0, math.min(totalRows, math.min(maxRows + extraRows, count)));
   }
 
   void _copy(BuildContext context, String text) {
@@ -238,7 +243,7 @@ class ComicDescription extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            height: 18,
+            height: math.max(18.0, MediaQuery.textScalerOf(context).scale(11) * 1.4),
             padding: const EdgeInsets.symmetric(horizontal: 6),
             decoration: BoxDecoration(
               color: color.toOpacity(0.18),
@@ -294,7 +299,7 @@ class ComicDescription extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 18,
+            height: math.max(18.0, MediaQuery.textScalerOf(context).scale(11) * 1.4),
             padding: const EdgeInsets.symmetric(horizontal: 6),
             decoration: BoxDecoration(
               color: color.toOpacity(0.18),

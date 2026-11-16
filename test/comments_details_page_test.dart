@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/chapter_duplicates.dart';
+import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/chapter_metadata.dart';
 import 'package:venera/foundation/comic_details_cache.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
@@ -399,6 +401,116 @@ void main() {
     expect(full.sharedSession, isNotNull);
     expect(full.sharedSession!.controller.loaded, isTrue);
     return full;
+  }
+
+  _pageTest('favorite grid keeps full metadata without per-card detail requests',
+      (tester) async {
+    var loads = 0;
+    final source = _source((_) async {
+      loads++;
+      return Res(_details(cover));
+    }, (a, b, c, d) async => const Res<List<Comment>>([], subData: 1));
+    expect(ComicSourceManager().add(source), isTrue);
+    sources.add(source);
+    final type = ComicType.fromKey(source.key);
+    final oldHistoryBadge = appdata.settings['showHistoryStatusOnTile'];
+    try {
+      appdata.settings['showHistoryStatusOnTile'] = true;
+      await HistoryManager().addHistoryAsync(History.fromMap({
+        'id': 'favorite-card', 'type': type.value, 'title': 'Favorite card',
+        'subtitle': '', 'cover': cover,
+        'time': DateTime(2026, 10, 21, 18, 30).millisecondsSinceEpoch,
+        'ep': 351, 'page': 2, 'max_page': 10, 'readEpisode': '',
+      }));
+      final favorite = FavoriteItem(id: 'favorite-card', name: 'Favorite card',
+        coverPath: cover, author: '', type: type, tags: ['Adventure'],
+        authors: ['Favorite artist'], status: 'Completed',
+        updateTimeMeta: '2026-10-20');
+      await tester.pumpWidget(MaterialApp(home: Scaffold(
+        body: CustomScrollView(slivers: [SliverGridComics(
+          comics: [favorite], forceDetailedMode: true, forceColumns: 1,
+          detailedItemHeight: 300, hideBlocked: false, enableHero: false,
+          badgeBuilder: (_) => 'Fixture source',
+          chapterCountBuilder: (_) => '385',
+        )]),
+      )));
+      await _frames(tester, 12);
+      final grid = tester.widget<SliverGrid>(find.byType(SliverGrid).first);
+      expect((grid.gridDelegate as SliverGridDelegateWithComics)
+          .detailedItemHeight, 300);
+      for (final value in ['Fixture source', '385',
+        '2026-10-21 18:30', '2026-10-20', 'Adventure', 'Completed']) {
+        expect(find.text(value), findsOneWidget);
+      }
+      expect(loads, 0, reason: 'showing favorites must not fetch every detail');
+      expect(tester.takeException(), isNull);
+    } finally {
+      appdata.settings['showHistoryStatusOnTile'] = oldHistoryBadge;
+      HistoryManager().remove('favorite-card', type);
+      await Future<void>.delayed(Duration.zero);
+    }
+  });
+
+  for (final scenario in ['text', 'cover-reverse', 'grouped', 'legacy-grouped']) {
+    _pageTest('first locate click reaches last chapter: $scenario', (tester) async {
+      final grouped = scenario.contains('grouped');
+      final oldGrid = appdata.settings['chapterCoverGrid'];
+      final oldReverse = appdata.settings['reverseChapterOrder'];
+      final oldNumberSort = appdata.settings['chapterSortByNumber'];
+      final oldOrder = appdata.settings[ChapterOrderPrefs.settingKey];
+      final type = ComicType.fromKey('details_page_fixture');
+      try {
+        appdata.settings['chapterCoverGrid'] = scenario == 'cover-reverse';
+        appdata.settings['reverseChapterOrder'] = scenario == 'cover-reverse';
+        appdata.settings['chapterSortByNumber'] = false;
+        final chapters = {for (var i = 0; i < 385; i++)
+          'id-$i': 'Locate target $i'};
+        final details = ComicDetails.fromJson({
+          'title': 'Real details host', 'cover': cover,
+          'tags': <String, List<String>>{},
+          'sourceKey': 'details_page_fixture', 'comicId': 'work',
+          'chapters': grouped ? {
+            'Edition A': {for (var i = 0; i < 30; i++) 'a-$i': 'Edition A $i'},
+            'Edition B': chapters,
+          } : chapters,
+          'chapterCovers': {for (final id in chapters.keys) id: cover},
+        });
+        // Nontrivial custom order: rotate each target group's source indices.
+        final order = [
+          if (grouped) for (var i = 0; i < 30; i++) i,
+          for (var i = 0; i < 385; i++)
+            (grouped ? 30 : 0) + (i + 117) % 385,
+        ];
+        await ChapterOrderPrefs.save(details.chapters!, 'work',
+          'details_page_fixture', order);
+        await HistoryManager().addHistoryAsync(History.fromMap({
+          'id': 'work', 'type': type.value, 'title': 'Real details host',
+          'subtitle': '', 'cover': cover,
+          'time': DateTime.now().millisecondsSinceEpoch,
+          'ep': scenario == 'legacy-grouped' ? 381 : 351,
+          'chapter_group': scenario == 'grouped' ? 2 : null,
+          'page': 1, 'max_page': 10, 'readEpisode': '',
+        }));
+        await mount(tester, _source((_) async => Res(details),
+          (a, b, c, d) async => const Res<List<Comment>>([], subData: 1)));
+        await _top(tester);
+        expect(find.text('Locate target 350'), findsNothing);
+        final locate = find.byIcon(Icons.my_location_rounded);
+        await tester.ensureVisible(locate);
+        // Exactly ONE production button tap: no manual expansion/second tap.
+        await tester.tap(locate);
+        await _frames(tester, 20);
+        expect(find.text('Locate target 350').hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      } finally {
+        appdata.settings['chapterCoverGrid'] = oldGrid;
+        appdata.settings['reverseChapterOrder'] = oldReverse;
+        appdata.settings['chapterSortByNumber'] = oldNumberSort;
+        appdata.settings[ChapterOrderPrefs.settingKey] = oldOrder;
+        HistoryManager().remove('work', type);
+        await Future<void>.delayed(Duration.zero);
+      }
+    });
   }
 
   _pageTest('metadata loads all 385 IDs before scrolling and stays fresh per entry', (tester) async {

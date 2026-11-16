@@ -104,10 +104,16 @@ class ComicDisplayInfo {
 }
 
 class ComicChapterProgressInfo {
-  const ComicChapterProgressInfo({this.currentTitle, this.latestTitle});
+  const ComicChapterProgressInfo({
+    this.currentTitle,
+    this.latestTitle,
+    this.totalChapters,
+  });
 
   final String? currentTitle;
   final String? latestTitle;
+  /// Known source chapter count; never inferred from a chapter title.
+  final int? totalChapters;
 
   bool get hasAny => currentTitle != null || latestTitle != null;
 }
@@ -201,11 +207,13 @@ class ComicStateRepository {
         ? comic
         : _findHistory(comic.id, identity.type);
     final localComic = _findLocalComic(comic.id, identity.type);
-    final favoriteFolders = _findFavoriteFolders(comic.id, identity.type);
+    final favoriteFolders = comic is FavoriteItem
+        ? const <String>[]
+        : _findFavoriteFolders(comic.id, identity.type);
     final favorite = comic is FavoriteItem
         ? comic
         : _findFavoriteItem(favoriteFolders, comic.id, identity.type);
-    final updateInfo = comic is FavoriteItemWithUpdateInfo
+    final updateInfo = comic is FavoriteItem
         ? comic
         : _findFollowUpdateInfo(comic.id, identity.type);
 
@@ -223,6 +231,8 @@ class ComicStateRepository {
             domainTags,
             updateInfo?.tags ?? const <String>[],
             favorite?.tags ?? const <String>[],
+            if (favorite != null)
+              favorite.extraMeta.entries.map((e) => '${e.key}:${e.value}').toList(),
             localComic?.tags ?? const <String>[],
             comic.tags ?? const <String>[],
           ]);
@@ -235,7 +245,7 @@ class ComicStateRepository {
       currentMeta.status,
     ]);
     final updateTime = _pick([
-      updateInfo?.updateTime,
+      updateInfo?.lastUpdateTime,
       domain?.updateTime,
       currentMeta.updateTime,
       favoriteMeta?.updateTime,
@@ -341,6 +351,7 @@ class ComicStateRepository {
           ? null
           : _chapterTitleAt(chapters, history),
       latestTitle: latestTitle,
+      totalChapters: chapters?.length,
     );
   }
 
@@ -349,12 +360,13 @@ class ComicStateRepository {
     History? history,
   ) {
     final chapters = comic.chapters;
-    if (history == null || chapters == null || chapters.length == 0) {
+    if (chapters == null || chapters.length == 0) {
       return const ComicChapterProgressInfo();
     }
     return ComicChapterProgressInfo(
-      currentTitle: _chapterTitleAt(chapters, history),
+      currentTitle: history == null ? null : _chapterTitleAt(chapters, history),
       latestTitle: chapters.titles.lastOrNull,
+      totalChapters: chapters.length,
     );
   }
 
@@ -715,11 +727,11 @@ class ComicStateRepository {
 
   String? _latestChapterTitleFallbackFor(Comic comic) {
     final identity = identityFor(comic.sourceKey, comic.id);
-    final updateInfo = comic is FavoriteItemWithUpdateInfo
+    final updateInfo = comic is FavoriteItem
         ? comic
         : _findFollowUpdateInfo(comic.id, identity.type);
     return _pick([
-      _extractChapterTitle(updateInfo?.updateTime),
+      _extractChapterTitle(updateInfo?.lastUpdateTime),
       if (comic is! History) _extractChapterTitle(comic.description),
       if (comic is! History) _extractChapterTitle(comic.subtitle),
     ]);
@@ -860,6 +872,7 @@ class _ComicMetadata {
   final int? pageCount;
 
   factory _ComicMetadata.fromComic(Comic comic) {
+    if (comic is FavoriteItem) return _ComicMetadata.fromFavorite(comic);
     final tags = comic.tags ?? const <String>[];
     return _ComicMetadata(
       author:
@@ -876,12 +889,13 @@ class _ComicMetadata {
   factory _ComicMetadata.fromFavorite(FavoriteItem favorite) {
     return _ComicMetadata(
       author:
-          clean(favorite.author) ??
+          clean(favorite.subtitle) ??
           _first(namespaceValues(favorite.tags, _authorNamespaces)),
-      status: statusFromTags(favorite.tags),
-      updateTime: _first(
-        namespaceValues(favorite.tags, _updateNamespaces).where(_looksLikeDate),
-      ),
+      status: clean(favorite.status) ?? statusFromTags(favorite.tags),
+      updateTime:
+          clean(favorite.lastUpdateTime) ??
+          clean(favorite.updateTimeMeta) ??
+          _first(namespaceValues(favorite.tags, _updateNamespaces).where(_looksLikeDate)),
       pageCount: _firstPageCount(favorite.tags),
     );
   }
