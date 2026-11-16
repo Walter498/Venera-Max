@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,7 +45,42 @@ void main() {
     expect(matchesAllCategoryTags(['热血', '冒险'], ['tag:热血', 'tag:冒险']), isTrue);
     expect(matchesAllCategoryTags(['热血'], ['tag:热血', 'tag:冒险']), isFalse);
   });
-  testWidgets('one short page still accepts drag and overscroll', (tester) async {
+  test('custom reader actions and settings remain wired after upstream UI merge', () {
+    final scaffold = File('lib/pages/reader/scaffold.dart').readAsStringSync();
+    final settings = File('lib/pages/settings/reader.dart').readAsStringSync();
+    final continuous =
+        File('lib/pages/reader/continuous_mode.dart').readAsStringSync();
+    final defaults = File('lib/foundation/appdata.dart').readAsStringSync();
+
+    for (final symbol in [
+      'favoriteComicFromReader',
+      'addImageFavorite',
+      'pickChaptersAndDownload',
+      'downloadFromReader',
+      'buildTranslationControls',
+      'openChapterDrawer',
+      'toggleReadingOrientation',
+      'toggleAutoPageTurning',
+      'showPageJumpDialog',
+    ]) {
+      expect(scaffold, contains(symbol), reason: 'reader action missing: $symbol');
+    }
+    for (final key in [
+      'showReadingProgressPercent',
+      'changeChapterOffset',
+      'readerNightModeIntensity',
+      'enableReaderImageEnhance',
+      'einkFullRefresh',
+      'einkRipplePageTurn',
+    ]) {
+      expect(settings, contains(key), reason: 'reader setting missing: $key');
+    }
+    expect(defaults, contains("'changeChapterOffset': 160"));
+    expect(continuous, contains("effectiveSetting('changeChapterOffset')"));
+    expect(scaffold, contains("effectiveSetting('showReadingProgressPercent')"));
+  });
+
+
     final controller = ScrollController();
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: CustomScrollView(
       controller: controller,

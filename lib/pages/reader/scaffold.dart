@@ -254,7 +254,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
   /// Night mode overlay tint, selected by `readerNightModeColor` setting.
   Color _nightModeColor() {
-    switch (appdata.settings['readerNightModeColor']) {
+    switch (context.reader.effectiveSetting('readerNightModeColor')) {
       case 'black':
         return const Color(0xFF000000);
       case 'red':
@@ -286,20 +286,21 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             ),
           ),
         ),
-        if (appdata.settings['readerNightMode'] == true)
+        if (context.reader.effectiveSetting('readerNightMode') == true)
           Positioned.fill(
             child: IgnorePointer(
               child: ColoredBox(
                 color: _nightModeColor().toOpacity(
-                  ((appdata.settings['readerNightModeIntensity'] as num?)
-                              ?.toDouble() ??
-                          0.45)
+                  ((context.reader.effectiveSetting('readerNightModeIntensity')
+                              as num?)
+                          ?.toDouble() ??
+                      0.45)
                       .clamp(0.1, 0.85),
                 ),
               ),
             ),
           ),
-        if (appdata.settings['showPageNumberInReader'] == true &&
+        if (context.reader.effectiveSetting('showPageNumberInReader') == true &&
             !isOnChapterCommentsPage)
           buildPageInfoText(),
         if (!isOnChapterCommentsPage) buildStatusInfo(),
@@ -375,10 +376,16 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       child: Container(
         padding: EdgeInsets.only(top: context.padding.top),
         decoration: BoxDecoration(
-          color: context.colorScheme.surface.toOpacity(0.92),
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.toOpacity(0.5), width: 0.5),
-          ),
+          color: context.colorScheme.surface.toOpacity(
+              appdata.settings['ui_style'] == 'glass' ? 0.55 : 0.92),
+          border: appdata.settings['ui_style'] == 'glass'
+              ? null
+              : Border(
+                  bottom: BorderSide(
+                    color: Colors.grey.toOpacity(0.5),
+                    width: 0.5,
+                  ),
+                ),
         ),
         child: Padding(
           padding: EdgeInsets.only(
@@ -431,7 +438,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                   message: "Download".tl,
                   child: IconButton(
                     icon: const Icon(Icons.download_outlined),
-                    onPressed: downloadFromReader,
+                    onPressed: pickChaptersAndDownload,
                   ),
                 ),
               ...buildTranslationControls(),
@@ -593,8 +600,107 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     return false;
   }
 
-  /// Whether the in-reader download button should show: only for online source
-  /// comics (not local ones, whose images are file:// paths) that aren't already
+  /// Whether the whole comic is in the user's local shelf.
+  bool isComicFavorited() {
+    final reader = context.reader;
+    if (reader.type == ComicType.local) return false;
+    return LocalFavoritesManager().find(reader.cid, reader.type).isNotEmpty;
+  }
+
+  /// Toggle the whole comic in the shelf. Image collection remains a separate
+  /// action (`addImageFavorite`); the reader's heart button is the comic-level
+  /// action used by the old customized reader.
+  void favoriteComicFromReader() {
+    final reader = context.reader;
+    if (reader.type == ComicType.local) {
+      showToast(
+        message: "Local comic collection is not supported at present".tl,
+        context: context,
+      );
+      return;
+    }
+    final manager = LocalFavoritesManager();
+    final folders = manager.folderNames;
+    if (folders.isEmpty) {
+      showToast(message: "No favorite folder".tl, context: context);
+      return;
+    }
+    if (manager.find(reader.cid, reader.type).isNotEmpty) {
+      manager.batchDeleteComicsInAllFolders([ComicID(reader.type, reader.cid)]);
+      showToast(message: "Removed from favorites".tl, context: context);
+      update();
+      return;
+    }
+    var folder = appdata.settings['quickFavorite'];
+    if (folder is! String || !folders.contains(folder)) folder = folders.first;
+    manager.addComic(
+      folder,
+      FavoriteItem(
+        id: reader.cid,
+        name: reader.widget.name,
+        coverPath: reader.widget.history.cover,
+        author: reader.widget.author,
+        type: reader.type,
+        tags: reader.widget.tags,
+      ),
+      null,
+      null,
+    );
+    showToast(message: "Added to favorites".tl, context: context);
+    update();
+  }
+
+  /// Old customized reader entry: multi-chapter downloads open the chapter
+  /// picker and preselect the current chapter. Single-chapter comics keep the
+  /// direct download path.
+  Future<void> pickChaptersAndDownload() async {
+    final reader = context.reader;
+    final chapters = reader.widget.chapters;
+    if (chapters == null) {
+      downloadFromReader();
+      return;
+    }
+    final source = ComicSource.find(reader.type.sourceKey);
+    if (source == null) return;
+    if (LocalManager().isDownloading(reader.cid, reader.type)) {
+      showToast(message: "The comic is downloading".tl, context: context);
+      return;
+    }
+    if (!await ensureDownloadStorageWritable()) return;
+    final titles = chapters.titles.toList();
+    final ids = chapters.ids.toList();
+    if (titles.isEmpty || ids.isEmpty) {
+      downloadFromReader();
+      return;
+    }
+    final local = LocalManager().find(reader.cid, reader.type);
+    final downloaded = <int>[];
+    if (local != null) {
+      for (var i = 0; i < ids.length && i < titles.length; i++) {
+        if (local.downloadedChapters.contains(ids[i])) downloaded.add(i);
+      }
+    }
+    final current = reader.chapter - 1;
+    final selected = await showDownloadChapterSelect(
+      App.rootContext,
+      titles: titles,
+      downloadedEps: downloaded,
+      preselected: current >= 0 && current < titles.length ? {current} : const {},
+      hiddenEps: {for (final c in reader._hiddenChapters) c - 1},
+    );
+    if (selected == null || selected.isEmpty || !mounted) return;
+    LocalManager().addTask(
+      ImagesDownloadTask(
+        source: source,
+        comicId: reader.cid,
+        comicTitle: reader.widget.name,
+        chapters: [for (final i in selected) if (i >= 0 && i < ids.length) ids[i]],
+      ),
+    );
+    showToast(message: "Download started".tl, context: context);
+    update();
+  }
+
   /// fully downloaded, and whose source can actually download (#16).
   bool canDownloadFromReader() {
     final reader = context.reader;
@@ -829,6 +935,12 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     if (context.reader.widget.chapters == null) {
       text = "P$displayPage";
     }
+    final showPercent =
+        context.reader.effectiveSetting('showReadingProgressPercent') != false;
+    final percentText = context.reader.maxPage <= 1
+        ? '--'
+        : '${(displayPage / context.reader.maxPage * 100).clamp(1, 100).toStringAsFixed(0)}%';
+    final indicatorText = showPercent ? percentText : text;
 
     final buttons = [
       ReaderNightModeButton(
@@ -841,6 +953,17 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           context.reader.update();
           update();
         },
+        comicId: context.reader.cid,
+        sourceKey: context.reader.type.sourceKey,
+      ),
+      Tooltip(
+        message: "Favorite comic".tl,
+        child: IconButton(
+          icon: Icon(
+            isComicFavorited() ? Icons.favorite : Icons.favorite_border,
+          ),
+          onPressed: favoriteComicFromReader,
+        ),
       ),
       Tooltip(
         message: AppShortcuts.hint(
@@ -848,7 +971,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           ShortcutAction.collectImage,
         ),
         child: IconButton(
-          icon: Icon(isLiked() ? Icons.favorite : Icons.favorite_border),
+          icon: Icon(isLiked() ? Icons.collections : Icons.collections_outlined),
           onPressed: addImageFavorite,
         ),
       ),
@@ -947,7 +1070,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         ),
         child: Center(
           child: Text(
-            text,
+            indicatorText,
             style: const TextStyle(fontSize: 13),
           ),
         ),
@@ -1033,8 +1156,9 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     return BlurEffect(
       child: Container(
         decoration: BoxDecoration(
-          color: context.colorScheme.surface.toOpacity(0.92),
-          border: isOpen
+          color: context.colorScheme.surface.toOpacity(
+              appdata.settings['ui_style'] == 'glass' ? 0.55 : 0.92),
+          border: (isOpen && appdata.settings['ui_style'] != 'glass')
               ? Border(
                   top: BorderSide(
                     color: Colors.grey.toOpacity(0.5),
@@ -1058,11 +1182,20 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
   void toggleNightMode() {
     // Manual toggle takes over: stop following the system theme so the
     // user's explicit choice isn't immediately overridden.
-    if (appdata.settings['readerNightModeFollowSystem'] == true) {
-      appdata.settings['readerNightModeFollowSystem'] = false;
+    if (context.reader.effectiveSetting('readerNightModeFollowSystem') == true) {
+      appdata.settings.setEffectiveReaderSetting(
+        context.reader.cid,
+        context.reader.type.sourceKey,
+        'readerNightModeFollowSystem',
+        false,
+      );
     }
-    appdata.settings['readerNightMode'] =
-        !(appdata.settings['readerNightMode'] == true);
+    appdata.settings.setEffectiveReaderSetting(
+      context.reader.cid,
+      context.reader.type.sourceKey,
+      'readerNightMode',
+      !(context.reader.effectiveSetting('readerNightMode') == true),
+    );
     appdata.saveData();
     context.reader.update();
     update();

@@ -550,6 +550,8 @@ class Settings with ChangeNotifier {
     'deviceId': '',
     'ignoreBadCertificate': false,
     'readerScrollSpeed': 1.0, // 0.5 - 3.0
+    // Overscroll distance before seamless continuous reading changes chapter.
+    'changeChapterOffset': 160,
     // 连续模式翻页后让目标页垂直居中（默认贴顶）。仅上下连续滑动生效。
     'readerCenterPageOnTurn': false,
     // 连续模式相邻图片之间的间隙（逻辑像素，0 = 紧贴）。

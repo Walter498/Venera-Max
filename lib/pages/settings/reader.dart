@@ -109,7 +109,11 @@ class _ReaderSettingsState extends State<ReaderSettings> {
   bool _isChapterCommentsAtEndSupported() {
     final mode = _effectiveSetting('readerMode');
     return _effectiveSetting('showChapterComments') == true &&
-        (mode == 'galleryLeftToRight' || mode == 'galleryRightToLeft');
+        (mode == 'galleryLeftToRight' ||
+            mode == 'galleryRightToLeft' ||
+            mode == 'continuousTopToBottom' ||
+            mode == 'continuousLeftToRight' ||
+            mode == 'continuousRightToLeft');
   }
 
   void refreshSettings() {
@@ -861,8 +865,26 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                       : null,
                   useDeviceSettings: useDeviceSpecificSettings,
                 ),
+              if ((_effectiveSetting('readerMode') as String?)?.startsWith(
+                    'continuous',
+                  ) ??
+                  false)
+                _SliderSetting(
+                  title: "Swipe distance to change chapter (px)".tl,
+                  settingsIndex: "changeChapterOffset",
+                  interval: 20,
+                  min: 40,
+                  max: 400,
+                  onChanged: () {
+                    widget.onChanged?.call("changeChapterOffset");
+                  },
+                  comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                  comicSource: isEnabledSpecificSettings
+                      ? widget.comicSource
+                      : null,
+                  useDeviceSettings: useDeviceSpecificSettings,
+                ),
               _SliderSetting(
-                title: "Number of images preloaded".tl,
                 settingsIndex: "preloadImageCount",
                 interval: 1,
                 min: 1,
@@ -997,7 +1019,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
             title: 'Display settings',
             icon: Icons.contrast,
             subtitle:
-                '${'Night mode'.tl}: ${(appdata.settings['readerNightMode'] == true ? 'On' : 'Off').tl}',
+                '${'Night mode'.tl}: ${(_effectiveSetting('readerNightMode') == true ? 'On' : 'Off').tl}',
             children: [
               SelectSetting(
                 title: "Reading background color".tl,
@@ -1025,11 +1047,16 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                     "Dim the page with a warm overlay to reduce eye strain".tl,
                 settingKey: "readerNightMode",
                 enabled:
-                    appdata.settings['readerNightModeFollowSystem'] != true,
+                    _effectiveSetting('readerNightModeFollowSystem') != true,
                 onChanged: () {
                   setState(() {});
                   widget.onChanged?.call("readerNightMode");
                 },
+                comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                comicSource: isEnabledSpecificSettings
+                    ? widget.comicSource
+                    : null,
+                useDeviceSettings: useDeviceSpecificSettings,
               ),
               _SwitchSetting(
                 title: "Follow system dark mode".tl,
@@ -1038,22 +1065,25 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                         .tl,
                 settingKey: "readerNightModeFollowSystem",
                 onChanged: () {
-                  if (appdata.settings['readerNightModeFollowSystem'] == true) {
+                  if (_effectiveSetting('readerNightModeFollowSystem') == true) {
                     final isDark =
-                        View.of(
-                          context,
-                        ).platformDispatcher.platformBrightness ==
+                        View.of(context).platformDispatcher.platformBrightness ==
                         Brightness.dark;
-                    appdata.settings['readerNightMode'] = isDark;
+                    _writeEffectiveSetting('readerNightMode', isDark);
                     appdata.saveData();
                     widget.onChanged?.call("readerNightMode");
                   }
                   setState(() {});
                   widget.onChanged?.call("readerNightModeFollowSystem");
                 },
+                comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                comicSource: isEnabledSpecificSettings
+                    ? widget.comicSource
+                    : null,
+                useDeviceSettings: useDeviceSpecificSettings,
               ),
-              if (appdata.settings['readerNightMode'] == true ||
-                  appdata.settings['readerNightModeFollowSystem'] == true)
+              if (_effectiveSetting('readerNightMode') == true ||
+                  _effectiveSetting('readerNightModeFollowSystem') == true)
                 SelectSetting(
                   title: "Night mode color".tl,
                   settingKey: "readerNightModeColor",
@@ -1065,9 +1095,14 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   onChanged: () {
                     widget.onChanged?.call("readerNightModeColor");
                   },
+                  comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                  comicSource: isEnabledSpecificSettings
+                      ? widget.comicSource
+                      : null,
+                  useDeviceSettings: useDeviceSpecificSettings,
                 ),
-              if (appdata.settings['readerNightMode'] == true ||
-                  appdata.settings['readerNightModeFollowSystem'] == true)
+              if (_effectiveSetting('readerNightMode') == true ||
+                  _effectiveSetting('readerNightModeFollowSystem') == true)
                 _SliderSetting(
                   title: "Night mode intensity".tl,
                   settingsIndex: "readerNightModeIntensity",
@@ -1077,6 +1112,11 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   onChanged: () {
                     widget.onChanged?.call("readerNightModeIntensity");
                   },
+                  comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                  comicSource: isEnabledSpecificSettings
+                      ? widget.comicSource
+                      : null,
+                  useDeviceSettings: useDeviceSpecificSettings,
                 ),
               _SwitchSetting(
                 title: "Display time & battery info in reader".tl,
@@ -1128,7 +1168,19 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                 useDeviceSettings: useDeviceSpecificSettings,
               ),
               _SwitchSetting(
-                title: "Show Chapter Comments".tl,
+                title: "Show reading progress percentage".tl,
+                subtitle: "Display percentage in the reader bottom bar".tl,
+                settingKey: "showReadingProgressPercent",
+                onChanged: () {
+                  widget.onChanged?.call("showReadingProgressPercent");
+                },
+                comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                comicSource: isEnabledSpecificSettings
+                    ? widget.comicSource
+                    : null,
+                useDeviceSettings: useDeviceSpecificSettings,
+              ),
+              _SwitchSetting(
                 settingKey: "showChapterComments",
                 onChanged: _onShowChapterCommentsChanged,
                 comicId: isEnabledSpecificSettings ? widget.comicId : null,
@@ -1213,7 +1265,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   widget.onChanged?.call("enableReaderImageEnhance");
                 },
               ),
-              if (appdata.settings['enableReaderImageEnhance'] == true) ...[
+              if (_effectiveSetting('enableReaderImageEnhance') == true) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                   child: ImageEnhancePreview(
@@ -1315,7 +1367,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                 settingKey: "einkFullRefresh",
                 onChanged: () => setState(() {}),
               ),
-              if (appdata.settings['einkFullRefresh'] == true) ...[
+              if (_effectiveSetting('einkFullRefresh') == true) ...[
                 SelectSetting(
                   title: "Refresh color".tl,
                   settingKey: "einkRefreshColor",
@@ -1349,7 +1401,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   settingKey: "einkRipplePageTurn",
                   onChanged: () => setState(() {}),
                 ),
-                if (appdata.settings['einkRipplePageTurn'] == true)
+                if (_effectiveSetting('einkRipplePageTurn') == true)
                   SelectSetting(
                     title: "Ripple speed".tl,
                     settingKey: "einkRippleSpeed",

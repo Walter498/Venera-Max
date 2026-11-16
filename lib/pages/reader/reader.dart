@@ -55,6 +55,7 @@ import 'package:venera/network/download.dart';
 import 'package:venera/network/images.dart';
 import 'package:venera/pages/reader/auto_page_turning_button.dart';
 import 'package:venera/pages/reader/auto_scroll_activity.dart';
+import 'package:venera/pages/reader/download_chapter_select.dart';
 import 'package:venera/pages/reader/continuous_page_turn_coordinator.dart';
 import 'package:venera/pages/reader/night_mode_button.dart';
 import 'package:venera/pages/reader/shader_image.dart';
@@ -1326,7 +1327,7 @@ abstract mixin class _ReaderLocation {
   /// Ripple turns are on and the panel supports them in this mode.
   bool get _rippleActive =>
       mode.isGallery &&
-      appdata.settings['einkRipplePageTurn'] == true &&
+      effectiveSetting('einkRipplePageTurn') == true &&
       EinkPanel.rippleSupported;
 
   /// Sweep for a ripple turn to [page], or null for a plain turn: no real

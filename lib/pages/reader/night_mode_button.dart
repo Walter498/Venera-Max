@@ -10,11 +10,15 @@ class ReaderNightModeButton extends StatefulWidget {
     required this.tooltip,
     required this.onPressed,
     required this.onChanged,
+    this.comicId,
+    this.sourceKey,
   });
 
   final String tooltip;
   final VoidCallback onPressed;
   final VoidCallback onChanged;
+  final String? comicId;
+  final String? sourceKey;
 
   @override
   State<ReaderNightModeButton> createState() => _ReaderNightModeButtonState();
@@ -45,10 +49,28 @@ class _ReaderNightModeButtonState extends State<ReaderNightModeButton> {
     _save();
   }
 
-  void _save() {
-    if (!_needsSave) return;
-    _needsSave = false;
-    appdata.saveData();
+  dynamic _setting(String key) {
+    if (widget.comicId != null && widget.sourceKey != null) {
+      return appdata.settings.getReaderSetting(
+        widget.comicId!,
+        widget.sourceKey!,
+        key,
+      );
+    }
+    return appdata.settings[key];
+  }
+
+  void _setSetting(String key, dynamic value) {
+    if (widget.comicId != null && widget.sourceKey != null) {
+      appdata.settings.setEffectiveReaderSetting(
+        widget.comicId!,
+        widget.sourceKey!,
+        key,
+        value,
+      );
+    } else {
+      appdata.settings[key] = value;
+    }
   }
 
   @override
@@ -59,7 +81,7 @@ class _ReaderNightModeButtonState extends State<ReaderNightModeButton> {
 
   @override
   Widget build(BuildContext context) {
-    final raw = appdata.settings['readerNightModeIntensity'];
+    final raw = _setting('readerNightModeIntensity');
     final intensity = (raw is num ? raw.toDouble() : 0.45).clamp(0.1, 0.85);
     final colors = Theme.of(context).colorScheme;
     return MenuAnchor(
@@ -109,11 +131,13 @@ class _ReaderNightModeButtonState extends State<ReaderNightModeButton> {
                         '${(value * 100).round()}%',
                     onChanged: (value) {
                       setState(() {
-                        appdata.settings['readerNightModeIntensity'] =
-                            (value * 100).round() / 100;
+                        _setSetting(
+                          'readerNightModeIntensity',
+                          (value * 100).round() / 100,
+                        );
                         // Adjusting is a manual choice and must preview now.
-                        appdata.settings['readerNightMode'] = true;
-                        appdata.settings['readerNightModeFollowSystem'] = false;
+                        _setSetting('readerNightMode', true);
+                        _setSetting('readerNightModeFollowSystem', false);
                         _needsSave = true;
                       });
                       widget.onChanged();
@@ -131,7 +155,7 @@ class _ReaderNightModeButtonState extends State<ReaderNightModeButton> {
         triggerMode: TooltipTriggerMode.manual,
         child: IconButton(
           icon: Icon(
-            appdata.settings['readerNightMode'] == true
+            _setting('readerNightMode') == true
                 ? Icons.nightlight_round
                 : Icons.nightlight_outlined,
           ),

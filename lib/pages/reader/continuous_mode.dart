@@ -8,7 +8,7 @@ const Set<PointerDeviceKind> _kTouchLikeDeviceTypes = <PointerDeviceKind>{
   PointerDeviceKind.unknown,
 };
 
-const double _kChangeChapterOffset = 160;
+const double _kDefaultChangeChapterOffset = 160;
 
 class _ContinuousMode extends StatefulWidget {
   const _ContinuousMode({super.key});
@@ -56,6 +56,13 @@ typedef _TurnStop = ({_ContinuousReaderEntry entry, bool lowerHalf});
 class _ContinuousModeState extends State<_ContinuousMode>
     implements _ImageViewController {
   late _ReaderState reader;
+
+  double get _changeChapterOffset {
+    final value = reader.effectiveSetting('changeChapterOffset');
+    return value is num
+        ? value.toDouble().clamp(40, 400)
+        : _kDefaultChangeChapterOffset;
+  }
 
   /// The reader's scroll controller. Owned directly now that the list is a
   /// plain [CustomScrollView] (the previous [ScrollablePositionedList] supplied
@@ -985,11 +992,11 @@ class _ContinuousModeState extends State<_ContinuousMode>
       jumpToNextChapter = false;
       jumpToPrevChapter =
           scrollController.offset <
-          scrollController.position.minScrollExtent - _kChangeChapterOffset;
+          scrollController.position.minScrollExtent - _changeChapterOffset;
     } else if (prepareToNextChapter) {
       jumpToNextChapter =
           scrollController.offset >
-          scrollController.position.maxScrollExtent + _kChangeChapterOffset;
+          scrollController.position.maxScrollExtent + _changeChapterOffset;
       jumpToPrevChapter = false;
     }
   }
@@ -1521,12 +1528,14 @@ class _ContinuousModeState extends State<_ContinuousMode>
         SizedBox(height: context.padding.top + 16),
         if (prepareToPrevChapter)
           _SwipeChangeChapterProgress(
+            changeOffset: _changeChapterOffset,
             controller: scrollController,
             isPrev: true,
           ),
         const Spacer(),
         if (prepareToNextChapter)
           _SwipeChangeChapterProgress(
+            changeOffset: _changeChapterOffset,
             controller: scrollController,
             isPrev: false,
           ),
@@ -2145,11 +2154,15 @@ class _ContinuousModeState extends State<_ContinuousMode>
 }
 
 class _SwipeChangeChapterProgress extends StatefulWidget {
-  const _SwipeChangeChapterProgress({this.controller, required this.isPrev});
+  const _SwipeChangeChapterProgress({
+    this.controller,
+    required this.isPrev,
+    required this.changeOffset,
+  });
 
   final ScrollController? controller;
-
   final bool isPrev;
+  final double changeOffset;
 
   @override
   State<_SwipeChangeChapterProgress> createState() =>
@@ -2199,7 +2212,7 @@ class _SwipeChangeChapterProgressState
     var offset = isPrev
         ? controller!.position.minScrollExtent - position
         : position - controller!.position.maxScrollExtent;
-    var newValue = offset / _kChangeChapterOffset;
+    var newValue = offset / widget.changeOffset;
     newValue = newValue.clamp(0.0, 1.0);
     if (newValue != value) {
       setState(() {
