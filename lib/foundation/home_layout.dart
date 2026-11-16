@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:venera/foundation/appdata.dart';
+import 'package:venera/foundation/comic_source/comic_source.dart';
 
 /// Metadata for a single customizable section on the home page.
 ///
@@ -23,6 +24,7 @@ class HomeSectionMeta {
 /// required for migration: [normalizeHomeLayout] appends any known section
 /// missing from a stored/synced config to the end, visible by default.
 const List<HomeSectionMeta> kHomeSections = [
+  HomeSectionMeta('sourceHome', 'Source Home', Icons.home_outlined),
   HomeSectionMeta('history', 'History', Icons.history),
   HomeSectionMeta('readLater', 'Read Later', Icons.watch_later_outlined),
   HomeSectionMeta('translatedComics', 'Translation Library', Icons.translate),
@@ -84,7 +86,11 @@ List<HomeSectionConfig> normalizeHomeLayout() {
   }
   for (var s in kHomeSections) {
     if (!seen.contains(s.id)) {
-      result.add(HomeSectionConfig(s.id, true));
+      if (s.id == 'sourceHome') {
+        result.insert(0, HomeSectionConfig(s.id, true));
+      } else {
+        result.add(HomeSectionConfig(s.id, true));
+      }
     }
   }
   return result;
@@ -183,4 +189,25 @@ void saveImageFavoritesTabs(List<HomeSectionConfig> tabs) {
     ...preserved,
   ];
   appdata.saveData();
+}
+
+/// 首页显示的漫画源。空集合代表所有提供探索页的源。
+List<String> homeDisplaySourceKeys() {
+  final raw = appdata.settings['homeDisplaySources'];
+  if (raw is List) {
+    return raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+  }
+  return const [];
+}
+
+/// 首页实际可显示的源：未设置时返回全部有探索页的源。
+List<String> effectiveHomeDisplaySourceKeys() {
+  final configured = homeDisplaySourceKeys();
+  if (configured.isNotEmpty) {
+    return configured.where((k) => ComicSource.find(k) != null).toList();
+  }
+  return [
+    for (final source in ComicSource.all())
+      if (source.explorePages.isNotEmpty) source.key,
+  ];
 }

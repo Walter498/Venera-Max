@@ -43,6 +43,7 @@ import 'package:venera/foundation/image_provider/reader_image.dart';
 import 'package:venera/foundation/image_translation/translation_config.dart';
 import 'package:venera/foundation/image_translation/translation_service.dart';
 import 'package:venera/foundation/image_translation/translation_types.dart';
+import 'package:venera/foundation/image_translation/pre_translation_tasks.dart';
 import 'package:venera/foundation/local.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/foundation/read_later.dart';
@@ -206,6 +207,36 @@ class _ReaderState extends State<Reader>
   @override
   void update() {
     setState(() {});
+  }
+
+  /// 在当前阅读器章节启动完整预翻译任务，跳过已完成页面。
+  void translateCurrentChapter() {
+    if (!ImageTranslationService.isEnabledForComic(cid, type.sourceKey)) {
+      context.showMessage(message: "Enable AI translation for this comic first".tl);
+      return;
+    }
+    if (!ImageTranslationService.isReadyForComic(cid, type.sourceKey)) {
+      context.showMessage(message: "Translation models or provider are not ready".tl);
+      return;
+    }
+    final task = PreTranslationTaskManager.instance.start(
+      cid: cid,
+      sourceKey: type.sourceKey,
+      comicType: type,
+      title: widget.name,
+      cover: widget.history.cover,
+      chapters: [
+        PreTranslationChapter(
+          eid: eid,
+          title: widget.chapters?.titles.elementAtOrNull(chapter - 1) ?? widget.name,
+        ),
+      ],
+    );
+    context.showMessage(
+      message: task == null
+          ? "A translation task is already running".tl
+          : "Chapter translation started".tl,
+    );
   }
 
   /// The maximum page number for images only (excluding chapter comments page).
