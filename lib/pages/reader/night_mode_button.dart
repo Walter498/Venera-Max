@@ -73,7 +73,7 @@ class _ReaderNightModeButtonState extends State<ReaderNightModeButton> {
     }
   }
 
-
+  void _save() {
     if (!_needsSave) return;
     _needsSave = false;
     appdata.saveData();
