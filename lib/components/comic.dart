@@ -828,6 +828,7 @@ class ComicTile extends StatelessWidget {
                             : null,
                         chaptersText: this.chaptersText,
                         lastReadTimeText: this.lastReadTimeText,
+                        maxInfoRows: 12,
                       ),
                     ),
                   ],

@@ -466,8 +466,8 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                     SliverGridComics(
                       comics: items,
                       forceDetailedMode: true,
-                      // 加高卡片：恢复旧版收藏页的完整资料与上次阅读时间。
-                      detailedItemHeight: 200,
+                      // 加高卡片：完整显示作者、来源、状态、标签、章节与阅读资料。
+                      detailedItemHeight: 300,
                       lastReadTimeBuilder: (c) {
                         final h = _histMap['${c.sourceKey}:${c.id}'];
                         if (h == null) return null;
@@ -755,10 +755,10 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('取消'.tl)),
+              child: Text('Cancel'.tl)),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text('清除'.tl)),
+              child: Text('Clear'.tl)),
         ],
       ),
     );
@@ -888,6 +888,7 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
           sourceKey: h.sourceKey,
           initialEp: h.ep,
           initialPage: h.page,
+          initialGroup: h.group,
         ));
   }
 

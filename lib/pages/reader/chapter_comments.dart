@@ -125,7 +125,9 @@ class _ChapterCommentsPageState extends State<ChapterCommentsPage> {
         !widget.source.canInteractWithComments(chapter: true, provider: feed.effectiveProvider)) {
       return const SizedBox(height: 0);
     }
-    return Container(
+    return SafeArea(
+      top: false,
+      child: Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -830,7 +832,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
               if (sorts.length > 1) sortSelector,
               IconButton(
                 key: const ValueKey('refresh-chapter-comments'),
-                tooltip: '刷新评论',
+                tooltip: 'Refresh comments'.tl,
                 icon: feed.loading
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.refresh_rounded),
@@ -842,7 +844,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
             if(feed.loading) panel([const Center(child:CircularProgressIndicator())]),
             if(feed.error!=null) panel([
               preview(feed.error!),
-              TextButton(onPressed:feed.refresh,child:const Text('重试')),
+              TextButton(onPressed:feed.refresh,child:Text('Retry'.tl)),
             ]),
             if(!feed.loading && feed.error==null)
               for(final comment in feed.comments.take(previewLimit)) ...[
@@ -861,6 +863,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
                 ],
               ],
             panel([OutlinedButton(onPressed:_openAll,child:Text('View all comments'.tl))]),
+            SizedBox(height: 132 + MediaQuery.paddingOf(context).bottom),
           ]);
           }));
         }
@@ -879,7 +882,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
                 if (sorts.length > 1) sortSelector,
                 IconButton(
                   key: const ValueKey('refresh-chapter-comments'),
-                  tooltip: '刷新评论',
+                  tooltip: 'Refresh comments'.tl,
                   icon: feed.loading
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.refresh_rounded),
@@ -892,7 +895,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
               child: Center(child: CircularProgressIndicator()))
             else if (feed.error != null) Padding(padding: const EdgeInsets.all(16),
               child: Column(children:[Text(feed.error!),
-                TextButton(onPressed:feed.refresh,child:const Text('重试'))]))
+                TextButton(onPressed:feed.refresh,child:Text('Retry'.tl))]))
             else for (final comment in feed.comments.take(previewLimit))
               CommentPresentation(key: ValueKey('${feed.sort}:${comment.id}:${comment.content}'),
                 comment:comment,sourceKey:widget.source.key,fontSize:commentsFontSize,
@@ -900,6 +903,7 @@ class ChapterCommentsPreviewState extends State<ChapterCommentsPreview> {
                 onReply:widget.source.canReadReplies(comment,chapter:true,provider:feed.effectiveProvider) ? () => _openReply(comment) : null),
             Padding(padding: const EdgeInsets.fromLTRB(16,0,16,12), child: OutlinedButton(
               onPressed:_openAll,child:Text('View all comments'.tl))),
+            SizedBox(height: 132 + MediaQuery.paddingOf(context).bottom),
           ]));
       });
   }

@@ -292,11 +292,7 @@ class _ReaderGestureDetectorState
   /// zone; false otherwise. [onComments]: the tap is on the chapter comments,
   /// the chapter's last page, so going on from there opens the next chapter.
   bool _turnPageByTap(Offset location, {bool onComments = false}) {
-    if (!appdata.settings.getReaderSetting(
-      reader.cid,
-      reader.type.sourceKey,
-      'enableTapToTurnPages',
-    )) {
+    if (reader.effectiveSetting('enableTapToTurnPages') != true) {
       return false;
     }
     bool isLeft = false, isRight = false, isTop = false, isBottom = false;
@@ -320,20 +316,12 @@ class _ReaderGestureDetectorState
         (onComments && !reader.isLastChapterOfGroup && reader.toNextChapter());
     var prev = backward;
     var next = forward;
-    final customZones = appdata.settings.getReaderSetting(
-      reader.cid,
-      reader.type.sourceKey,
-      'enableCustomTapZones',
-    );
+    final customZones = reader.effectiveSetting('enableCustomTapZones');
     if (customZones == true) {
       // 自定义翻页区域：由用户为四条边缘各自指定动作。角落同属两条边时
       // 上下优先于左右；若命中边动作为 'none' 则回退到相邻边的非 none 动作。
       String action = 'none';
-      String? zone(String key) => appdata.settings.getReaderSetting(
-        reader.cid,
-        reader.type.sourceKey,
-        key,
-      );
+      String? zone(String key) => reader.effectiveSetting(key);
       for (final a in <String?>[
         if (isTop) zone('tapZoneTop'),
         if (isBottom) zone('tapZoneBottom'),
@@ -355,11 +343,7 @@ class _ReaderGestureDetectorState
       // 'none' 或点在中心区域：落到打开/关闭工具栏
       return false;
     }
-    if (appdata.settings.getReaderSetting(
-      reader.cid,
-      reader.type.sourceKey,
-      'reverseTapToTurnPages',
-    )) {
+    if (reader.effectiveSetting('reverseTapToTurnPages') == true) {
       prev = forward;
       next = backward;
     }
@@ -408,6 +392,10 @@ class _ReaderGestureDetectorState
   }
 
   void onDoubleTap(Offset location) {
+    if (context.reader.autoPageTurning) {
+      context.reader.stopAutoPageTurning();
+      return;
+    }
     context.reader._imageViewController?.handleDoubleTap(location);
   }
 

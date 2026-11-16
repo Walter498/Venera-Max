@@ -86,7 +86,7 @@ mixin class JsUiApi {
           onPressed: () {
             dialogContext?.pop();
           },
-          child: Text('OK'),
+          child: Text('OK'.tl),
         ),
       );
     }

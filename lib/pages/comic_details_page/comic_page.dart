@@ -9,7 +9,6 @@ import 'package:shimmer_animation/shimmer_animation.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:venera/components/components.dart';
-import 'package:venera/components/related_sources_dialog.dart';
 import 'package:venera/components/rich_comment_content.dart';
 import 'package:venera/components/comment_presentation.dart';
 import 'package:venera/components/comments_feed.dart';
@@ -24,7 +23,6 @@ import 'package:venera/foundation/js_engine.dart';
 import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/comic_state_repository.dart';
 import 'package:venera/foundation/comic_type.dart';
-import 'package:venera/foundation/domain_database.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/favorites_meta.dart';
 import 'package:venera/foundation/history.dart';
@@ -47,7 +45,6 @@ import 'package:venera/pages/comic_collection_edit_page.dart';
 import 'package:venera/pages/favorites/favorites_page.dart';
 import 'package:venera/pages/comic_details_page/glossary_editor.dart';
 import 'package:venera/pages/comic_details_page/chapter_order_editor.dart';
-import 'package:venera/pages/comic_details_page/related_sources_section.dart';
 import 'package:venera/pages/reader/reader.dart';
 import 'package:venera/pages/webdav_migration_dialog.dart';
 import 'package:venera/pages/search_result_page.dart';
@@ -238,9 +235,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   final ComicStateRepository _comicStateRepository =
       const ComicStateRepository();
 
-  List<DomainComicSourceLink> _relatedSourceLinks = const [];
-  bool _relatedSourcesLoaded = false;
-
   @override
   void onReadEnd() {
     history ??= _comicStateRepository.load(widget.sourceKey, widget.id).history;
@@ -287,31 +281,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       );
     }
 
-    // 查询已关联的源
-    List<DomainComicSourceLink> relatedLinks = [];
-    if (_comicStateRepository.isDomainReady) {
-      try {
-        // 构建一个临时的 Comic 对象用于查询
-        final tempComic = Comic(
-          widget.title ?? '',
-          widget.cover ?? '',
-          widget.id,
-          null,
-          null,
-          '',
-          widget.sourceKey,
-          null,
-          null,
-        );
-        relatedLinks = _comicStateRepository
-            .relatedSourcesFor(tempComic)
-            .where((link) => link.status == 'accepted')
-            .toList();
-      } catch (e) {
-        // 忽略错误，继续显示基本错误页面
-      }
-    }
-
     return NetworkError(
       message: error!,
       retry: retry,
@@ -328,7 +297,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                   )
                   .toList(),
             ),
-      relatedLinks: relatedLinks,
       comic: widget.title != null || widget.cover != null
           ? Comic(
               widget.title ?? widget.id,
@@ -459,7 +427,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
           slivers: [
             ...buildTitle(horizontalInset),
             inset(buildActions()),
-            inset(buildRelatedSources()),
             inset(buildDescription()),
             inset(buildChapters()),
             inset(buildComments()),
@@ -472,70 +439,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget buildRelatedSources() {
-    if (ComicCollectionStore.isCollectionSourceKey(comic.sourceKey) ||
-        !_comicStateRepository.isDomainReady) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-    if (!_relatedSourcesLoaded) {
-      _loadRelatedSources();
-    }
-    final currentComicId = _comicStateRepository
-        .identityFor(comic.sourceKey, comic.id)
-        .comicId;
-    return SliverToBoxAdapter(
-      child: ComicRelatedSourcesSection(
-        links: _relatedSourceLinks,
-        currentComicId: currentComicId,
-        onManage: _showRelatedSourcesManager,
-        onOpenSource: _openRelatedSource,
-      ),
-    );
-  }
-
-  Comic _relatedSourcesComic() => Comic(
-    comic.title,
-    comic.cover,
-    comic.id,
-    comic.subTitle,
-    comic.plainTags,
-    comic.description ?? '',
-    comic.sourceKey,
-    comic.maxPage,
-    null,
-  );
-
-  void _loadRelatedSources() {
-    _relatedSourcesLoaded = true;
-    if (ComicCollectionStore.isCollectionSourceKey(comic.sourceKey) ||
-        !_comicStateRepository.isDomainReady) {
-      _relatedSourceLinks = const [];
-      return;
-    }
-    _relatedSourceLinks = _comicStateRepository.relatedSourcesFor(
-      _relatedSourcesComic(),
-    );
-  }
-
-  @override
-  Future<void> _showRelatedSourcesManager() async {
-    await showRelatedSourcesDialog(context, _relatedSourcesComic());
-    if (!mounted) return;
-    setState(_loadRelatedSources);
-  }
-
-  void _openRelatedSource(DomainComicSourceLink link) {
-    final sourceKey = sourceKeyFromRelatedPlatformId(link.platformId);
-    context.to(
-      () => ComicPage(
-        id: link.sourceComicId,
-        sourceKey: sourceKey,
-        cover: link.comicCoverUri,
-        title: link.comicTitle,
       ),
     );
   }
@@ -848,7 +751,6 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       Log.error('AuthorIndex', e, s);
     }
     _comicStateRepository.mirrorComicDetails(comic);
-    _loadRelatedSources();
     TranslationStore().updateComicMetadata(
       comic.sourceKey,
       comic.comicId,
@@ -1647,7 +1549,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('取消'.tl)),
+              child: Text('Cancel'.tl)),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
               child: const Text('清除')),

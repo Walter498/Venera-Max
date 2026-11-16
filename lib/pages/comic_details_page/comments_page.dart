@@ -190,7 +190,9 @@ class _CommentsPageState extends State<CommentsPage> {
         height: 0,
       );
     }
-    return Container(
+    return SafeArea(
+      top: false,
+      child: Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,

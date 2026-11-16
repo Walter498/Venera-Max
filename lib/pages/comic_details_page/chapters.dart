@@ -72,6 +72,7 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
 
   final GlobalKey _chapterGridKey = GlobalKey();
   int? _locatedChapter;
+  int _locateGeneration = 0;
 
   void locateLastChapter() {
     if (!mounted || pageState.history == null) return;
@@ -79,6 +80,7 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
     int local = h.ep - 1;
     int slot;
     bool reversed;
+    int? targetGroupIndex;
     if (this is _GroupedComicChaptersState) {
       final view = this as _GroupedComicChaptersState;
       int groupIndex;
@@ -91,6 +93,7 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
           local -= view.chapters.getGroupByIndex(groupIndex++).length;
         }
       }
+      targetGroupIndex = groupIndex;
       setState(() {
         view.index = groupIndex;
         view.showAll = true;
@@ -116,22 +119,61 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
       context.showMessage(message: '上次閱讀章節已被隱藏或移除');
       return;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final render = _chapterGridKey.currentContext?.findRenderObject();
-      if (render is! RenderSliverGrid) return;
-      final viewport = RenderAbstractViewport.of(render);
-      final base = viewport.getOffsetToReveal(render, 0).offset;
-      final geometry = render.gridDelegate.getLayout(render.constraints)
-          .getGeometryForChildIndex(slot);
-      final controller = pageState.scrollController;
-      if (!controller.hasClients) return;
-      final target = (base + geometry.scrollOffset - context.padding.top - 76)
-          .clamp(controller.position.minScrollExtent, controller.position.maxScrollExtent)
-          .toDouble();
-      // Direct positioning: no long animation across hundreds of chapters.
-      controller.jumpTo(target);
-    });
+    final generation = ++_locateGeneration;
+    void scheduleReveal(int attempt) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || generation != _locateGeneration) return;
+        if (this is _GroupedComicChaptersState && targetGroupIndex != null) {
+          final view = this as _GroupedComicChaptersState;
+          if (view.tabController.index != targetGroupIndex) {
+            view.tabController.index = targetGroupIndex!;
+            if (attempt < 8) scheduleReveal(attempt + 1);
+            return;
+          }
+        }
+        final render = _chapterGridKey.currentContext?.findRenderObject();
+        if (render is! RenderSliverGrid) {
+          if (attempt < 8) scheduleReveal(attempt + 1);
+          return;
+        }
+        final viewport = RenderAbstractViewport.of(render);
+        final base = viewport.getOffsetToReveal(render, 0).offset;
+        final geometry = render.gridDelegate.getLayout(render.constraints)
+            .getGeometryForChildIndex(slot);
+        final controller = pageState.scrollController;
+        if (!controller.hasClients) {
+          if (attempt < 8) scheduleReveal(attempt + 1);
+          return;
+        }
+        final target = (base + geometry.scrollOffset - context.padding.top - 76)
+            .clamp(
+              controller.position.minScrollExtent,
+              controller.position.maxScrollExtent,
+            )
+            .toDouble();
+        // Direct positioning: no long animation across hundreds of chapters.
+        controller.jumpTo(target);
+      });
+    }
+    scheduleReveal(0);
+  }
+
+  /// Opens the per-comic chapter order editor. The editor stores raw chapter
+  /// indices; the visible list is rebuilt after it returns so history, reader
+  /// navigation and downloads keep using the same source indices.
+  Future<void> customizeChapterOrder() async {
+    if (!mounted || pageState.comic.chapters == null) return;
+    final groupIndex = this is _GroupedComicChaptersState
+        ? (this as _GroupedComicChaptersState).index
+        : 0;
+    final changed = await showChapterOrderEditor(
+      context: context,
+      chapters: pageState.comic.chapters!,
+      comicId: pageState.comic.id,
+      sourceKey: pageState.comic.sourceKey,
+      initialGroupIndex: groupIndex,
+    );
+    if (changed == true && mounted) setState(() {});
   }
 
   void enterSelectMode() {
@@ -297,6 +339,7 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
     BuildContext context, {
     required bool reverse,
     required VoidCallback onToggleOrder,
+    required VoidCallback onCustomizeOrder,
     required bool showAll,
     required VoidCallback onToggleShowAll,
   }) {
@@ -312,6 +355,14 @@ mixin _ChapterSelectionMixin<T extends StatefulWidget> on State<T> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Tooltip(
+            message: "Customize chapter order".tl,
+            child: IconButton(
+              key: const ValueKey('customize-chapter-order'),
+              icon: const Icon(Icons.reorder_rounded),
+              onPressed: onCustomizeOrder,
+            ),
+          ),
           ChapterDateSourceButton(
             value: appdata.settings['chapterDateSource'] == 'tencent' ? 'tencent' : 'lizi',
             onChanged: (value) {
@@ -431,8 +482,13 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
     final hidden = state.hideDuplicateChapters
         ? state.duplicateChapterIndices
         : const <int>{};
+    final ordered = ChapterOrderPrefs.orderedIndices(
+      chapters,
+      state.comic.id,
+      state.comic.sourceKey,
+    );
     visible = [
-      for (var i = 0; i < chapters.length; i++)
+      for (final i in ordered)
         if (!hidden.contains(i)) i,
     ];
     visible = _sortByChapterNumber(visible, chapters.titles.toList());
@@ -659,6 +715,7 @@ class _NormalComicChaptersState extends State<_NormalComicChapters>
                       context,
                       reverse: reverse,
                       onToggleOrder: () => setState(() => reverse = !reverse),
+                      onCustomizeOrder: customizeChapterOrder,
                       showAll: showAll,
                       onToggleShowAll: () => setState(() => showAll = !showAll),
                     ),
@@ -894,8 +951,14 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
         ? state.duplicateChapterIndices
         : const <int>{};
     final offset = _groupOffset;
+    final ordered = ChapterOrderPrefs.orderedIndicesForGroup(
+      chapters,
+      state.comic.id,
+      state.comic.sourceKey,
+      index,
+    );
     visible = [
-      for (var i = 0; i < group.length; i++)
+      for (final i in ordered)
         if (!hidden.contains(offset + i)) i,
     ];
     visible = _sortByChapterNumber(visible, group.values.toList());
@@ -1066,6 +1129,7 @@ class _GroupedComicChaptersState extends State<_GroupedComicChapters>
                       context,
                       reverse: reverse,
                       onToggleOrder: () => setState(() => reverse = !reverse),
+                      onCustomizeOrder: customizeChapterOrder,
                       showAll: showAll,
                       onToggleShowAll: () => setState(() => showAll = !showAll),
                     ),

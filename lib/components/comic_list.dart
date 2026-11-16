@@ -98,6 +98,8 @@ class ComicListState extends State<ComicList> {
   // ---- Multi-select (only active when widget.enableSelection) ----
   bool _selecting = false;
   final Map<Comic, bool> _selected = {};
+  Set<String>? _publishedTags;
+  (int?, int)? _publishedCount;
 
   /// Comics currently loaded: the current page in paging mode, every loaded
   /// page in continuous mode. "Select all" is necessarily limited to these —
@@ -321,12 +323,32 @@ class ComicListState extends State<ComicList> {
     );
   }
 
+  void _publishAvailableTags(Set<String> tags) {
+    final previous = _publishedTags;
+    if (previous != null && previous.length == tags.length &&
+        previous.containsAll(tags)) {
+      return;
+    }
+    _publishedTags = Set<String>.from(tags);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onAvailableTags?.call(tags);
+    });
+  }
+
+  void _publishResultCount(int? total, int loaded) {
+    if (_publishedCount == (total, loaded)) return;
+    _publishedCount = (total, loaded);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onResultCount?.call(total, loaded);
+    });
+  }
+
   /// SliverGridComics configured for the current (normal / selecting) mode.
   Widget _buildGrid(List<Comic> comics, {void Function()? onLastItemBuild}) {
     final available = <String>{
       for (final comic in comics) ...?comic.tags,
     };
-    widget.onAvailableTags?.call(available);
+    _publishAvailableTags(available);
     final visible = widget.filterTags.isEmpty
         ? comics
         : comics.where((comic) {
@@ -334,7 +356,7 @@ class ComicListState extends State<ComicList> {
             return widget.filterTags.every((filter) => tags.any((tag) =>
                 tag == filter || tag.endsWith(':$filter') || tag.endsWith('@$filter')));
           }).toList();
-    widget.onResultCount?.call(_maxPage, visible.length);
+    _publishResultCount(_maxPage, visible.length);
     return SliverGridComics(
       comics: visible,
       enableContextMenu: !_selecting,
@@ -510,8 +532,10 @@ class ComicListState extends State<ComicList> {
   }
 
   Future<void> _loadPage(int page) async {
-    if (widget.loadPage == null && widget.loadNext == null) {
-      _error = "loadPage and loadNext can't be null at the same time";
+    if (widget.loadPage == null &&
+        widget.loadNext == null &&
+        widget.loadWithFilters == null) {
+      _error = "loadPage, loadNext and loadWithFilters can't all be null";
       Future.microtask(() {
         setState(() {});
       });
@@ -521,8 +545,10 @@ class ComicListState extends State<ComicList> {
     }
     _loading[page] = true;
     try {
-      if (widget.loadPage != null) {
-        var res = await widget.loadPage!(page);
+      if (widget.loadPage != null || widget.loadWithFilters != null) {
+        final res = widget.loadPage != null
+            ? await widget.loadPage!(page)
+            : await widget.loadWithFilters!(page);
         if (!mounted) return;
         if (res.success) {
           if (res.data.isEmpty) {

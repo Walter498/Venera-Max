@@ -949,6 +949,7 @@ class SearchBarController {
   String currentText;
 
   void setText(String text) {
+    currentText = text;
     _state?.setText(text);
   }
 
@@ -1029,6 +1030,7 @@ class _SliverSearchBarState extends State<SliverSearchBar>
 
   @override
   void setText(String text) {
+    _controller.currentText = text;
     _editingController.text = text;
   }
 
@@ -1112,7 +1114,10 @@ class _SliverSearchBarDelegate extends SliverPersistentHeaderDelegate {
                 onSubmitted: (text) {
                   controller.onSearch?.call(text);
                 },
-                onChanged: onChanged,
+                onChanged: (value) {
+                  controller.currentText = value;
+                  onChanged?.call(value);
+                },
               ),
             ),
           ),
@@ -1174,6 +1179,7 @@ class _SearchBarState extends State<AppSearchBar> with _SearchBarMixin {
 
   @override
   void setText(String text) {
+    _controller.currentText = text;
     _editingController.text = text;
   }
 
@@ -1242,6 +1248,7 @@ class _SearchBarState extends State<AppSearchBar> with _SearchBarMixin {
                   hintText: "Search".tl,
                   border: InputBorder.none,
                 ),
+                onChanged: (value) => _controller.currentText = value,
                 onSubmitted: (text) {
                   _controller.onSearch?.call(text);
                 },

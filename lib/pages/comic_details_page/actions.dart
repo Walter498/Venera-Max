@@ -8,8 +8,6 @@ abstract mixin class _ComicPageActions {
   /// a plain [update] would rebuild from the stale data still in hand.
   void reloadDetails();
 
-  Future<void> _showRelatedSourcesManager();
-
   ComicDetails get comic;
 
   ComicSource? get comicSource => ComicSource.find(comic.sourceKey);
@@ -740,15 +738,6 @@ abstract mixin class _ComicPageActions {
               ),
             ]);
           },
-        ),
-      // Not offered for a collection: it has no upstream source to link to or
-      // migrate from, and migrating would rebind it to a search hit, discarding
-      // the grouping. Its members remain individually migratable.
-      if (!_isCollection)
-        MenuEntry(
-          icon: Icons.hub_outlined,
-          text: "Linked entries".tl,
-          onClick: _showRelatedSourcesManager,
         ),
       if (!_isCollection)
         MenuEntry(

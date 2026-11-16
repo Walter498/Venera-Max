@@ -38,20 +38,20 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
       }
     }
     this.sources = sources.map((e) => ComicSource.find(e)!).toList();
-    _keyword = widget.keyword;
+    _keyword = widget.keyword.trim();
     // Aggregated search also feeds the shared search history; without this,
     // searches run in aggregated mode never showed up under recent searches.
     if (widget.keyword.trim().isNotEmpty) {
       appdata.addSearchHistory(widget.keyword);
     }
     controller = SearchBarController(
-      currentText: widget.keyword,
+      currentText: _keyword,
       onSearch: (text) {
-        if (text.trim().isNotEmpty) {
-          appdata.addSearchHistory(text);
-        }
+        final query = text.trim();
+        if (query.isEmpty) return;
+        appdata.addSearchHistory(query);
         setState(() {
-          _keyword = text;
+          _keyword = query;
         });
       },
     );
@@ -110,12 +110,15 @@ class _SliverSearchResultState extends State<_SliverSearchResult>
   String? error;
 
   void load() async {
-    final data = widget.source.searchPageData!;
+    try {
+      final data = widget.source.searchPageData!;
     var options = (data.searchOptions ?? [])
         .map((e) => e.defaultValue)
         .toList();
     if (data.loadPage != null) {
-      var res = await data.loadPage!(widget.keyword, 1, options);
+      var res = await data
+          .loadPage!(widget.keyword, 1, options)
+          .timeout(const Duration(seconds: 20));
       if (!mounted) return;
       if (!res.error) {
         setState(() {
@@ -129,7 +132,9 @@ class _SliverSearchResultState extends State<_SliverSearchResult>
         });
       }
     } else if (data.loadNext != null) {
-      var res = await data.loadNext!(widget.keyword, null, options);
+      var res = await data
+          .loadNext!(widget.keyword, null, options)
+          .timeout(const Duration(seconds: 20));
       if (!mounted) return;
       if (!res.error) {
         setState(() {
@@ -139,6 +144,21 @@ class _SliverSearchResultState extends State<_SliverSearchResult>
       } else {
         setState(() {
           error = res.errorMessage ?? "Unknown error".tl;
+          isLoading = false;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          error = "This source does not support searching".tl;
+          isLoading = false;
+        });
+      }
+    }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          error = e.toString();
           isLoading = false;
         });
       }

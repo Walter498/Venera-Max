@@ -66,8 +66,21 @@ class _SearchResultPageState extends State<SearchResultPage> {
   /// Set by [ComicList] via selectionHandlerCallback; enters multi-select mode.
   VoidCallback? _enterSelection;
 
+  void _publishResultCount(int? total, int loaded) {
+    if (!mounted || (_resultTotal == total && _loadedCount == loaded)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || (_resultTotal == total && _loadedCount == loaded)) return;
+      setState(() {
+        _resultTotal = total;
+        _loadedCount = loaded;
+      });
+    });
+  }
+
   void search([String? text]) {
     if (text != null) {
+      text = text.trim();
+      if (text.isEmpty) return;
       if (suggestionsController.entry != null) {
         suggestionsController.remove();
       }
@@ -194,7 +207,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
           AppSearchBar(controller: controller),
           if (_authorMode) Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('作者作品 · ${widget.author}'),
+            child: Text('Author works · @author'.tlParams({'author': widget.author!})),
           ),
           Expanded(
             child: NetworkError(
@@ -220,30 +233,31 @@ class _SearchResultPageState extends State<SearchResultPage> {
       // Author results have no tag-filter UI. For keyword results, ComicList
       // reports tags after every grid build; unchanged tags must not schedule
       // another parent build (including an empty successfully loaded page).
-      onAvailableTags: _authorMode ? null : (tags) {
-        if (!mounted ||
-            (_availableTags.length == tags.length &&
-                _availableTags.containsAll(tags))) {
-          return;
-        }
-        setState(() {
-          _availableTags
-            ..clear()
-            ..addAll(tags);
-          // Selections are kept: a label a result does not carry is reported by
-          // the empty-message below instead of being silently unselected.
-        });
-      },
+      onAvailableTags: _authorMode
+          ? null
+          : (tags) {
+              if (!mounted ||
+                  (_availableTags.length == tags.length &&
+                      _availableTags.containsAll(tags))) {
+                return;
+              }
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted ||
+                    (_availableTags.length == tags.length &&
+                        _availableTags.containsAll(tags))) {
+                  return;
+                }
+                setState(() {
+                  _availableTags
+                    ..clear()
+                    ..addAll(tags);
+                });
+              });
+            },
       selectionHandlerCallback: (fn) => _enterSelection = fn,
       scrollbarTopPadding: context.padding.top + 56,
       errorLeading: AppSearchBar(controller: controller, action: buildAction()),
-      onResultCount: (total, loaded) {
-        if (!mounted) return;
-        setState(() {
-          _resultTotal = total;
-          _loadedCount = loaded;
-        });
-      },
+      onResultCount: _publishResultCount,
       leadingSliver: SliverMainAxisGroup(
         slivers: [
           SliverSearchBar(
@@ -255,9 +269,11 @@ class _SearchResultPageState extends State<SearchResultPage> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Text(_authorMode
-                    ? '作者作品 · ${widget.author}'
-                    : 'Keyword search · 關鍵詞候選 · 未確認作者關聯'),
+                child: Text(
+                  _authorMode
+                      ? 'Author works · @author'.tlParams({'author': widget.author!})
+                      : 'Keyword search · Keyword candidates · Author association not confirmed'.tl,
+                ),
               ),
             ),
           if (_resultTotal != null || _loadedCount > 0)
@@ -266,8 +282,11 @@ class _SearchResultPageState extends State<SearchResultPage> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text(
                   _resultTotal == null
-                      ? '已載入 $_loadedCount 本'
-                      : '共 $_resultTotal 本 · 已載入 $_loadedCount 本',
+                      ? 'Loaded @count'.tlParams({'count': _loadedCount})
+                      : 'Total @total · Loaded @count'.tlParams({
+                          'total': _resultTotal!,
+                          'count': _loadedCount,
+                        }),
                   style: TextStyle(color: context.colorScheme.outline),
                 ),
               ),
@@ -279,7 +298,12 @@ class _SearchResultPageState extends State<SearchResultPage> {
               ? null
               : (i) => searchData.loadAuthor!(widget.author!, i, options))
           : (serverFilter
-              ? null
+              ? (i) => searchData.loadWithFilters!(SearchFilterRequest(
+                    keyword: text,
+                    selections: _selectedSearchFilters(),
+                    options: options,
+                    page: i,
+                  ))
               : (searchData.loadPage == null
                   ? null
                   : (i) => searchData.loadPage!(text, i, options))),
@@ -334,12 +358,15 @@ class _SearchResultPageState extends State<SearchResultPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('作者作品 · ${widget.author}'),
-                  Text('$sourceName · 本地已索引 ${comics.length} 本'),
-                  const Text('僅列出已開啟作品中明確標記此作者的漫畫'),
+                  Text('Author works · @author'.tlParams({'author': widget.author!})),
+                  Text('Source indexed @count comics'.tlParams({
+                    'source': sourceName,
+                    'count': comics.length,
+                  })),
+                  Text('Only lists opened comics with an explicit author marker'.tl),
                   TextButton(
                     onPressed: _findMoreAuthorCandidates,
-                    child: const Text('查找更多（關鍵詞候選）'),
+                    child: Text('Find more (keyword candidates)'.tl),
                   ),
                 ],
               ),
@@ -374,7 +401,9 @@ class _SearchResultPageState extends State<SearchResultPage> {
           bottom: false,
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('關鍵詞候選 · ${widget.author} · 未確認作者關聯'),
+            child: Text('Keyword candidates · @author · Author association not confirmed'.tlParams({
+              'author': widget.author!,
+            })),
           ),
         ),
         Expanded(child: AggregatedSearchPage(keyword: widget.author!)),

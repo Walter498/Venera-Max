@@ -988,6 +988,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
   }
 
   void _updateSwipeChangeChapter() {
+    final wasJumping = jumpToPrevChapter || jumpToNextChapter;
     if (prepareToPrevChapter) {
       jumpToNextChapter = false;
       jumpToPrevChapter =
@@ -999,6 +1000,24 @@ class _ContinuousModeState extends State<_ContinuousMode>
           scrollController.position.maxScrollExtent + _changeChapterOffset;
       jumpToPrevChapter = false;
     }
+    final isJumping = jumpToPrevChapter || jumpToNextChapter;
+    if (!wasJumping && isJumping) {
+      unawaited(HapticFeedback.mediumImpact());
+    }
+  }
+
+  void _clearChapterSwipeState() {
+    final changed =
+        prepareToPrevChapter ||
+        prepareToNextChapter ||
+        jumpToPrevChapter ||
+        jumpToNextChapter;
+    prepareToPrevChapter = false;
+    prepareToNextChapter = false;
+    jumpToPrevChapter = false;
+    jumpToNextChapter = false;
+    context.readerScaffold.setFloatingButton(0);
+    if (changed && mounted) setState(() {});
   }
 
   bool onScaleUpdate([double? scale]) {
@@ -1364,10 +1383,10 @@ class _ContinuousModeState extends State<_ContinuousMode>
         }
         if (!seamlessChapterReading && fingers == 0) {
           if (jumpToPrevChapter) {
-            context.readerScaffold.setFloatingButton(0);
+            _clearChapterSwipeState();
             reader.toPrevChapter(toLastPage: true);
           } else if (jumpToNextChapter) {
-            context.readerScaffold.setFloatingButton(0);
+            _clearChapterSwipeState();
             reader.toNextChapter();
           }
         }
@@ -1382,6 +1401,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
         if (fingers == 0 && reader.autoScrollRunning) {
           _scheduleAutoScrollResume();
         }
+        _clearChapterSwipeState();
       },
       onPointerPanZoomUpdate: (event) {
         if (event.scale == 1.0) {
@@ -1453,6 +1473,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
             if (!prepareToPrevChapter) {
               jumpToPrevChapter = false;
               jumpToNextChapter = false;
+              unawaited(HapticFeedback.selectionClick());
               context.readerScaffold.setFloatingButton(-1);
               setState(() {
                 prepareToPrevChapter = true;
@@ -1464,6 +1485,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
             if (!prepareToNextChapter) {
               jumpToPrevChapter = false;
               jumpToNextChapter = false;
+              unawaited(HapticFeedback.selectionClick());
               context.readerScaffold.setFloatingButton(1);
               setState(() {
                 prepareToNextChapter = true;

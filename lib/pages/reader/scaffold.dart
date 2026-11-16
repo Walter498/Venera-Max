@@ -942,208 +942,137 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         : '${(displayPage / context.reader.maxPage * 100).clamp(1, 100).toStringAsFixed(0)}%';
     final indicatorText = showPercent ? percentText : text;
 
-    final buttons = [
-      ReaderNightModeButton(
-        tooltip: AppShortcuts.hint(
-          "Night mode".tl,
-          ShortcutAction.toggleNightMode,
-        ),
-        onPressed: toggleNightMode,
-        onChanged: () {
-          context.reader.update();
-          update();
-        },
-        comicId: context.reader.cid,
-        sourceKey: context.reader.type.sourceKey,
+    final items = <_ReaderBottomItem>[
+      _ReaderBottomItem(
+        icon: context.reader.effectiveSetting('readerNightMode') == true
+            ? Icons.nightlight_round
+            : Icons.nightlight_outlined,
+        label: "Night".tl,
+        onTap: toggleNightMode,
       ),
-      Tooltip(
-        message: "Favorite comic".tl,
-        child: IconButton(
-          icon: Icon(
-            isComicFavorited() ? Icons.favorite : Icons.favorite_border,
-          ),
-          onPressed: favoriteComicFromReader,
-        ),
+      _ReaderBottomItem(
+        icon: isComicFavorited() ? Icons.favorite : Icons.favorite_border,
+        label: "Favorite".tl,
+        onTap: favoriteComicFromReader,
       ),
-      Tooltip(
-        message: AppShortcuts.hint(
-          "Collect the image".tl,
-          ShortcutAction.collectImage,
+      if (App.isDesktop)
+        _ReaderBottomItem(
+          icon: Icons.fullscreen,
+          label: "Full Screen".tl,
+          onTap: () => context.reader.fullscreen(),
         ),
-        child: IconButton(
-          icon: Icon(isLiked() ? Icons.collections : Icons.collections_outlined),
-          onPressed: addImageFavorite,
-        ),
-      ),
       if (App.isMobile)
-        Tooltip(
-          message: "${"Reading Orientation".tl}: ${switch (rotation) {
-            false => "Portrait".tl,
-            true => "Landscape".tl,
-            _ => "Auto".tl,
-          }}",
-          child: IconButton(
-            icon: Icon(switch (rotation) {
-              false => Icons.screen_lock_portrait,
-              true => Icons.screen_lock_landscape,
-              _ => Icons.screen_rotation,
-            }),
-            onPressed: toggleReadingOrientation,
-          ),
+        _ReaderBottomItem(
+          icon: rotation == null
+              ? Icons.screen_rotation
+              : rotation == false
+              ? Icons.screen_lock_portrait
+              : Icons.screen_lock_landscape,
+          label: rotation == null
+              ? "Follow system".tl
+              : rotation == false
+              ? "Portrait".tl
+              : "Landscape".tl,
+          onTap: toggleReadingOrientation,
         ),
-      ReaderAutoPageTurningButton(
-        tooltip: AppShortcuts.hint(
-          "Auto Page Turning".tl,
-          ShortcutAction.toggleAutoPageTurning,
-        ),
-        isSelected: context.reader.autoPageTurning,
-        readerMode: context.reader.mode.name,
-        comicId: context.reader.cid,
-        comicSource: context.reader.type.sourceKey,
-        onPressed: toggleAutoPageTurning,
-        onChanged: () {
-          context.reader._syncAutoTurn(restartCountdown: true);
-          context.reader.update();
-          update();
-        },
+      _ReaderBottomItem(
+        icon: context.reader.autoPageTurning ? Icons.timer : Icons.timer_sharp,
+        label: "Auto".tl,
+        onTap: toggleAutoPageTurning,
       ),
-      if (context.reader.mode.isGallery && context.reader.imagesPerPage > 1)
-        Tooltip(
-          message: context.reader.isPairingShifted
-              ? "Undo page shift".tl
-              : "Shift pages by one".tl,
-          child: IconButton(
-            isSelected: context.reader.isPairingShifted,
-            icon: const Icon(Icons.auto_stories_outlined),
-            selectedIcon: const Icon(Icons.auto_stories),
-            onPressed: context.reader.canShiftPairing ? shiftPairing : null,
-          ),
-        ),
       if (context.reader.widget.chapters != null)
-        Tooltip(
-          message: "Chapters".tl,
-          child: IconButton(
-            icon: const Icon(Icons.library_books),
-            onPressed: openChapterDrawer,
-          ),
+        _ReaderBottomItem(
+          icon: Icons.library_books,
+          label: "Chapters".tl,
+          onTap: openChapterDrawer,
         ),
-      Tooltip(
-        message: "Save Image".tl,
-        child: IconButton(
-          icon: const Icon(Icons.download),
-          onPressed: saveCurrentImage,
-        ),
+      _ReaderBottomItem(
+        icon: Icons.skip_previous_rounded,
+        label: "Previous chapter".tl,
+        onTap: () => context.reader.toPrevChapter(),
+      ),
+      _ReaderBottomItem(
+        icon: Icons.skip_next_rounded,
+        label: "Next chapter".tl,
+        onTap: () => context.reader.toNextChapter(),
       ),
     ];
 
-    void turnChapter(bool forward) {
-      final reader = context.reader;
-      final target = reader.visibleChapterFrom(
-        reader.chapter,
-        forward ? 1 : -1,
-      );
-      if (target != null) {
-        reader.toChapter(target);
-      } else {
-        reader.toPage(forward ? reader.maxPage : 1);
-      }
-    }
-
-    final prevChapterButton = IconButton.filledTonal(
-      onPressed: () => turnChapter(isReversed),
-      icon: const Icon(Icons.first_page),
-    );
-
-    final nextChapterButton = IconButton.filledTonal(
-      onPressed: () => turnChapter(!isReversed),
-      icon: const Icon(Icons.last_page),
-    );
-
-    final pageIndicator = GestureDetector(
-      onTap: showPageJumpDialog,
-      child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.tertiaryContainer,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Center(
-          child: Text(
-            indicatorText,
-            style: const TextStyle(fontSize: 13),
+    var buttonHeight = 48.0;
+    for (final item in items) {
+      final label = TextPainter(
+        text: TextSpan(
+          text: item.label,
+          style: DefaultTextStyle.of(context).style.merge(
+            const TextStyle(fontSize: 11),
           ),
         ),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      buttonHeight = math.max(buttonHeight, 22 + 4 + label.height + 8);
+      label.dispose();
+    }
+
+    Widget child = SizedBox(
+      height: math.max(
+        kBottomBarHeight,
+        (56 + buttonHeight + 1).ceilToDouble(),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const SizedBox(width: 8),
+              Expanded(child: buildSlider()),
+              if (showPercent)
+                GestureDetector(
+                  onTap: showPageJumpDialog,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    alignment: Alignment.center,
+                    constraints: const BoxConstraints(minWidth: 52),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      percentText,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                )
+              else
+                GestureDetector(
+                  onTap: showPageJumpDialog,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    alignment: Alignment.center,
+                    constraints: const BoxConstraints(minWidth: 52),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      indicatorText,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  for (final item in items)
+                    Expanded(child: _ReaderBottomLabeledButton(item: item)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
-
-    Widget twoRowLayout() => Column(
-      children: [
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const SizedBox(width: 8),
-            prevChapterButton,
-            Expanded(child: buildSlider()),
-            pageIndicator,
-            nextChapterButton,
-            const SizedBox(width: 8),
-          ],
-        ),
-        LayoutBuilder(
-          builder: (context, constrains) {
-            final small = (constrains.maxWidth - buttons.length * 50) < 120;
-            return Row(
-              children: [
-                const Spacer(),
-                for (var button in buttons)
-                  if (!small)
-                    button.paddingHorizontal(4)
-                  else ...[
-                    button,
-                    const Spacer(),
-                  ],
-                if (!small) const SizedBox(width: 4),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-
-    // Landscape phones have little height to spare: fold the slider row and the
-    // action row into one so the bar stops covering a third of the page. Only
-    // when the width actually fits everything plus a usable slider, otherwise
-    // the single row overflows and the two-row layout is the lesser evil.
-    Widget child = compactBars
-        ? LayoutBuilder(
-            builder: (context, constrains) {
-              const kMinSliderWidth = 120.0;
-              final fits =
-                  constrains.maxWidth -
-                      (buttons.length + 2) * 48 -
-                      74 -
-                      8 >=
-                  kMinSliderWidth;
-              return SizedBox(
-                height: fits ? bottomBarHeight : kBottomBarHeight,
-                child: fits
-                    ? Row(
-                        children: [
-                          const SizedBox(width: 4),
-                          prevChapterButton,
-                          Expanded(child: buildSlider()),
-                          pageIndicator,
-                          nextChapterButton,
-                          ...buttons,
-                          const SizedBox(width: 4),
-                        ],
-                      )
-                    : twoRowLayout(),
-              );
-            },
-          )
-        : SizedBox(height: bottomBarHeight, child: twoRowLayout());
 
     if (context.reader.autoPageTurning) {
       child = Column(
@@ -1199,11 +1128,6 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     appdata.saveData();
     context.reader.update();
     update();
-  }
-
-  void shiftPairing() {
-    final view = context.reader._imageViewController;
-    if (view is _GalleryModeState) view.shiftPairing();
   }
 
   void toggleAutoPageTurning() {
@@ -1360,20 +1284,6 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           : _ChaptersView(context.reader),
       width: 400,
     );
-  }
-
-  void saveCurrentImage() async {
-    var result = await selectImageToData();
-    if (result == null) {
-      return;
-    }
-    var (imageIndex, data) = result;
-    var fileType = detectFileType(data);
-    // Save file name: ComicName_EP{chapter}_P{page}.{ext} to avoid conflict.
-    // The chapter index of different group is continuous, so we use chapter number is enough.
-    var filename =
-        "${context.reader.widget.name}_EP${context.reader.chapter}_P${imageIndex + 1}${fileType.ext}";
-    saveFile(data: data, filename: filename);
   }
 
   void share() async {
@@ -1794,6 +1704,53 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     overlay.insert(entry);
 
     return completer.future;
+  }
+}
+
+/// Reader bottom action with the legacy icon + text presentation.
+class _ReaderBottomItem {
+  const _ReaderBottomItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+}
+
+class _ReaderBottomLabeledButton extends StatelessWidget {
+  const _ReaderBottomLabeledButton({required this.item});
+
+  final _ReaderBottomItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: item.onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(item.icon, size: 22, color: context.colorScheme.onSurface),
+            const SizedBox(height: 4),
+            Text(
+              item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

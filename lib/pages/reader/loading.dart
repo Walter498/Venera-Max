@@ -3,8 +3,9 @@ part of 'reader.dart';
 int? resolveReaderInitialChapterGroup({
   required int? initialChapter,
   required int? historyGroup,
+  int? initialGroup,
 }) {
-  return initialChapter == null ? historyGroup : null;
+  return initialGroup ?? (initialChapter == null ? historyGroup : null);
 }
 
 class ReaderWithLoading extends StatefulWidget {
@@ -14,6 +15,7 @@ class ReaderWithLoading extends StatefulWidget {
     required this.sourceKey,
     this.initialEp,
     this.initialPage,
+    this.initialGroup,
   });
 
   final String id;
@@ -23,6 +25,8 @@ class ReaderWithLoading extends StatefulWidget {
   final int? initialEp;
 
   final int? initialPage;
+
+  final int? initialGroup;
 
   @override
   State<ReaderWithLoading> createState() => _ReaderWithLoadingState();
@@ -46,6 +50,7 @@ class _ReaderWithLoadingState
       initialChapterGroup: resolveReaderInitialChapterGroup(
         initialChapter: widget.initialEp,
         historyGroup: data.history.group,
+        initialGroup: widget.initialGroup,
       ),
       author: data.author,
       tags: data.tags,

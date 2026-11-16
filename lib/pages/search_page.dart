@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -39,6 +40,7 @@ class _SearchPageState extends State<SearchPage> {
   bool aggregatedSearch = false;
 
   var focusNode = FocusNode();
+  Timer? _suggestionDebounce;
 
   var options = <String>[];
 
@@ -47,15 +49,17 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void search([String? text]) {
+    final query = (text ?? controller.text).trim();
+    if (query.isEmpty) return;
     if (aggregatedSearch) {
       context
-          .to(() => AggregatedSearchPage(keyword: text ?? controller.text))
+          .to(() => AggregatedSearchPage(keyword: query))
           .then((_) => update());
     } else {
       context
           .to(
             () => SearchResultPage(
-              text: text ?? controller.text,
+              text: query,
               sourceKey: searchTarget,
               options: options,
             ),
@@ -77,6 +81,13 @@ class _SearchPageState extends State<SearchPage> {
       }
     }
     return false;
+  }
+
+  void _scheduleSuggestions() {
+    _suggestionDebounce?.cancel();
+    _suggestionDebounce = Timer(const Duration(milliseconds: 120), () {
+      if (mounted) findSuggestions();
+    });
   }
 
   void findSuggestions() {
@@ -160,6 +171,7 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   void dispose() {
+    _suggestionDebounce?.cancel();
     focusNode.dispose();
     appdata.settings.removeListener(updateSearchSourcesIfNeeded);
     super.dispose();
@@ -233,9 +245,7 @@ class _SearchPageState extends State<SearchPage> {
   Iterable<Widget> buildSlivers() sync* {
     yield SliverSearchBar(
       controller: controller,
-      onChanged: (s) {
-        findSuggestions();
-      },
+      onChanged: (_) => _scheduleSuggestions(),
       focusNode: focusNode,
     );
     if (suggestions.isNotEmpty) {
@@ -645,7 +655,6 @@ class _SearchHistoryState extends State<_SearchHistory> {
           text: 'Delete'.tl,
           onClick: () {
             appdata.removeSearchHistory(appdata.searchHistory[index]);
-            appdata.saveData();
             setState(() {});
           },
         ),

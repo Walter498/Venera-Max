@@ -123,7 +123,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
     for (final part in data.categories) {
       if (part is! FixedCategoryPart) continue;
       final options = <_FilterOption>[
-        _FilterOption('全部'.tl, null, nativeCategory: part.title),
+        _FilterOption('All'.tl, null, nativeCategory: part.title),
       ];
       var hasRealParam = false;
       for (final item in part.categories) {

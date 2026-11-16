@@ -74,10 +74,12 @@ class Appdata with Init, ChangeNotifier {
   }
 
   void addSearchHistory(String keyword) {
-    if (searchHistory.contains(keyword)) {
-      searchHistory.remove(keyword);
+    final normalized = keyword.trim();
+    if (normalized.isEmpty) return;
+    if (searchHistory.contains(normalized)) {
+      searchHistory.remove(normalized);
     }
-    searchHistory.insert(0, keyword);
+    searchHistory.insert(0, normalized);
     if (searchHistory.length > 50) {
       searchHistory.removeLast();
     }

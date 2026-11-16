@@ -17,6 +17,7 @@ class ComicDescription extends StatelessWidget {
     this.pagesText,
     this.chaptersText,
     this.lastReadTimeText,
+    this.maxInfoRows = 5,
     this.showTitle = true,
     this.titleTrailing,
     this.showDescription = true,
@@ -39,6 +40,9 @@ class ComicDescription extends StatelessWidget {
   final String? pagesText;
   final String? chaptersText;
   final String? lastReadTimeText;
+  /// Maximum metadata rows in a bounded tile. Detail pages use unbounded
+  /// height; library tiles opt into a larger value after their height grows.
+  final int maxInfoRows;
   final bool showTitle;
   final Widget? titleTrailing;
 
@@ -93,6 +97,11 @@ class ComicDescription extends StatelessWidget {
       // Ahead of update/source/tags on purpose: only the first few rows survive
       // the height budget below, and page count is what a reader filters on.
       if (pages != null) _infoRow(context, "Pages".tl, pages, Colors.teal),
+      if (source != null) _infoRow(context, "Source".tl, source, Colors.cyan),
+      if (chaptersText != null)
+        _infoRow(context, "Chapters".tl, chaptersText!, Colors.amber),
+      if (lastReadTimeText != null)
+        _infoRow(context, "Last read".tl, lastReadTimeText!, Colors.deepPurple),
       // High in the list for the same reason: a fixed-height tile draws only
       // its first few rows, and language is worth a slot there (issue #288).
       if (languageItems.isNotEmpty && onTapTag != null)
@@ -117,11 +126,6 @@ class ComicDescription extends StatelessWidget {
           Colors.indigo,
         ),
       if (update != null) _infoRow(context, "Update".tl, update, Colors.cyan),
-      if (chaptersText != null)
-        _infoRow(context, '話數', chaptersText!, Colors.amber),
-      if (lastReadTimeText != null)
-        _infoRow(context, '上次閱讀', lastReadTimeText!, Colors.deepPurple),
-      if (source != null) _infoRow(context, "Source".tl, source, Colors.cyan),
       if (tagItems.isNotEmpty && onTapTag != null)
         _actionRow(
           context,
@@ -158,6 +162,7 @@ class ComicDescription extends StatelessWidget {
           constraints.maxHeight,
           rating != null,
           totalRows: rows.length,
+          maxRows: maxInfoRows,
           extraRows: languageItems.isEmpty ? 0 : 1,
         );
         return Column(
@@ -203,6 +208,7 @@ class ComicDescription extends StatelessWidget {
     double maxHeight,
     bool hasRating, {
     required int totalRows,
+    required int maxRows,
     int extraRows = 0,
   }) {
     if (maxHeight.isInfinite) {
@@ -212,7 +218,7 @@ class ComicDescription extends StatelessWidget {
         (showTitle ? (titleTrailing == null ? 24 : 52) : 0) +
         (hasRating ? 20 : 0);
     final count = ((maxHeight - reservedHeight) / 21).floor();
-    return math.max(1, math.min(5 + extraRows, count));
+    return math.max(1, math.min(maxRows + extraRows, count));
   }
 
   void _copy(BuildContext context, String text) {
