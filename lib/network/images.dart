@@ -17,6 +17,12 @@ import 'app_dio.dart';
 
 const _imageStreamIdleTimeout = Duration(seconds: 30);
 
+bool isValidDownloadedImage(Uint8List data) =>
+    data.length >= 100 && detectFileType(data).mime.startsWith('image/');
+
+Future<String?> _refreshComicPageUrl(
+  String sourceKey, String cid, String eid, String imageKey) async => null;
+
 // Dynamic runCode results own native references, independently of the source.
 // Collect before freeing: aliases/cycles and wrappers reused by the next config
 // must not cause a double free or invalidate a still-live replacement.

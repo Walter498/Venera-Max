@@ -1118,11 +1118,17 @@ typedef CategoryOptionsLoader =
       String? param,
     );
 
+typedef CategoryFilterLoader =
+    Future<Res<List<Comic>>> Function(CategoryFilterRequest request);
+
 class CategoryComicsData {
   /// options
   final List<CategoryComicsOptions>? options;
 
   final CategoryOptionsLoader? optionsLoader;
+
+  /// Optional source-native multi-condition category loader.
+  final CategoryFilterLoader? loadWithFilters;
 
   /// [category] is the one clicked by the user on the category page.
   ///
@@ -1134,11 +1140,12 @@ class CategoryComicsData {
   final RankingData? rankingData;
 
   /// Source-declared groups that can be selected together in category filters.
-  final List<String>? multiSelectGroups;
+  final Set<String>? multiSelectGroups;
 
   const CategoryComicsData({
     this.options,
     this.optionsLoader,
+    this.loadWithFilters,
     required this.load,
     this.rankingData,
     this.multiSelectGroups,

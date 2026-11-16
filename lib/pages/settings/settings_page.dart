@@ -101,7 +101,7 @@ const _settingsCategoryIcons = <IconData>[
   Icons.menu_book_outlined,
   Icons.favorite_border,
   Icons.cloud_outlined,
-  Icons.tune_outlined,
+  Icons.explore_outlined,
   Icons.public,
   Icons.bug_report_outlined,
   Icons.info_outline,

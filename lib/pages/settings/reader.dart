@@ -132,16 +132,34 @@ class _ReaderSettingsState extends State<ReaderSettings> {
 
   String _effectiveTargetLang() => _effectiveTranslationConfig().targetLang;
 
+  /// Built-in targets, then the user's own. A selected code that is no longer
+  /// listed (a removed custom language) stays visible under its raw code
+  /// instead of showing as blank.
   Map<String, String> _targetLanguageOptions() {
-    final options = <String, String>{
-      for (final entry in TranslationTargets.builtIn.entries)
-        entry.key: entry.value.label.tl,
+    var options = {
+      for (var e in TranslationTargets.builtIn.entries) e.key: e.value.label.tl,
+      for (var e in TranslationTargets.custom) e.code: e.name,
     };
-    for (final language in TranslationTargets.custom) {
-      options[language.code] = language.name;
-    }
+    var current = _effectiveTargetLang();
+    options.putIfAbsent(current, () => current);
     return options;
   }
+
+  /// Auto, built-in sources, then the user's own; a removed custom language
+  /// still selected shows under its code.
+  Map<String, String> _sourceLanguageOptions() {
+    var options = {
+      'auto': "Auto detect".tl,
+      for (var e in TranslationSources.builtIn.entries) e.key: e.value.tl,
+      for (var e in TranslationSources.custom) e.code: e.name,
+    };
+    var current = _effectiveSourceLang();
+    options.putIfAbsent(current, () => current);
+    return options;
+  }
+
+  int _customLanguageCount() =>
+      TranslationSources.custom.length + TranslationTargets.custom.length;
 
   /// Summary line for the LLM-providers entry: the active provider's name (or
   /// its URL when unnamed), how many others are configured, or "Not configured".
@@ -974,149 +992,12 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   ),
                 ),
             ],
-          ).toSliver(),
-          _SettingsExpansionTile(
-            expansionKey: const PageStorageKey('readerFavoritesGroup'),
-            icon: Icons.favorite_border,
-            title: "Favorites settings".tl,
-            children: [
-              _SwitchSetting(
-                title: "Also collect chapter cover when collecting image".tl,
-                settingKey: "autoFavoriteCover",
-                onChanged: () {
-                  widget.onChanged?.call("autoFavoriteCover");
-                },
-                comicId: isEnabledSpecificSettings ? widget.comicId : null,
-                comicSource: isEnabledSpecificSettings
-                    ? widget.comicSource
-                    : null,
-                useDeviceSettings: useDeviceSpecificSettings,
-              ),
-              SelectSetting(
-                title: "Quick collect image".tl,
-                settingKey: "quickCollectImage",
-                optionTranslation: {
-                  "No": "Not enable".tl,
-                  "DoubleTap": "Double Tap".tl,
-                  "Swipe": "Swipe".tl,
-                },
-                onChanged: () {
-                  widget.onChanged?.call("quickCollectImage");
-                },
-                help:
-                    "On the image browsing page, you can quickly collect images by sliding horizontally or vertically according to your reading mode"
-                        .tl,
-                comicId: isEnabledSpecificSettings ? widget.comicId : null,
-                comicSource: isEnabledSpecificSettings
-                    ? widget.comicSource
-                    : null,
-                useDeviceSettings: useDeviceSpecificSettings,
-              ),
-            ],
-          ).toSliver(),
-          _SettingsExpansionTile(
-            expansionKey: const PageStorageKey('readerImageProcessingGroup'),
-            icon: Icons.auto_fix_high,
-            title: "Image processing / enhancement".tl,
-            children: [
-              _SwitchSetting(
-                title: 'Limit image width'.tl,
-                subtitle: 'When using Continuous(Top to Bottom) mode'.tl,
-                settingKey: 'limitImageWidth',
-                onChanged: () {
-                  setState(() {});
-                  widget.onChanged?.call('limitImageWidth');
-                },
-                comicId: isEnabledSpecificSettings ? widget.comicId : null,
-                comicSource: isEnabledSpecificSettings
-                    ? widget.comicSource
-                    : null,
-                useDeviceSettings: useDeviceSpecificSettings,
-              ),
-              if (_effectiveSetting('limitImageWidth') == true)
-                _SliderSetting(
-                  title: "Image width (% of screen height)".tl,
-                  settingsIndex: 'imageWidthPercent',
-                  interval: 5,
-                  min: 40,
-                  max: 150,
-                  onChanged: () {
-                    widget.onChanged?.call('imageWidthPercent');
-                  },
-                  comicId: isEnabledSpecificSettings ? widget.comicId : null,
-                  comicSource: isEnabledSpecificSettings
-                      ? widget.comicSource
-                      : null,
-                  useDeviceSettings: useDeviceSpecificSettings,
-                ),
-              _CallbackSetting(
-                title: "Custom Image Processing".tl,
-                callback: () => context.to(() => _CustomImageProcessing()),
-                actionTitle: "Edit".tl,
-              ),
-              _SwitchSetting(
-                title: "Image enhancement".tl,
-                subtitle:
-                    "Sharpen blurry images at render time without extra loading or battery cost"
-                        .tl,
-                settingKey: "enableReaderImageEnhance",
-                onChanged: () {
-                  setState(() {});
-                  widget.onChanged?.call("enableReaderImageEnhance");
-                },
-              ),
-              if (appdata.settings['enableReaderImageEnhance'] == true) ...[
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-                  child: ImageEnhancePreview(),
-                ),
-                _SliderSetting(
-                  title: "Sharpen strength".tl,
-                  settingsIndex: "readerImageEnhanceStrength",
-                  interval: 0.1,
-                  min: 0.0,
-                  max: ImageEnhanceShader.maxStrength,
-                  onChanged: () {
-                    widget.onChanged?.call("readerImageEnhanceStrength");
-                  },
-                ),
-                _SliderSetting(
-                  title: "Clarity".tl,
-                  settingsIndex: "readerImageEnhanceClarity",
-                  interval: 0.1,
-                  min: 0.0,
-                  max: 1.0,
-                  onChanged: () {
-                    widget.onChanged?.call("readerImageEnhanceClarity");
-                  },
-                ),
-                _SliderSetting(
-                  title: "Contrast".tl,
-                  settingsIndex: "readerImageEnhanceContrast",
-                  interval: 0.1,
-                  min: 0.0,
-                  max: 1.0,
-                  onChanged: () {
-                    widget.onChanged?.call("readerImageEnhanceContrast");
-                  },
-                ),
-                _SliderSetting(
-                  title: "Color vibrance".tl,
-                  settingsIndex: "readerImageEnhanceVibrance",
-                  interval: 0.1,
-                  min: 0.0,
-                  max: 1.0,
-                  onChanged: () {
-                    widget.onChanged?.call("readerImageEnhanceVibrance");
-                  },
-                ),
-              ],
-            ],
-          ).toSliver(),
-          _SettingsExpansionTile(
-            expansionKey: const PageStorageKey('readerDisplayGroup'),
-            icon: Icons.tv,
-            title: "Display settings".tl,
+          ),
+          _SettingsSection(
+            title: 'Display settings',
+            icon: Icons.contrast,
+            subtitle:
+                '${'Night mode'.tl}: ${(appdata.settings['readerNightMode'] == true ? 'On' : 'Off').tl}',
             children: [
               SelectSetting(
                 title: "Reading background color".tl,
@@ -1546,41 +1427,10 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                   ),
                   enabled: false,
                 ),
-              _CallbackSetting(
-                title: "LLM providers".tl,
-                subtitle: _activeProviderSubtitle(),
-                actionTitle: "Manage".tl,
-                callback: () async {
-                  await context.to(() => const LlmProvidersPage());
-                  if (mounted) setState(() {});
-                },
-              ),
-              _CallbackSetting(
-                title: "Test translation".tl,
-                subtitle: "Check the endpoint with a sample line".tl,
-                actionTitle: "Test".tl,
-                callback: _testTranslation,
-              ),
-              _CallbackSetting(
-                title: "Custom languages".tl,
-                subtitle: "Add custom target languages".tl,
-                actionTitle: "Manage".tl,
-                callback: () async {
-                  await context.to(() => const TranslationLanguagesPage());
-                  if (mounted) setState(() {});
-                },
-              ),
               SelectSetting(
                 title: "Source language".tl,
                 settingKey: "imageTranslationSource",
-                optionTranslation: {
-                  "auto": "Auto detect".tl,
-                  "ja": "Japanese".tl,
-                  "en": "English".tl,
-                  "ko": "Korean".tl,
-                  "zh": "Chinese".tl,
-                  "zh-TW": "Traditional Chinese".tl,
-                },
+                optionTranslation: _sourceLanguageOptions(),
                 onChanged: () {
                   setState(() {});
                   widget.onChanged?.call("imageTranslationSource");
