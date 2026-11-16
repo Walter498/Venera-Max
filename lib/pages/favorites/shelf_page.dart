@@ -466,16 +466,6 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                     SliverGridComics(
                       comics: items,
                       forceDetailedMode: true,
-                      // 加高卡片：讓「上次閱讀」那行進得了可視範圍
-                      detailedItemHeight: 200,
-                      // 最後閱讀時間（用戶要求：收藏卡片也顯示）
-                      lastReadTimeBuilder: (c) {
-                        final h = _histMap['${c.sourceKey}:${c.id}'];
-                        if (h == null) return null;
-                        final t = h.time;
-                        return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')} '
-                            '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-                      },
                       selections: _editMode
                           ? {
                               for (final c in items)

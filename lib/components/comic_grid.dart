@@ -196,6 +196,9 @@ class _SliverGridComics extends StatelessWidget {
   final bool forceBriefMode;
   final bool forceDetailedMode;
   final int? forceColumns;
+
+  @override
+  Widget build(BuildContext context) {
     return SliverGrid(
       delegate: SliverChildBuilderDelegate((context, index) {
         if (index == comics.length - 1) {
