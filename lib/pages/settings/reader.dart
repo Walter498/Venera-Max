@@ -109,11 +109,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
   bool _isChapterCommentsAtEndSupported() {
     final mode = _effectiveSetting('readerMode');
     return _effectiveSetting('showChapterComments') == true &&
-        (mode == 'galleryLeftToRight' ||
-            mode == 'galleryRightToLeft' ||
-            mode == 'continuousTopToBottom' ||
-            mode == 'continuousLeftToRight' ||
-            mode == 'continuousRightToLeft');
+        (mode == 'galleryLeftToRight' || mode == 'galleryRightToLeft');
   }
 
   void refreshSettings() {

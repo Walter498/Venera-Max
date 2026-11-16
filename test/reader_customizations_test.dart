@@ -79,8 +79,7 @@ void main() {
     expect(continuous, contains("effectiveSetting('changeChapterOffset')"));
     expect(scaffold, contains("effectiveSetting('showReadingProgressPercent')"));
   });
-
-
+  testWidgets('one short page still accepts drag and overscroll', (tester) async {
     final controller = ScrollController();
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: CustomScrollView(
       controller: controller,
