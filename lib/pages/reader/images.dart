@@ -32,9 +32,53 @@ class _ReaderImagesState extends State<_ReaderImages> {
 
   late _ReaderState reader;
 
+  late final List<String>? _loadedImages;
+
+  bool _probingLayout = false;
+
+  Future<void> _prepareImages(List<String> images) async {
+    reader.images = images;
+    reader._syncLayoutChapter();
+    if (reader.effectiveSetting('adaptiveReading') == true &&
+        reader._adaptiveLayout == null) {
+      _probingLayout = true;
+      final result = await probeReadingLayout(
+        imageCount: images.length,
+        isCancelled: () => !mounted || !identical(reader.images, images),
+        readSize: (index) async {
+          final provider =
+              _createImageProvider(index + 1, context) as ReaderImageProvider;
+          final size = await provider.readDimensions(() {
+            if (!mounted ||
+                !_probingLayout ||
+                !identical(reader.images, images)) {
+              throw StateError('Reader layout probe ended');
+            }
+          });
+          if (mounted && _probingLayout && identical(reader.images, images)) {
+            reader.noteImageSize(index, size);
+          }
+          return size;
+        },
+      );
+      _probingLayout = false;
+      if (!mounted) return;
+      reader._adaptiveLayout = result;
+    }
+    if (!mounted) return;
+    reader.mode = reader._preferredMode;
+    reader._layout = null;
+    reader.initImagesPerPage(reader._openingImage ?? 1);
+    _placePageOnLoad();
+  }
+
   @override
   void initState() {
     reader = context.reader;
+    // Mode changes reuse the current chapter, including when offline.
+    _loadedImages = !reader.isLoading && reader._openingImage != null
+        ? reader.images
+        : null;
     reader.isLoading = true;
     super.initState();
   }
@@ -45,11 +89,18 @@ class _ReaderImagesState extends State<_ReaderImages> {
     ImageDownloader.cancelAllLoadingImages();
   }
 
-  /// Handle jumping to last page when _jumpToLastPageOnLoad is true
-  void _handleJumpToLastPage() {
+  /// Puts the reader on its page once the chapter's images are in: the last
+  /// one when turning back into the chapter (its comments page when shown at
+  /// the end), or the one showing the image it opened at, which depends on
+  /// the chapter's saved pairing.
+  void _placePageOnLoad() {
+    final opening = reader._openingImage;
+    reader._openingImage = null;
     if (reader._jumpToLastPageOnLoad) {
-      reader._page = reader.maxPage;
+      reader._page = reader.totalPages;
       reader._jumpToLastPageOnLoad = false;
+    } else if (opening != null && reader.images!.isNotEmpty) {
+      reader._page = reader.galleryLayout.screenOf(opening - 1);
     }
   }
 
@@ -72,17 +123,19 @@ class _ReaderImagesState extends State<_ReaderImages> {
           reader.widget.chapters,
         ))) {
       try {
-        var images = await LocalManager().getImages(
-          reader.cid,
-          reader.type,
-          reader.chapter,
-        );
+        var images =
+            _loadedImages ??
+            await LocalManager().getImages(
+              reader.cid,
+              reader.type,
+              reader.chapter,
+            );
+        if (!mounted) return;
+        await _prepareImages(images);
         if (!mounted) return;
         setState(() {
-          reader.images = images;
           reader.isLoading = false;
           inProgress = false;
-          _handleJumpToLastPage();
           Future.microtask(() {
             reader.updateHistory();
           });
@@ -100,14 +153,16 @@ class _ReaderImagesState extends State<_ReaderImages> {
         var cp = reader.widget.chapters?.ids.elementAtOrNull(
           reader.chapter - 1,
         );
-        var res = await reader
-            .type
-            .comicSource!
-            .loadComicPages!(reader.widget.cid, cp)
-            .timeout(
-              _readerPageLoadTimeout,
-              onTimeout: () => const Res.error("Network error"),
-            );
+        var res = _loadedImages != null
+            ? Res(_loadedImages)
+            : await reader
+                  .type
+                  .comicSource!
+                  .loadComicPages!(reader.widget.cid, cp)
+                  .timeout(
+                    _readerPageLoadTimeout,
+                    onTimeout: () => const Res.error("Network error"),
+                  );
         if (!mounted) return;
         if (res.error) {
           setState(() {
@@ -116,11 +171,11 @@ class _ReaderImagesState extends State<_ReaderImages> {
             inProgress = false;
           });
         } else {
+          await _prepareImages(res.data);
+          if (!mounted) return;
           setState(() {
-            reader.images = res.data;
             reader.isLoading = false;
             inProgress = false;
-            _handleJumpToLastPage();
             Future.microtask(() {
               reader.updateHistory();
             });
@@ -136,13 +191,19 @@ class _ReaderImagesState extends State<_ReaderImages> {
       }
     }
     if (!mounted) return;
+    if (error == null) {
+      reader._onChapterImagesLoaded();
+    } else {
+      reader._onChapterLoadFailed();
+    }
     context.readerScaffold.update();
   }
 
   @override
   Widget build(BuildContext context) {
     if (reader.isLoading) {
-      load();
+      // Finish the old view's cancellation before starting this one's loads.
+      Future.microtask(load);
       return const Center(child: CircularProgressIndicator());
     } else if (error != null) {
       return GestureDetector(
@@ -179,7 +240,7 @@ class _ReaderImagesState extends State<_ReaderImages> {
             true;
         return _GalleryMode(
           key: Key(
-            '${reader.mode.key}_${reader.imagesPerPage}_${showComments}_$showCommentsAtEnd',
+            '${reader.mode.key}_${reader.imagesPerPage}_${showComments}_${showCommentsAtEnd}_${reader.galleryWidePageSplit.name}',
           ),
         );
       } else {
@@ -1387,25 +1448,6 @@ class _ContinuousModeState extends State<_ContinuousMode>
           ),
         );
       }
-      final nextChapter = reader.visibleChapterFrom(chapter, 1);
-      entries.add(
-        _ContinuousReaderEntry.separator(
-          chapter: chapter,
-          hasNext: nextChapter != null,
-          nextChapter: nextChapter,
-          isLoading:
-              nextChapter != null &&
-              _continuousChapterLoads.containsKey(nextChapter),
-          error: nextChapter == null
-              ? null
-              : _continuousChapterErrors[nextChapter],
-        ),
-      );
-      if (nextChapter == null ||
-          !_continuousChapterImages.containsKey(nextChapter)) {
-        break;
-      }
-      chapter = nextChapter;
     }
     return entries;
   }
@@ -3119,8 +3161,6 @@ ImageProvider _createImageProviderFromKey(
       reader.cid,
       eid,
     );
-    ImageTranslationService.instance.setReadingPosition(
-      reader.type.sourceKey, reader.cid, reader.eid, reader.currentImagePage);
     translationConfig = TranslationConfig.of(
       reader.cid,
       reader.type.comicSource?.key,

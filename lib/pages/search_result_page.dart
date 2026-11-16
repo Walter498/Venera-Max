@@ -39,10 +39,6 @@ class SearchResultPage extends StatefulWidget {
 
   final List<String>? options;
 
-  /// Category labels already selected on the category page; the result list
-  /// starts filtered by them so the search matches what the user is looking at.
-  final Set<String> initialTags;
-
   @override
   State<SearchResultPage> createState() => _SearchResultPageState();
 }
@@ -136,22 +132,12 @@ class _SearchResultPageState extends State<SearchResultPage> {
     super.dispose();
   }
 
-  String checkAutoLanguage(String text) {
-    var setting = appdata.settings["autoAddLanguageFilter"] ?? 'none';
-    if (setting == 'none') {
-      return text;
-    }
-    var searchSource = sourceKey;
-    // TODO: Move it to a better place
-    const enabledSources = ['nhentai', 'ehentai'];
-    if (!enabledSources.contains(searchSource)) {
-      return text;
-    }
-    if (!text.contains('language:')) {
-      return '$text language:$setting';
-    }
-    return text;
-  }
+  String checkAutoLanguage(String text) => applyAutoLanguageFilter(
+    text,
+    sourceKey: sourceKey,
+    language: appdata.settings["autoAddLanguageFilter"],
+    enabledSources: appdata.settings["languageFilterSources"],
+  );
 
   @override
   void initState() {
@@ -597,7 +583,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
         if (!_authorMode || (_searchData?.searchOptions?.isNotEmpty ?? false)) Tooltip(
           message: "Settings".tl,
           child: IconButton(
-            icon: const Icon(Icons.tune_rounded),
+            icon: const Icon(Icons.filter_alt_outlined),
             onPressed: () async {
               if (suggestionOverlay != null) {
                 suggestionsController.remove();
@@ -631,6 +617,25 @@ class _SearchResultPageState extends State<SearchResultPage> {
       ],
     );
   }
+}
+
+/// Appends `language:<language>` for sources the user opted into.
+String applyAutoLanguageFilter(
+  String text, {
+  required String sourceKey,
+  Object? language,
+  Object? enabledSources,
+}) {
+  if (language is! String || language.isEmpty || language == 'none') {
+    return text;
+  }
+  if (enabledSources is! List || !enabledSources.contains(sourceKey)) {
+    return text;
+  }
+  if (text.contains('language:')) {
+    return text;
+  }
+  return '$text language:$language';
 }
 
 class _SuggestionsController {

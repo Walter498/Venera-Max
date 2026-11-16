@@ -6,7 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
 
-const double _kBackGestureWidth = 19.0; // 約 0.5cm：僅邊緣可觸發返回
+const double _kBackGestureWidth = 20.0;
 const int _kMaxDroppedSwipePageForwardAnimationTime = 800;
 const int _kMaxPageBackAnimationTime = 300;
 const double _kMinFlingVelocity = 1.0;
@@ -17,6 +17,10 @@ const double _kMinFlingVelocity = 1.0;
 /// back closed) must NOT be stolen by the page back gesture, so over a swipe
 /// region the back gesture is only allowed from the screen's left edge. This
 /// lets left-swipe-to-favorite and right-swipe-to-go-back coexist.
+///
+/// [active] is read when the back gesture decides, so a region can claim
+/// horizontal drags only part of the time (e.g. while a reader image is
+/// zoomed and a drag pans it). Null means always active.
 class SwipeRegionMarker extends SingleChildRenderObjectWidget {
   const SwipeRegionMarker({
     super.key,
@@ -56,9 +60,9 @@ class AppPageRoute<T> extends PageRoute<T> with _AppRouteTransitionMixin {
     super.fullscreenDialog,
     super.allowSnapshotting = true,
     super.barrierDismissible = false,
-    bool? enableIOSGesture,
+    this.enableIOSGesture = true,
     this.preventRebuild = true,
-  }) : _enableIOSGestureOverride = enableIOSGesture {
+  }) {
     assert(opaque);
   }
 
@@ -83,13 +87,8 @@ class AppPageRoute<T> extends PageRoute<T> with _AppRouteTransitionMixin {
   @override
   String get debugLabel => '${super.debugLabel}(${settings.name})';
 
-  /// null 時跟隨全局設置 [enableIOSBackGesture]（默認關閉）
-  bool? _enableIOSGestureOverride;
-
   @override
-  bool get enableIOSGesture =>
-      _enableIOSGestureOverride ??
-      (appdata.settings['enableIOSEdgeBack'] == true);
+  final bool enableIOSGesture;
 
   @override
   final bool preventRebuild;
@@ -424,6 +423,7 @@ class _IOSBackGestureDetectorState extends State<IOSBackGestureDetector> {
     _recognizer = _BackSwipeRecognizer(
       debugOwner: this,
       gestureWidth: widget.gestureWidth,
+      isEnabled: () => widget.enabledCallback(),
       isPointerInHorizontal: _isPointerInHorizontalScrollable,
       onStart: _handleDragStart,
       onUpdate: _handleDragUpdate,
@@ -447,18 +447,20 @@ class _IOSBackGestureDetectorState extends State<IOSBackGestureDetector> {
 
   @override
   Widget build(BuildContext context) {
-    return RawGestureDetector(
-      behavior: HitTestBehavior.translucent,
-      gestures: {
-        _BackSwipeRecognizer:
-            GestureRecognizerFactoryWithHandlers<_BackSwipeRecognizer>(
-              () => _recognizer,
-              (instance) {
-                instance.gestureWidth = widget.gestureWidth;
-              },
-            ),
-      },
-      child: widget.child,
+    _recognizer.gestureWidth = widget.gestureWidth;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        widget.child,
+        Positioned.fill(
+          // Check swipe ownership before child drags can hide their viewports.
+          // The translucent listener still lets taps and scrolls reach them.
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: _recognizer.addPointer,
+          ),
+        ),
+      ],
     );
   }
 
@@ -562,6 +564,7 @@ class _IOSBackGestureDetectorState extends State<IOSBackGestureDetector> {
 
 class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
   _BackSwipeRecognizer({
+    required this.isEnabled,
     required this.isPointerInHorizontal,
     required this.gestureWidth,
     required this.onStart,
@@ -571,6 +574,7 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
     super.debugOwner,
   });
 
+  final bool Function() isEnabled;
   final bool Function(Offset globalPosition) isPointerInHorizontal;
   double gestureWidth;
   final ValueSetter<DragStartDetails> onStart;
@@ -578,6 +582,7 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
   final ValueSetter<DragEndDetails> onEnd;
   final VoidCallback onCancel;
 
+  int? _pointer;
   Offset? _startGlobal;
 
   /// The single pointer that owns the current back swipe. Extra fingers that
@@ -600,8 +605,7 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
 
   VelocityTracker? _velocityTracker;
 
-  // 必須真拖動（避免連點/輕觸被判成返回手勢）
-  static const double _minDistance = 12.0;
+  static const double _minDistance = 5.0;
 
   @override
   void addPointer(PointerDownEvent event) {
@@ -696,8 +700,8 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
 
         onEnd(
           DragEndDetails(
-            velocity: velocity,
-            primaryVelocity: velocity.pixelsPerSecond.dx,
+            velocity: Velocity(pixelsPerSecond: Offset(velocity, 0)),
+            primaryVelocity: velocity,
           ),
         );
       }
@@ -730,7 +734,9 @@ class _BackSwipeRecognizer extends OneSequenceGestureRecognizer {
       'nearEdge=$_startedNearLeftEdge)';
 
   @override
-  void didStopTrackingLastPointer(int pointer) {}
+  void didStopTrackingLastPointer(int pointer) {
+    resolve(GestureDisposition.rejected);
+  }
 }
 
 class SlidePageTransitionBuilder extends PageTransitionsBuilder {

@@ -1,138 +1,676 @@
 import 'package:flutter/material.dart';
-import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
-import 'package:venera/pages/main_page.dart';
+import 'package:venera/foundation/disclaimer_content.dart';
+import 'package:venera/foundation/onboarding.dart';
 import 'package:venera/utils/translations.dart';
 
-/// Disclaimer content as ordered sections of (title, paragraphs). Titles and
-/// paragraphs are translation keys resolved via `.tl`; English falls back to
-/// the key text itself.
-const List<(String, List<String>)> kDisclaimerSections = [
-  (
-    "1. Nature of the Software",
-    [
-      "This software is a user-configurable, local content reading tool that only provides technical capabilities such as network access, content parsing, reading layout, and local data management. The code is provided \"AS IS\", without warranty of any kind, express or implied; the maintainers do not guarantee its accuracy, completeness, or fitness for any particular purpose, and you use it at your own risk.",
-      "By default, this software does not pre-configure, bundle, or provide any third-party website content, data resources, or parsing extensions; the maintainers do not provide any content operation, storage, publishing, or distribution services, nor do they recommend or endorse any third-party content.",
-      "This project is for personal learning and research only, and its feature development and maintenance are AI-driven. It is a non-profit open-source project: the maintainers conduct no commercial operations and have not authorized any individual or organization to carry out paid distribution, resale, paid installation, traffic diversion, paid communities, or any other commercial activity in this project's name; any third-party commercial activity is unrelated to this project and undertaken at that party's own risk. The project may be suspended, changed, or discontinued at any time without notice.",
-    ],
-  ),
-  (
-    "2. Extensions and User Conduct",
-    [
-      "The software's online reading capability is implemented as a JavaScript-extension-compatible API. Users may create and edit extension scripts themselves, or import extension scripts shared by third parties; whether and which extensions are loaded is entirely up to the user to configure lawfully, and the user shall independently judge and bear full responsibility for their origin, legality, accuracy, and applicability.",
-      "When a user accesses third-party websites through extensions, the network requests are initiated directly from the user's device to the target websites. This software only provides local parsing, layout, and display capabilities, and does not publicly disseminate or redistribute any third-party content. Search results, chapter loading, image availability, and content copyright all depend on the respective websites and extensions, and are unrelated to this project.",
-      "Users must comply with the laws and regulations of their jurisdiction, network security requirements, and the terms of service and copyright policies of the relevant websites. Users must not use this software to infringe intellectual property rights, obtain data without authorization, distribute unlawful content or malware, disrupt any network service, or harm the lawful rights and interests of any company or individual.",
-    ],
-  ),
-  (
-    "3. Third-Party Platforms and Communities",
-    [
-      "Any extension-sharing platform, website, forum, or chat group established or maintained by third parties is an independently operated third party with no affiliation to this project. This project does not participate in the creation, publication, operation, maintenance, or distribution of such third-party extensions or communities, and assumes no obligation of proactive review; all risks and liabilities arising from using third-party extensions or accessing third-party websites shall be borne by the responsible parties in accordance with the law.",
-      "This project has not established and does not operate any official community, group, or public account, nor has it authorized any third party to advertise, promote, or publish in its name.",
-    ],
-  ),
-  (
-    "4. Privacy and Data",
-    [
-      "All features of this software run on the user's local device. This project operates no server, does not collect or upload any user data (including reading content, extension lists, or browsing history) to the maintainers, and integrates no analytics, crash-reporting, or telemetry components. Optional features that the user explicitly enables (such as AI translation) may send data to third-party services the user configures; see item 3 below.",
-      "Network and storage permissions are used only to implement the software's features such as online reading, local backup import/export, WebDAV sync, app update checks, AI translation, and translation model downloads, and for no other purpose; WebDAV sync transmits data only to a server configured by the user, and the maintainers cannot access, obtain, or control that server or any data stored on it.",
-      "AI translation is an optional feature that is disabled by default and ships with no preset provider, endpoint, or key. When the user enables it, recognized text is sent only to the third-party model service the user configures themselves; whether to use it, and which provider to use, is the user's own decision, and the user shall comply with that provider's terms — the maintainers neither access nor control such requests or data.",
-    ],
-  ),
-  (
-    "5. Intellectual Property",
-    [
-      "This project respects intellectual property rights. If a rights holder believes that the code or files directly contained in this repository infringe their lawful rights, they may submit a valid notice with identity proof, ownership proof, and specific details to the maintainers, who will handle it within their reasonable technical capabilities.",
-      "This project neither hosts nor controls any third-party extension or the third-party content parsed or presented by extensions, and is therefore unable to take removal, blocking, or other measures against them; rights holders should assert their rights against the publisher of the relevant extension or the party actually hosting the content.",
-      "This project does not accept issues or technical-support requests concerning third-party website content, extension configuration, the availability of specific works, or copyright ownership.",
-    ],
-  ),
-  (
-    "6. Limitation of Liability",
-    [
-      "To the maximum extent permitted by applicable law, this project and its maintainers shall not be liable for any direct, indirect, incidental, special, punitive, or consequential losses arising from the use of or inability to use this software, or from third-party extensions, third-party websites, network conditions, data loss, device failure, account issues, copyright disputes, or similar causes. Users shall evaluate and bear all risks of using this software.",
-      "This project does not guarantee compatibility with any third-party website, extension, or service, nor the continued availability of any feature.",
-    ],
-  ),
-  (
-    "7. Derivative Work and Redistribution",
-    [
-      "This project is a modified version of Venera, independently developed and published by this project's maintainers; the upstream project and its maintainers bear no responsibility for this project's code, builds, or conduct. The allocation of responsibility in this section runs both ways and applies equally to any version derived from this project.",
-      "Any version modified, built, or distributed from this project's source code (including forks, private builds, and self-signed installers) is the sole responsibility of whoever publishes that version. This project's maintainers do not review, endorse, or support such versions, and bear no responsibility for their code, builds, conduct, or any consequences thereof.",
-      "A modified version should be published under a distinguishable name and state prominently that it is a modified version of this project; it must not claim authorization or endorsement from this project, or any affiliation with it.",
-      "Only the builds provided on this repository's Release page are published by this project. Installers obtained through other channels, and any build that ships preset extension scripts, extension repository addresses, or content-source lists, are unrelated to this project; their integrity, security, and compliance are the responsibility of whoever provides them.",
-      "Whoever publishes a modified version shall fulfill the obligations in the LICENSE themselves and comply with the laws and regulations of their own jurisdiction, bearing the resulting responsibility.",
-    ],
-  ),
-  (
-    "8. Miscellaneous",
-    [
-      "Do not promote or advertise this project on any public or official platforms or official account areas (including but not limited to Weibo, WeChat Official Accounts, X, etc.).",
-      "This software is licensed and distributed under the license set out in the LICENSE file at the root of the repository; this disclaimer does not modify or limit the rights granted by that license, and the license prevails in case of conflict.",
-      "By downloading, copying, modifying, or using this project, you are deemed to have read and accepted this disclaimer in its entirety. The maintainers reserve the right to modify or supplement this disclaimer at any time, effective upon publication.",
-    ],
-  ),
-];
-
-/// Renders the disclaimer body as titled sections of paragraphs.
+/// Shared text, including the emphasis approved in the preview.
 class DisclaimerBody extends StatelessWidget {
-  const DisclaimerBody({super.key});
+  const DisclaimerBody({super.key, this.sectionKeys, this.wide = false});
+  final List<GlobalKey>? sectionKeys;
+  final bool wide;
 
   @override
   Widget build(BuildContext context) {
-    var children = <Widget>[];
-    for (var (title, paragraphs) in kDisclaimerSections) {
-      children.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Text(
-            title.tl,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              height: 1.5,
-            ),
-          ),
-        ),
-      );
-      for (var paragraph in paragraphs) {
-        children.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              paragraph.tl,
-              style: const TextStyle(fontSize: 14, height: 1.5),
-            ),
-          ),
-        );
-      }
-    }
+    final colors = Theme.of(context).colorScheme;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: children,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var section = 0; section < kDisclaimerSections.length; section++)
+          Padding(
+            key: sectionKeys?[section],
+            padding: EdgeInsets.only(top: section == 0 ? 0 : 9, bottom: 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  kDisclaimerSections[section].$1.tl,
+                  style: TextStyle(
+                    fontSize: wide ? 15 : 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.8,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (
+                  var row = 0;
+                  row < kDisclaimerSections[section].$2.length;
+                  row++
+                )
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 15),
+                    padding: section == 6 || (section == 8 && row == 2)
+                        ? const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          )
+                        : section == 4 && row == 4
+                        ? const EdgeInsets.only(left: 14)
+                        : EdgeInsets.zero,
+                    decoration: section == 6 || (section == 8 && row == 2)
+                        ? BoxDecoration(
+                            color: colors.primaryContainer,
+                            border: Border(
+                              left: BorderSide(color: colors.primary, width: 3),
+                            ),
+                          )
+                        : section == 4 && row == 4
+                        ? const BoxDecoration(
+                            border: Border(
+                              left: BorderSide(
+                                color: Color(0xffb28d48),
+                                width: 3,
+                              ),
+                            ),
+                          )
+                        : null,
+                    child: Text(
+                      kDisclaimerSections[section].$2[row].tl,
+                      style: TextStyle(
+                        fontSize: wide ? 14 : 13,
+                        height: 2.05,
+                        fontWeight: section == 6 || (section == 8 && row == 2)
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
 
-/// Shows the disclaimer in a scrollable read-only dialog.
-void showDisclaimerDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return ContentDialog(
-        title: "User Agreement & Disclaimer".tl,
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 420),
-          child: SingleChildScrollView(
-            child: const DisclaimerBody().paddingHorizontal(16).paddingVertical(4),
-          ),
+String agreementReadingLanguage() {
+  final locale = App.locale;
+  if (locale.languageCode == 'zh' && locale.countryCode == 'TW') return 'zh-TW';
+  if (locale.languageCode == 'zh' && locale.countryCode == 'CN') return 'zh-CN';
+  return 'en-US';
+}
+
+class AgreementLanguagePicker extends StatelessWidget {
+  const AgreementLanguagePicker({
+    super.key,
+    required this.onChanged,
+    this.enabled = true,
+  });
+  final VoidCallback onChanged;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return IntrinsicWidth(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 146),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(20),
         ),
-        actions: [
-          Button.filled(
-            onPressed: () => Navigator.pop(context),
-            child: Text("OK".tl),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.language, size: 14, color: colors.onSurfaceVariant),
+            const SizedBox(width: 5),
+            Flexible(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: appdata.settings['language'],
+                  isDense: true,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(12),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colors.onSurfaceVariant,
+                  ),
+                  icon: Icon(
+                    Icons.expand_more,
+                    size: 14,
+                    color: colors.onSurfaceVariant,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'system',
+                      child: Text('Follow system'.tl),
+                    ),
+                    const DropdownMenuItem(value: 'zh-CN', child: Text('简体中文')),
+                    const DropdownMenuItem(value: 'zh-TW', child: Text('繁體中文')),
+                    const DropdownMenuItem(
+                      value: 'en-US',
+                      child: Text('English'),
+                    ),
+                  ],
+                  onChanged: !enabled
+                      ? null
+                      : (value) async {
+                          if (value == null) return;
+                          appdata.settings['language'] = value;
+                          onChanged();
+                          App.forceRebuild();
+                          await appdata.saveData(false);
+                        },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AgreementPanel extends StatefulWidget {
+  const AgreementPanel({
+    super.key,
+    required this.onAccepted,
+    required this.onDeclined,
+    this.isUpdate = false,
+    this.previousVersion = 0,
+    this.showLanguagePicker = true,
+  });
+  final Future<void> Function() onAccepted;
+  final VoidCallback onDeclined;
+  final bool isUpdate;
+  final int previousVersion;
+  final bool showLanguagePicker;
+
+  @override
+  State<AgreementPanel> createState() => _AgreementPanelState();
+}
+
+class _AgreementPanelState extends State<AgreementPanel> {
+  bool _checked = false;
+  bool _saving = false;
+  bool _failed = false;
+  final _scroll = ScrollController();
+  final _sections = List.generate(
+    kDisclaimerSections.length,
+    (_) => GlobalKey(),
+  );
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _accept() async {
+    if (!_checked || _saving) return;
+    setState(() {
+      _saving = true;
+      _failed = false;
+    });
+    try {
+      await widget.onAccepted();
+    } catch (_) {
+      if (mounted) {
+        setState(() => _failed = true);
+        if (_scroll.hasClients) _scroll.jumpTo(0);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _jump(int section) {
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
+    if (section == 0 && _scroll.hasClients) {
+      if (duration == Duration.zero) {
+        _scroll.jumpTo(0);
+      } else {
+        _scroll.animateTo(0, duration: duration, curve: Curves.easeOut);
+      }
+      return;
+    }
+    final target = _sections[section].currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(target, duration: duration);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, size) {
+      final colors = Theme.of(context).colorScheme;
+      final wide = size.maxWidth >= 600;
+      final narrow = size.maxWidth <= 360;
+      final inset = widget.isUpdate
+          ? 0.0
+          : wide
+          ? 30.0
+          : size.maxWidth <= 360
+          ? 18.0
+          : 24.0;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              inset,
+              widget.isUpdate ? 0 : 3,
+              inset,
+              widget.isUpdate ? 14 : 8,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: widget.isUpdate && wide
+                            ? 440
+                            : size.maxWidth - inset * 2,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.isUpdate) ...[
+                            Text(
+                              (widget.previousVersion > 0
+                                      ? 'Please review the updated agreement'
+                                      : 'A one-time notice after updating')
+                                  .tl,
+                              style: TextStyle(
+                                color: colors.primary,
+                                fontSize: 11,
+                                height: 1.6,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          Text(
+                            'User Agreement & Disclaimer'.tl,
+                            style: TextStyle(
+                              fontSize: widget.isUpdate
+                                  ? (wide
+                                        ? 22
+                                        : narrow
+                                        ? 17
+                                        : 19)
+                                  : (wide ? 24 : 20),
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                              letterSpacing: -.5,
+                            ),
+                          ),
+                          if (widget.isUpdate)
+                            Text(
+                              'v$kDisclaimerVersion · $kDisclaimerDate',
+                              style: TextStyle(
+                                fontSize: 10,
+                                height: 1.6,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (widget.showLanguagePicker)
+                      AgreementLanguagePicker(
+                        enabled: !_saving,
+                        onChanged: () {
+                          if (mounted) setState(() => _checked = false);
+                        },
+                      ),
+                  ],
+                ),
+                if (!widget.isUpdate) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Please review the risks, liability limits, and data practices.'
+                        .tl,
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.6,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final item in [
+                          (6, 'Risks & liability'),
+                          (4, 'Privacy & data'),
+                          (8, 'Acceptance & changes'),
+                          (0, 'Back to top'),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 13),
+                            child: TextButton(
+                              onPressed: () => _jump(item.$1),
+                              style: TextButton.styleFrom(
+                                foregroundColor: colors.primary,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                minimumSize: const Size(0, 30),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(7),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 11,
+                                  height: 1.5,
+                                ),
+                              ),
+                              child: Text(item.$2.tl),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                inset,
+                0,
+                inset,
+                widget.isUpdate ? 0 : 10,
+              ),
+              child: Container(
+                decoration: widget.isUpdate
+                    ? null
+                    : BoxDecoration(
+                        color: colors.surfaceContainerLowest,
+                        border: Border.all(color: colors.outlineVariant),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                clipBehavior: widget.isUpdate ? Clip.none : Clip.antiAlias,
+                child: Scrollbar(
+                  controller: _scroll,
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    padding: widget.isUpdate
+                        ? EdgeInsets.zero
+                        : EdgeInsets.fromLTRB(
+                            wide ? 28 : 18,
+                            wide ? 24 : 18,
+                            wide ? 28 : 18,
+                            24,
+                          ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_failed)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: Text(
+                              'Unable to save your acceptance. Please check available storage and try again.'
+                                  .tl,
+                              style: TextStyle(
+                                color: colors.error,
+                                fontSize: 12,
+                                height: 1.8,
+                              ),
+                            ),
+                          ),
+                        if (widget.isUpdate) ...[
+                          Text(
+                            (widget.previousVersion > 0
+                                    ? 'The agreement has changed. Please review the changes and full text, then confirm the new version.'
+                                    : 'Earlier versions did not show a separate agreement prompt. Please review and confirm this notice.')
+                                .tl,
+                            style: const TextStyle(fontSize: 13, height: 1.9),
+                          ),
+                          const SizedBox(height: 15),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 17,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.primaryContainer,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'What to review'.tl,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                for (final change in kDisclaimerChanges)
+                                  Text(
+                                    '• ${change.tl}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      height: 2,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12, bottom: 18),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.lock_outline,
+                                  size: 15,
+                                  color: colors.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 7),
+                                Expanded(
+                                  child: Text(
+                                    'Your library, reading history, and settings remain intact. Acceptance takes you straight to Home.'
+                                        .tl,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: colors.onSurfaceVariant,
+                                      height: 1.8,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Divider(height: 1, color: colors.outlineVariant),
+                          const SizedBox(height: 20),
+                        ],
+                        DisclaimerBody(
+                          sectionKeys: _sections,
+                          wide: wide && !widget.isUpdate,
+                        ),
+                        Text(
+                          'End of terms'.tl,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: colors.onSurfaceVariant,
+                            height: 1.8,
+                          ),
+                        ),
+                        if (!widget.isUpdate)
+                          Text(
+                            'v$kDisclaimerVersion · $kDisclaimerDate',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: colors.onSurfaceVariant,
+                              height: 1.8,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Container(
+            margin: EdgeInsets.only(top: widget.isUpdate ? 12 : 0),
+            padding: EdgeInsets.fromLTRB(
+              inset,
+              10,
+              inset,
+              widget.isUpdate ? 0 : 8,
+            ),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: colors.outlineVariant)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                InkWell(
+                  key: const ValueKey('agreement-consent'),
+                  onTap: _saving
+                      ? null
+                      : () => setState(() => _checked = !_checked),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 21,
+                        height: 25,
+                        child: Checkbox(
+                          value: _checked,
+                          onChanged: _saving
+                              ? null
+                              : (value) =>
+                                    setState(() => _checked = value ?? false),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          side: BorderSide(color: colors.outlineVariant),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          'I have read and agree to the User Agreement & Disclaimer.'
+                              .tl,
+                          style: TextStyle(
+                            fontSize: narrow ? 10 : 11,
+                            height: narrow ? 1.7 : 1.8,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: wide ? 370 : double.infinity,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: OutlinedButton(
+                            onPressed: _saving ? null : widget.onDeclined,
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 46),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              textStyle: TextStyle(
+                                fontSize: narrow ? 11 : 12,
+                                height: 1.6,
+                              ),
+                            ),
+                            child: Text(
+                              'Disagree and exit'.tl,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 3,
+                          child: FilledButton(
+                            key: const ValueKey('agreement-accept'),
+                            onPressed: _checked && !_saving ? _accept : null,
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 46),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              textStyle: TextStyle(
+                                fontSize: narrow ? 11 : 12,
+                                height: 1.6,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            child: _saving
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          (widget.isUpdate
+                                                  ? 'Agree and go to Home'
+                                                  : 'Agree and Continue')
+                                              .tl,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 7),
+                                      const Icon(Icons.arrow_forward, size: 17),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 9),
+                Text(
+                  'Notifications, sync and translation require separate choices.'
+                      .tl,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: narrow ? 9 : 10,
+                    height: 1.65,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       );
@@ -140,81 +678,53 @@ void showDisclaimerDialog(BuildContext context) {
   );
 }
 
-/// Full-screen consent gate. Shown before the main UI when the consent flow is
-/// enabled and consent has not yet been recorded. The user must tick the
-/// checkbox to enable the accept button.
-class DisclaimerConsentPage extends StatefulWidget {
-  const DisclaimerConsentPage({super.key});
-
-  @override
-  State<DisclaimerConsentPage> createState() => _DisclaimerConsentPageState();
-}
-
-class _DisclaimerConsentPageState extends State<DisclaimerConsentPage> {
-  bool _checked = false;
-
-  void _accept() {
-    appdata.settings['disclaimerConsented'] = true;
-    appdata.saveData(false);
-    App.rootContext.toReplacement(() => const MainPage());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
+/// Reading this dialog does not change the saved acceptance record.
+void showDisclaimerDialog(BuildContext context) {
+  final state = OnboardingStore.instance.state;
+  showDialog<void>(
+    context: context,
+    builder: (context) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760, maxHeight: 760),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 8),
               Text(
-                "User Agreement & Disclaimer".tl,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                kDisclaimerTitle.tl,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: Scrollbar(
-                  child: SingleChildScrollView(
-                    child: const DisclaimerBody(),
+              Text('v$kDisclaimerVersion · $kDisclaimerDate'),
+              if (state.acceptedAt != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Accepted on this device: v@version · @date'.tlParams({
+                      'version': state.acceptedVersion,
+                      'date': DateTime.parse(
+                        state.acceptedAt!,
+                      ).toLocal().toString().split('.').first,
+                    }),
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
+              const SizedBox(height: 12),
+              const Expanded(
+                child: SingleChildScrollView(child: DisclaimerBody()),
               ),
               const SizedBox(height: 12),
-              InkWell(
-                onTap: () => setState(() => _checked = !_checked),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: _checked,
-                        onChanged: (v) => setState(() => _checked = v ?? false),
-                      ),
-                      Expanded(
-                        child: Text("I have read and agree to the disclaimer above".tl),
-                      ),
-                    ],
-                  ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('OK'.tl),
                 ),
               ),
-              const SizedBox(height: 8),
-              Opacity(
-                opacity: _checked ? 1 : 0.5,
-                child: Button.filled(
-                  onPressed: () {
-                    if (_checked) _accept();
-                  },
-                  child: Text("Agree and Continue".tl),
-                ),
-              ),
-              const SizedBox(height: 8),
             ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

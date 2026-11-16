@@ -54,7 +54,7 @@ abstract final class TranslationPerformanceConfig {
       batchPages: isDesktop ? 8 : 4,
       ocrWorkers: isDesktop ? 3 : 2,
       imageConcurrency: isDesktop ? 6 : 3,
-      llmConcurrency: isDesktop ? 8 : 6,
+      llmConcurrency: isDesktop ? 4 : 3,
     ),
     TranslationPerformancePreset.custom => TranslationPerformanceValues(
       batchPages: _intSetting(
@@ -72,7 +72,7 @@ abstract final class TranslationPerformanceConfig {
       llmConcurrency: _intSetting(
         'imageTranslationLlmConcurrency',
         2,
-      ).clamp(1, isDesktop ? 12 : 8),
+      ).clamp(1, isDesktop ? 4 : 3),
     ),
   };
 

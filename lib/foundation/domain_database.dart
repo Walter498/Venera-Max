@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/common.dart';
+import 'package:venera/foundation/log.dart';
 import 'package:venera/foundation/sqlite_connection.dart';
 import 'package:venera/foundation/source_platform.dart';
 import 'package:venera/utils/io.dart';
@@ -89,12 +91,16 @@ class DomainComicSourceLink {
 }
 
 class DomainDatabase {
-  static const schemaVersion = 4;
+  static const schemaVersion = 5;
   static const dataDirectoryName = 'data';
   static const databaseFileName = 'venera.db';
 
   CommonDatabase? _db;
   String? _dbPath;
+
+  /// Platforms already written to the open file; re-upserting them cost two
+  /// writes per mirrored comic.
+  final _ensuredPlatforms = <String>{};
 
   CommonDatabase get db {
     final database = _db;
@@ -109,12 +115,29 @@ class DomainDatabase {
   static String databasePathFor(String appDataPath) =>
       p.join(appDataPath, dataDirectoryName, databaseFileName);
 
+  /// Set while [init] upgrades the file on a background isolate; the file must
+  /// not be opened meanwhile.
+  Future<void>? _upgrading;
+
   Future<void> init(String appDataPath) async {
+    if (_db != null) {
+      return;
+    }
+    final dbPath = databasePathFor(appDataPath);
+    final version = _storedSchemaVersion(dbPath);
+    if (version != null && version < schemaVersion) {
+      final upgrading = _upgrading ??= _upgradeInBackground(dbPath);
+      try {
+        await upgrading;
+      } finally {
+        _upgrading = null;
+      }
+    }
     initSync(appDataPath);
   }
 
   void initSync(String appDataPath) {
-    if (_db != null) {
+    if (_db != null || _upgrading != null) {
       return;
     }
     final dbPath = databasePathFor(appDataPath);
@@ -123,12 +146,147 @@ class DomainDatabase {
     _db = _openDatabase(dbPath);
   }
 
+  /// The schema version a file was last opened with, read from its header.
+  /// Only decides whether to upgrade ahead of the open, which re-runs the same
+  /// pipeline anyway, so a stale or unreadable header is harmless.
+  static int? _storedSchemaVersion(String path) {
+    try {
+      final file = File(path).openSync();
+      try {
+        final header = file.readSync(64);
+        if (header.length < 64) {
+          return null;
+        }
+        return ByteData.sublistView(header).getInt32(60);
+      } finally {
+        file.closeSync();
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _upgradeInBackground(String dbPath) async {
+    try {
+      _logUpgradeWarning(
+        await DatabaseGateway.instance.isolateOp(
+          dbPath,
+          (db) async => upgradeFile(db),
+        ),
+      );
+    } catch (error, stackTrace) {
+      // The open that follows runs the same pipeline and owns any recovery.
+      Log.warning('Domain database', 'Upgrade failed: $error\n$stackTrace');
+    }
+  }
+
+  /// Upgrades a file that is not open anywhere yet, such as an imported one.
+  static Future<void> _upgradeDetached(String path) async {
+    try {
+      _logUpgradeWarning(
+        await Isolate.run(() {
+          final db = openRawDatabase(path);
+          try {
+            db.execute('PRAGMA foreign_keys = ON');
+            final warning = upgradeFile(db);
+            db.execute('PRAGMA wal_checkpoint(TRUNCATE);');
+            return warning;
+          } finally {
+            db.dispose();
+          }
+        }),
+      );
+    } catch (error, stackTrace) {
+      Log.warning('Domain database', 'Upgrade failed: $error\n$stackTrace');
+    }
+  }
+
+  /// Logs on the calling isolate: a log written on the upgrade's own isolate
+  /// is lost with it.
+  static void _logUpgradeWarning(String? warning) {
+    if (warning != null) {
+      Log.warning('Domain database', warning);
+    }
+  }
+
+  /// Copies the database at [sourcePath] to [targetPath] keeping only
+  /// [keptComicIds], every comic sharing a work with one of them, and every
+  /// work that holds a user's link decision. Comics merely browsed past are
+  /// this device's cache and stay out of backups, where they were most of the
+  /// payload. Runs on the export isolate; [sourcePath] may be open elsewhere.
+  static void writeSyncSnapshot({
+    required String sourcePath,
+    required String targetPath,
+    required Iterable<String> keptComicIds,
+  }) {
+    final target = File(targetPath);
+    if (target.existsSync()) {
+      target.deleteSync();
+    }
+    final source = openRawDatabase(sourcePath);
+    try {
+      source.execute('VACUUM INTO ?;', [targetPath]);
+    } finally {
+      source.dispose();
+    }
+    final db = openRawDatabase(targetPath);
+    try {
+      db.execute('PRAGMA journal_mode = DELETE;');
+      db.execute('PRAGMA foreign_keys = ON;');
+      db.execute('CREATE TEMP TABLE kept (comic_id TEXT PRIMARY KEY);');
+      db.execute('BEGIN TRANSACTION;');
+      final insert = db.prepare('INSERT OR IGNORE INTO kept VALUES (?);');
+      try {
+        for (final comicId in keptComicIds) {
+          insert.execute([comicId]);
+        }
+      } finally {
+        insert.dispose();
+      }
+      db.execute('''
+        INSERT OR IGNORE INTO kept
+        SELECT comic_id FROM work_sources
+        WHERE work_id IN (
+          SELECT work_id FROM work_sources
+          WHERE comic_id IN (SELECT comic_id FROM kept)
+            OR link_status = 'rejected'
+            OR (link_status = 'accepted' AND work_id != 'work:' || comic_id)
+        );
+        ''');
+      // Cascades to each comic's links, chapter list and mirror rows.
+      db.execute(
+        'DELETE FROM comics WHERE comic_id NOT IN (SELECT comic_id FROM kept);',
+      );
+      db.execute(
+        'DELETE FROM works '
+        'WHERE work_id NOT IN (SELECT work_id FROM work_sources);',
+      );
+      db.execute('COMMIT;');
+      db.execute('DROP TABLE kept;');
+      db.execute('VACUUM;');
+    } finally {
+      db.dispose();
+    }
+  }
+
+  /// Runs the open-time schema pipeline and compacts the file, so the open
+  /// that follows is cheap. Meant for a background isolate: converting an
+  /// older large library takes seconds on a phone. Returns a warning to log.
+  static String? upgradeFile(CommonDatabase db) {
+    final warning = createSchema(db);
+    // Dropped row-per-chapter tables leave most of the file as free pages.
+    if ((db.select('PRAGMA freelist_count;').single[0] as int) > 0) {
+      db.execute('VACUUM;');
+    }
+    return warning;
+  }
+
   CommonDatabase _openDatabase(String dbPath) {
     try {
       final database = DatabaseGateway.instance.openManaged(dbPath);
       try {
         configure(database);
-        createSchema(database);
+        _logUpgradeWarning(createSchema(database));
         return database;
       } catch (_) {
         // The handle is registered by now — release it before the recovery
@@ -150,6 +308,7 @@ class DomainDatabase {
     final dbPath = _db == null ? null : _dbPath;
     _db = null;
     _dbPath = null;
+    _ensuredPlatforms.clear();
     if (dbPath != null) {
       DatabaseGateway.instance.closeManaged(dbPath);
     }
@@ -163,8 +322,12 @@ class DomainDatabase {
     if (_db == null || dbPath == null) {
       throw StateError('DomainDatabase is not initialized; cannot restore');
     }
+    // A file from an older version needs the costly conversion; it is not
+    // shared yet, so do it off the UI isolate before the swap.
+    await _upgradeDetached(sourcePath);
     DatabaseGateway.instance.closeManaged(dbPath);
     _db = null;
+    _ensuredPlatforms.clear();
     try {
       restoreDatabaseFiles({dbPath: sourcePath});
     } finally {
@@ -200,14 +363,17 @@ class DomainDatabase {
     db.execute('PRAGMA journal_mode = WAL');
   }
 
-  static void createSchema(CommonDatabase db) {
+  /// Returns a warning for a cache conversion that failed without failing the
+  /// open.
+  static String? createSchema(CommonDatabase db) {
     db.execute(_schemaSql);
-    migrateSchema(db);
+    final warning = migrateSchema(db);
     seedStaticData(db);
     db.execute('PRAGMA user_version = $schemaVersion');
+    return warning;
   }
 
-  static void migrateSchema(CommonDatabase db) {
+  static String? migrateSchema(CommonDatabase db) {
     void addColumnIfMissing(String table, String column, String definition) {
       final columns = db.select('PRAGMA table_info("$table");');
       if (!columns.any((element) => element['name'] == column)) {
@@ -221,21 +387,6 @@ class DomainDatabase {
     addColumnIfMissing('comics', 'tags_json', 'tags_json TEXT');
     addColumnIfMissing('comics', 'page_count', 'page_count INTEGER');
     addColumnIfMissing(
-      'chapter_sources',
-      'source_chapter_group',
-      'source_chapter_group INTEGER',
-    );
-    addColumnIfMissing(
-      'chapter_sources',
-      'source_group_title',
-      'source_group_title TEXT',
-    );
-    addColumnIfMissing(
-      'chapter_sources',
-      'source_chapter_index_in_group',
-      'source_chapter_index_in_group INTEGER',
-    );
-    addColumnIfMissing(
       'comics',
       'base_info_updated_at',
       'base_info_updated_at INTEGER NOT NULL DEFAULT 0',
@@ -246,7 +397,109 @@ class DomainDatabase {
       'CREATE INDEX IF NOT EXISTS idx_comics_normalized_title '
       'ON comics(normalized_title);',
     );
+    final warning = _foldLegacyChapterRows(db);
     _dropRetiredTables(db);
+    return warning;
+  }
+
+  /// Chapter lists used to take one row per chapter in two tables, repeating
+  /// the comic's id on every row — most of the file for a large library. Folds
+  /// them into [comic_source_chapters] before the old tables are dropped.
+  ///
+  /// A legacy list replaces a compact one: with both present, only an older
+  /// app version sharing this data can have written the legacy rows since.
+  static String? _foldLegacyChapterRows(CommonDatabase db) {
+    bool hasTable(String name) => db.select(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?;",
+      [name],
+    ).isNotEmpty;
+    if (!hasTable('chapter_sources') || !hasTable('chapters')) {
+      return null;
+    }
+    // The lists are a cache the app refills; a file this cannot read must not
+    // fail the open, which would set the whole database aside.
+    try {
+      final columns = db
+          .select('PRAGMA table_info("chapter_sources");')
+          .map((row) => row['name'])
+          .toSet();
+      // Group columns arrived after the first release of the table.
+      String optional(String column) =>
+          columns.contains(column) ? 'cs.$column' : 'NULL';
+      final rows = db.prepare('''
+        SELECT
+          cs.comic_source_id,
+          src.comic_id,
+          ch.chapter_index,
+          cs.source_chapter_id,
+          cs.source_chapter_index,
+          COALESCE(NULLIF(cs.source_title, ''), ch.title) AS title,
+          ${optional('source_chapter_group')} AS source_chapter_group,
+          ${optional('source_group_title')} AS source_group_title,
+          ${optional('source_chapter_index_in_group')}
+            AS source_chapter_index_in_group
+        FROM chapter_sources cs
+        JOIN chapters ch ON ch.chapter_id = cs.chapter_id
+        JOIN comic_sources src ON src.comic_source_id = cs.comic_source_id
+        ORDER BY
+          cs.comic_source_id,
+          COALESCE(cs.source_chapter_index, ch.chapter_index),
+          ch.chapter_index;
+        ''');
+      final insert = db.prepare(
+        'INSERT OR REPLACE INTO comic_source_chapters '
+        '(comic_source_id, chapters_json) VALUES (?, ?);',
+      );
+      db.execute('BEGIN TRANSACTION;');
+      try {
+        int? comicSourceId;
+        var comicId = '';
+        var chapters = <DomainComicChapterInfo>[];
+        void flush() {
+          if (comicSourceId != null) {
+            insert.execute([comicSourceId, _encodeChapters(chapters, comicId)]);
+          }
+        }
+
+        // A cursor, not select(): a big library holds 100k+ of these rows.
+        final cursor = rows.selectCursor();
+        while (cursor.moveNext()) {
+          final row = cursor.current;
+          final id = row['comic_source_id'] as int;
+          if (id != comicSourceId) {
+            flush();
+            comicSourceId = id;
+            comicId = row['comic_id'] as String;
+            chapters = [];
+          }
+          final chapterIndex = row['chapter_index'] as int;
+          chapters.add(
+            DomainComicChapterInfo(
+              chapterId: '$comicId:chapter:$chapterIndex',
+              title: row['title'] as String? ?? '',
+              chapterIndex: chapterIndex,
+              sourceChapterId: row['source_chapter_id'] as String?,
+              sourceChapterIndex: row['source_chapter_index'] as int?,
+              sourceChapterGroup: row['source_chapter_group'] as int?,
+              sourceGroupTitle: row['source_group_title'] as String?,
+              sourceChapterIndexInGroup:
+                  row['source_chapter_index_in_group'] as int?,
+            ),
+          );
+        }
+        flush();
+        db.execute('COMMIT;');
+      } catch (_) {
+        db.execute('ROLLBACK;');
+        rethrow;
+      } finally {
+        rows.dispose();
+        insert.dispose();
+      }
+    } catch (error) {
+      return 'Chapter list conversion failed: $error';
+    }
+    return null;
   }
 
   /// Populates [normalized_title] for rows written before the column existed,
@@ -273,10 +526,13 @@ class DomainDatabase {
     }
   }
 
-  /// Drops tables that were provisioned ahead of features that never shipped.
+  /// Drops tables that were provisioned ahead of features that never shipped,
+  /// or that were only ever written to.
   /// Children are removed before their parents so foreign keys stay satisfied.
   static void _dropRetiredTables(CommonDatabase db) {
     const retiredTables = [
+      // Append-only read log: one row per page turn, read by nothing.
+      'history_events',
       'reader_tabs',
       'reader_sessions',
       'page_order_items',
@@ -288,6 +544,11 @@ class DomainDatabase {
       'comic_titles',
       'comic_tags',
       'remote_match_candidates',
+      // Row-per-chapter storage, folded into comic_source_chapters. Last:
+      // several tables above referenced these.
+      'chapter_sources',
+      'pages',
+      'chapters',
     ];
     for (final table in retiredTables) {
       db.execute('DROP TABLE IF EXISTS $table;');
@@ -337,6 +598,13 @@ class DomainDatabase {
     return '${platform.platformId}:$sourceComicId';
   }
 
+  /// The work [ensureWorkForComic] creates for a comic that has none yet.
+  static String _ownWorkIdFor(String comicId) => 'work:$comicId';
+
+  /// [replaceMetadata] is for the caller that owns the comic's metadata (a
+  /// local comic's own files): empty fields then clear stale values, and the
+  /// comic's own work snapshot is refreshed. Other callers may pass partial
+  /// data, so their empty fields keep what is stored.
   String ensureComicSource({
     required SourcePlatformRef platform,
     required String sourceComicId,
@@ -353,11 +621,40 @@ class DomainDatabase {
     List<String>? tags,
     int? pageCount,
     int? timestamp,
+    bool replaceMetadata = false,
   }) {
     final now = timestamp ?? DateTime.now().millisecondsSinceEpoch;
     final comicId = comicIdFor(platform, sourceComicId);
     final tagsJson = tags == null ? null : jsonEncode(tags);
     final normalizedTitle = _normalizeForMatch(title);
+    String merged(String column) => replaceMetadata
+        ? 'excluded.$column'
+        : 'COALESCE(excluded.$column, comics.$column)';
+    if (!replaceMetadata &&
+        _storedComicMatches(
+          platform: platform,
+          sourceComicId: sourceComicId,
+          comicId: comicId,
+          values: {
+            'title': title,
+            'subtitle': subtitle,
+            'description': description,
+            'language': language,
+            'cover_uri': coverUri,
+            'normalized_title': normalizedTitle,
+            'source_url': sourceUrl,
+            'source_title': sourceTitle ?? title,
+          },
+          mergedValues: {
+            'author': _emptyToNull(author),
+            'status': _emptyToNull(status),
+            'update_time': _emptyToNull(updateTime),
+            'tags_json': tagsJson,
+            'page_count': pageCount,
+          },
+        )) {
+      return comicId;
+    }
     ensureSourcePlatform(platform, timestamp: now);
     db.execute(
       '''
@@ -382,13 +679,13 @@ class DomainDatabase {
         title = excluded.title,
         subtitle = excluded.subtitle,
         description = excluded.description,
-        author = COALESCE(excluded.author, comics.author),
-        status = COALESCE(excluded.status, comics.status),
-        update_time = COALESCE(excluded.update_time, comics.update_time),
+        author = ${merged('author')},
+        status = ${merged('status')},
+        update_time = ${merged('update_time')},
         language = excluded.language,
         cover_uri = excluded.cover_uri,
-        tags_json = COALESCE(excluded.tags_json, comics.tags_json),
-        page_count = COALESCE(excluded.page_count, comics.page_count),
+        tags_json = ${merged('tags_json')},
+        page_count = ${merged('page_count')},
         normalized_title = excluded.normalized_title,
         updated_at = excluded.updated_at,
         base_info_updated_at = excluded.base_info_updated_at;
@@ -440,6 +737,37 @@ class DomainDatabase {
         now,
       ],
     );
+    if (replaceMetadata) {
+      // The work row is a snapshot taken once and wins over the comic row in
+      // [getComicBaseInfo], so a stale snapshot would outlive the fix above.
+      db.execute(
+        '''
+        UPDATE works SET
+          title = ?,
+          author = ?,
+          status = ?,
+          update_time = ?,
+          cover_uri = ?,
+          description = ?,
+          tags_json = ?,
+          page_count = ?,
+          updated_at = ?
+        WHERE work_id = ?;
+        ''',
+        [
+          _emptyToNull(title),
+          _emptyToNull(author),
+          _emptyToNull(status),
+          _emptyToNull(updateTime),
+          _emptyToNull(coverUri),
+          _emptyToNull(description),
+          tags == null || tags.isEmpty ? null : tagsJson,
+          pageCount,
+          now,
+          _ownWorkIdFor(comicId),
+        ],
+      );
+    }
     _createAutoWorkCandidates(
       comicId: comicId,
       title: title,
@@ -447,6 +775,42 @@ class DomainDatabase {
       timestamp: now,
     );
     return comicId;
+  }
+
+  /// Whether [ensureComicSource]'s upserts would leave the stored rows as they
+  /// are: a list page re-shows comics already held, and one read beats several
+  /// writes plus a title match. [mergedValues] are kept when absent. Write
+  /// timestamps alone don't count as a change.
+  bool _storedComicMatches({
+    required SourcePlatformRef platform,
+    required String sourceComicId,
+    required String comicId,
+    required Map<String, Object?> values,
+    required Map<String, Object?> mergedValues,
+  }) {
+    final rows = db.select(
+      '''
+      SELECT
+        c.title, c.subtitle, c.description, c.language, c.cover_uri,
+        c.normalized_title, c.author, c.status, c.update_time, c.tags_json,
+        c.page_count, s.source_url, s.source_title, s.comic_id AS linked_id,
+        s.status AS link_status
+      FROM comic_sources s
+      JOIN comics c ON c.comic_id = s.comic_id
+      WHERE s.platform_id = ? AND s.source_comic_id = ?;
+      ''',
+      [platform.platformId, sourceComicId],
+    );
+    if (rows.isEmpty) {
+      return false;
+    }
+    final row = rows.single;
+    return row['linked_id'] == comicId &&
+        row['link_status'] == 'accepted' &&
+        values.entries.every((e) => row[e.key] == e.value) &&
+        mergedValues.entries.every(
+          (e) => e.value == null || row[e.key] == e.value,
+        );
   }
 
   DomainComicBaseInfo? getComicBaseInfo(String comicId) {
@@ -495,7 +859,6 @@ class DomainDatabase {
     required SourcePlatformRef platform,
     required String sourceComicId,
     required List<DomainComicChapterInfo> chapters,
-    int? timestamp,
   }) {
     final sourceRows = db.select(
       '''
@@ -509,137 +872,31 @@ class DomainDatabase {
     if (sourceRows.isEmpty) {
       return;
     }
-
-    final now = timestamp ?? DateTime.now().millisecondsSinceEpoch;
     final comicSourceId = sourceRows.single['comic_source_id'] as int;
-    final comicId = sourceRows.single['comic_id'] as String;
+    final encoded = _encodeChapters(
+      chapters,
+      sourceRows.single['comic_id'] as String,
+    );
     // Bulk update checks re-mirror every followed comic's chapter list on each
-    // pass; deleting and re-inserting hundreds of rows when nothing changed is
-    // the largest synchronous write burst on the UI isolate (reader jank
-    // during a check). One indexed read to compare is far cheaper.
-    if (_sourceChaptersUnchanged(comicSourceId, comicId, chapters)) {
-      return;
-    }
-    db.execute('BEGIN TRANSACTION;');
-    try {
-      db.execute(
-        '''
-        DELETE FROM chapter_sources
-        WHERE comic_source_id = ?;
-        ''',
-        [comicSourceId],
-      );
-      for (final chapter in chapters) {
-        final chapterId = '$comicId:chapter:${chapter.chapterIndex}';
-        final sourceChapterId = chapter.sourceChapterId ?? chapterId;
-        db.execute(
-          '''
-          INSERT INTO chapters (
-            chapter_id,
-            comic_id,
-            title,
-            chapter_index,
-            source_chapter_id,
-            created_at
-          ) VALUES (?, ?, ?, ?, ?, ?)
-          ON CONFLICT(comic_id, chapter_index) DO UPDATE SET
-            title = excluded.title,
-            source_chapter_id = excluded.source_chapter_id;
-          ''',
-          [
-            chapterId,
-            comicId,
-            chapter.title,
-            chapter.chapterIndex,
-            sourceChapterId,
-            now,
-          ],
-        );
-        db.execute(
-          '''
-          INSERT INTO chapter_sources (
-            chapter_id,
-            comic_source_id,
-            source_chapter_id,
-            source_chapter_index,
-            source_title,
-            source_chapter_group,
-            source_group_title,
-            source_chapter_index_in_group
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(comic_source_id, source_chapter_id) DO UPDATE SET
-            chapter_id = excluded.chapter_id,
-            source_chapter_index = excluded.source_chapter_index,
-            source_title = excluded.source_title,
-            source_chapter_group = excluded.source_chapter_group,
-            source_group_title = excluded.source_group_title,
-            source_chapter_index_in_group =
-              excluded.source_chapter_index_in_group;
-          ''',
-          [
-            chapterId,
-            comicSourceId,
-            sourceChapterId,
-            chapter.sourceChapterIndex ?? chapter.chapterIndex,
-            chapter.title,
-            chapter.sourceChapterGroup,
-            chapter.sourceGroupTitle,
-            chapter.sourceChapterIndexInGroup,
-          ],
-        );
-      }
-      db.execute('COMMIT;');
-    } catch (_) {
-      db.execute('ROLLBACK;');
-      rethrow;
-    }
-  }
-
-  /// Whether the stored chapter rows for [comicSourceId] already match
-  /// [chapters] field-for-field, so [replaceSourceChapters] can skip its
-  /// delete+reinsert. Compares exactly the columns that call would write.
-  bool _sourceChaptersUnchanged(
-    int comicSourceId,
-    String comicId,
-    List<DomainComicChapterInfo> chapters,
-  ) {
-    final rows = db.select(
-      '''
-      SELECT
-        chapter_id,
-        source_chapter_id,
-        source_chapter_index,
-        source_title,
-        source_chapter_group,
-        source_group_title,
-        source_chapter_index_in_group
-      FROM chapter_sources
-      WHERE comic_source_id = ?
-      ORDER BY source_chapter_index, chapter_id;
-      ''',
+    // pass. One indexed read to compare keeps an unchanged list from becoming
+    // a write on the UI isolate (reader jank during a check).
+    final stored = db.select(
+      'SELECT chapters_json FROM comic_source_chapters '
+      'WHERE comic_source_id = ?;',
       [comicSourceId],
     );
-    if (rows.length != chapters.length) {
-      return false;
+    if (stored.isNotEmpty && stored.single['chapters_json'] == encoded) {
+      return;
     }
-    for (var i = 0; i < chapters.length; i++) {
-      final chapter = chapters[i];
-      final row = rows[i];
-      final chapterId = '$comicId:chapter:${chapter.chapterIndex}';
-      final sourceChapterId = chapter.sourceChapterId ?? chapterId;
-      if (row['chapter_id'] != chapterId ||
-          row['source_chapter_id'] != sourceChapterId ||
-          row['source_chapter_index'] !=
-              (chapter.sourceChapterIndex ?? chapter.chapterIndex) ||
-          row['source_title'] != chapter.title ||
-          row['source_chapter_group'] != chapter.sourceChapterGroup ||
-          row['source_group_title'] != chapter.sourceGroupTitle ||
-          row['source_chapter_index_in_group'] !=
-              chapter.sourceChapterIndexInGroup) {
-        return false;
-      }
-    }
-    return true;
+    db.execute(
+      '''
+      INSERT INTO comic_source_chapters (comic_source_id, chapters_json)
+      VALUES (?, ?)
+      ON CONFLICT(comic_source_id) DO UPDATE SET
+        chapters_json = excluded.chapters_json;
+      ''',
+      [comicSourceId, encoded],
+    );
   }
 
   List<DomainComicChapterInfo> getSourceChapters({
@@ -648,26 +905,86 @@ class DomainDatabase {
   }) {
     final rows = db.select(
       '''
-      SELECT
-        ch.chapter_id,
-        COALESCE(NULLIF(cs.source_title, ''), ch.title) AS title,
-        ch.chapter_index,
-        cs.source_chapter_id,
-        cs.source_chapter_index,
-        cs.source_chapter_group,
-        cs.source_group_title,
-        cs.source_chapter_index_in_group
+      SELECT src.comic_id, c.chapters_json
       FROM comic_sources src
-      JOIN chapter_sources cs ON cs.comic_source_id = src.comic_source_id
-      JOIN chapters ch ON ch.chapter_id = cs.chapter_id
-      WHERE src.platform_id = ? AND src.source_comic_id = ?
-      ORDER BY
-        COALESCE(cs.source_chapter_index, ch.chapter_index),
-        ch.chapter_index;
+      JOIN comic_source_chapters c ON c.comic_source_id = src.comic_source_id
+      WHERE src.platform_id = ? AND src.source_comic_id = ?;
       ''',
       [platform.platformId, sourceComicId],
     );
-    return rows.map(_chapterInfoFromRow).toList();
+    if (rows.isEmpty) {
+      return const [];
+    }
+    return _decodeChapters(
+      rows.single['chapters_json'] as String,
+      rows.single['comic_id'] as String,
+    );
+  }
+
+  /// One JSON array per chapter, in list order: `[id, title]`, then the group
+  /// triple when the list is grouped, then both indexes when they are not
+  /// simply the position.
+  static String _encodeChapters(
+    List<DomainComicChapterInfo> chapters,
+    String comicId,
+  ) {
+    final entries = <List<Object?>>[];
+    for (var i = 0; i < chapters.length; i++) {
+      final chapter = chapters[i];
+      final sourceIndex = chapter.sourceChapterIndex ?? chapter.chapterIndex;
+      final ownIndexes =
+          chapter.chapterIndex != i + 1 || sourceIndex != chapter.chapterIndex;
+      final grouped =
+          chapter.sourceChapterGroup != null ||
+          chapter.sourceGroupTitle != null ||
+          chapter.sourceChapterIndexInGroup != null;
+      entries.add([
+        chapter.sourceChapterId ?? '$comicId:chapter:${chapter.chapterIndex}',
+        chapter.title,
+        if (grouped || ownIndexes) ...[
+          chapter.sourceChapterGroup,
+          chapter.sourceGroupTitle,
+          chapter.sourceChapterIndexInGroup,
+        ],
+        if (ownIndexes) ...[chapter.chapterIndex, sourceIndex],
+      ]);
+    }
+    return jsonEncode(entries);
+  }
+
+  static List<DomainComicChapterInfo> _decodeChapters(
+    String encoded,
+    String comicId,
+  ) {
+    final entries = jsonDecode(encoded) as List;
+    final chapters = <DomainComicChapterInfo>[];
+    var ownIndexes = false;
+    for (var i = 0; i < entries.length; i++) {
+      final entry = entries[i] as List;
+      final chapterIndex = entry.length > 5 ? entry[5] as int : i + 1;
+      ownIndexes = ownIndexes || entry.length > 5;
+      chapters.add(
+        DomainComicChapterInfo(
+          chapterId: '$comicId:chapter:$chapterIndex',
+          title: entry[1] as String,
+          chapterIndex: chapterIndex,
+          sourceChapterId: entry[0] as String,
+          sourceChapterIndex: entry.length > 6 ? entry[6] as int : chapterIndex,
+          sourceChapterGroup: entry.length > 2 ? entry[2] as int? : null,
+          sourceGroupTitle: entry.length > 3 ? entry[3] as String? : null,
+          sourceChapterIndexInGroup: entry.length > 4 ? entry[4] as int? : null,
+        ),
+      );
+    }
+    if (ownIndexes) {
+      chapters.sort((a, b) {
+        final bySource = a.sourceChapterIndex!.compareTo(b.sourceChapterIndex!);
+        return bySource != 0
+            ? bySource
+            : a.chapterIndex.compareTo(b.chapterIndex);
+      });
+    }
+    return chapters;
   }
 
   String ensureWorkForComic({
@@ -697,7 +1014,7 @@ class DomainDatabase {
 
     final now = timestamp ?? DateTime.now().millisecondsSinceEpoch;
     final baseInfo = getComicBaseInfo(comicId);
-    final workId = 'work:$comicId';
+    final workId = _ownWorkIdFor(comicId);
     db.execute(
       '''
       INSERT INTO works (
@@ -932,6 +1249,18 @@ class DomainDatabase {
   }
 
   void ensureSourcePlatform(SourcePlatformRef platform, {int? timestamp}) {
+    final key = [
+      platform.platformId,
+      platform.canonicalKey,
+      platform.displayName,
+      platform.kind.value,
+      platform.legacyIntType,
+      platform.matchedAlias,
+      platform.matchedAliasType.value,
+    ].join('\u0000');
+    if (_ensuredPlatforms.contains(key)) {
+      return;
+    }
     db.execute(
       '''
       INSERT INTO source_platforms (
@@ -976,15 +1305,37 @@ class DomainDatabase {
         platform.legacyIntType,
       ],
     );
+    _ensuredPlatforms.add(key);
+  }
+
+  /// Runs [body] as one transaction, so a batch of small writes costs one
+  /// commit instead of one per statement.
+  void runInTransaction(void Function() body) {
+    if (!db.autocommit) {
+      body();
+      return;
+    }
+    db.execute('BEGIN TRANSACTION;');
+    try {
+      body();
+      db.execute('COMMIT;');
+    } catch (_) {
+      if (!db.autocommit) {
+        db.execute('ROLLBACK;');
+      }
+      // Rows recorded as written may have been rolled back.
+      _ensuredPlatforms.clear();
+      rethrow;
+    }
   }
 
   /// Removes a source comic and all of its dependent rows (work links, local
-  /// library item, chapters, history events, favorites — via FK cascade).
+  /// library item, chapters, favorites — via FK cascade).
   ///
-  /// Local comic ids are reused after deletion ([LocalManager.findValidId]),
-  /// so a stale mirror left behind would attach the old comic's work link —
-  /// and therefore its title/cover — to the next comic that gets the same id
-  /// (issue #135). Works left without any source are cleaned up as well.
+  /// Older versions reused local comic ids, so a stale mirror could attach the
+  /// old comic's work link — and therefore its title/cover — to the next comic
+  /// that got the same id (issue #135). Works left without any source are
+  /// cleaned up as well.
   void removeComicSource({
     required SourcePlatformRef platform,
     required String sourceComicId,
@@ -1047,30 +1398,6 @@ class DomainDatabase {
         folderName,
         sortOrder,
         timestamp ?? DateTime.now().millisecondsSinceEpoch,
-      ],
-    );
-  }
-
-  void markRead({
-    required String comicId,
-    String? chapterId,
-    String? pageId,
-    int? occurredAt,
-  }) {
-    db.execute(
-      '''
-      INSERT INTO history_events (
-        comic_id,
-        chapter_id,
-        page_id,
-        occurred_at
-      ) VALUES (?, ?, ?, ?);
-      ''',
-      [
-        comicId,
-        chapterId,
-        pageId,
-        occurredAt ?? DateTime.now().millisecondsSinceEpoch,
       ],
     );
   }
@@ -1197,19 +1524,6 @@ class DomainDatabase {
       tags: _decodeTags(row['tags_json']),
       pageCount: row['page_count'] as int?,
       workId: row['work_id'] as String?,
-    );
-  }
-
-  DomainComicChapterInfo _chapterInfoFromRow(Row row) {
-    return DomainComicChapterInfo(
-      chapterId: row['chapter_id'] as String,
-      title: row['title'] as String,
-      chapterIndex: row['chapter_index'] as int,
-      sourceChapterId: row['source_chapter_id'] as String?,
-      sourceChapterIndex: row['source_chapter_index'] as int?,
-      sourceChapterGroup: row['source_chapter_group'] as int?,
-      sourceGroupTitle: row['source_group_title'] as String?,
-      sourceChapterIndexInGroup: row['source_chapter_index_in_group'] as int?,
     );
   }
 
@@ -1383,43 +1697,9 @@ CREATE TABLE IF NOT EXISTS local_library_items (
   FOREIGN KEY (comic_id) REFERENCES comics(comic_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS chapters (
-  chapter_id TEXT PRIMARY KEY,
-  comic_id TEXT NOT NULL,
-  title TEXT NOT NULL,
-  chapter_index INTEGER NOT NULL,
-  source_chapter_id TEXT,
-  is_hidden INTEGER NOT NULL DEFAULT 0 CHECK (is_hidden IN (0, 1)),
-  created_at INTEGER NOT NULL,
-  UNIQUE (comic_id, chapter_index),
-  FOREIGN KEY (comic_id) REFERENCES comics(comic_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS pages (
-  page_id TEXT PRIMARY KEY,
-  chapter_id TEXT NOT NULL,
-  page_index INTEGER NOT NULL,
-  uri TEXT NOT NULL,
-  is_hidden INTEGER NOT NULL DEFAULT 0 CHECK (is_hidden IN (0, 1)),
-  width INTEGER,
-  height INTEGER,
-  created_at INTEGER NOT NULL,
-  UNIQUE (chapter_id, page_index),
-  FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS chapter_sources (
-  chapter_source_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  chapter_id TEXT NOT NULL,
-  comic_source_id INTEGER NOT NULL,
-  source_chapter_id TEXT,
-  source_chapter_index INTEGER,
-  source_title TEXT,
-  source_chapter_group INTEGER,
-  source_group_title TEXT,
-  source_chapter_index_in_group INTEGER,
-  UNIQUE (comic_source_id, source_chapter_id),
-  FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS comic_source_chapters (
+  comic_source_id INTEGER PRIMARY KEY,
+  chapters_json TEXT NOT NULL,
   FOREIGN KEY (comic_source_id) REFERENCES comic_sources(comic_source_id)
     ON DELETE CASCADE
 );
@@ -1429,18 +1709,6 @@ CREATE TABLE IF NOT EXISTS tags (
   name TEXT NOT NULL UNIQUE,
   translated_name TEXT,
   created_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS history_events (
-  history_event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  comic_id TEXT NOT NULL,
-  chapter_id TEXT,
-  page_id TEXT,
-  event_type TEXT NOT NULL DEFAULT 'read',
-  occurred_at INTEGER NOT NULL,
-  FOREIGN KEY (comic_id) REFERENCES comics(comic_id) ON DELETE CASCADE,
-  FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE SET NULL,
-  FOREIGN KEY (page_id) REFERENCES pages(page_id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS favorites (
@@ -1459,10 +1727,4 @@ CREATE INDEX IF NOT EXISTS idx_work_sources_comic_id
   ON work_sources(comic_id, link_status);
 CREATE INDEX IF NOT EXISTS idx_local_library_items_comic_id
   ON local_library_items(comic_id);
-CREATE INDEX IF NOT EXISTS idx_chapters_comic_id
-  ON chapters(comic_id, chapter_index);
-CREATE INDEX IF NOT EXISTS idx_pages_chapter_id
-  ON pages(chapter_id, page_index);
-CREATE INDEX IF NOT EXISTS idx_history_events_comic_time
-  ON history_events(comic_id, occurred_at);
 ''';

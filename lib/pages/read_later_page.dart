@@ -3,7 +3,7 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/read_later.dart';
-import 'package:venera/pages/favorites/favorite_actions.dart';
+import 'package:venera/pages/favorites/favorites_page.dart';
 import 'package:venera/utils/translations.dart';
 
 class ReadLaterPage extends StatefulWidget {
@@ -272,6 +272,7 @@ class _ReadLaterPageState extends State<ReadLaterPage>
               SliverGridComics(
                 comics: filteredComics,
                 selections: selectedItems,
+                enableContextMenu: !multiSelectMode,
                 onLongPressed: null,
                 swipeActionBuilder: multiSelectMode
                     ? null
@@ -302,16 +303,22 @@ class _ReadLaterPageState extends State<ReadLaterPage>
                 menuBuilder: (c) {
                   return [
                     MenuEntry(
-                      icon: Icons.favorite_border,
-                      text: 'Add to favorites'.tl,
-                      onClick: () {
-                        addFavorite([c as ReadLaterItem]);
-                      },
+                      action: MenuAction.select,
+                      icon: Icons.checklist,
+                      text: 'Multi-Select'.tl,
+                      onClick: () => setState(() {
+                        multiSelectMode = true;
+                        selectedItems[c as ReadLaterItem] = true;
+                      }),
                     ),
                     MenuEntry(
-                      icon: Icons.delete_outline,
-                      text: 'Remove'.tl,
-                      color: context.colorScheme.error,
+                      action: MenuAction.readLater,
+                      group: MenuGroup.organize,
+                      role: MenuEntryRole.quick,
+                      isSelected: true,
+                      icon: Icons.bookmark_remove_outlined,
+                      text: 'Remove from read later'.tl,
+                      compactText: 'In read later'.tl,
                       onClick: () {
                         _removeSingle(c as ReadLaterItem);
                       },

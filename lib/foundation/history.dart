@@ -11,6 +11,7 @@ import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/image_provider/image_favorites_provider.dart';
+import 'package:venera/foundation/local.dart';
 import 'package:venera/foundation/log.dart';
 import 'package:venera/foundation/reading_statistics.dart';
 import 'package:venera/foundation/source_platform.dart';
@@ -400,16 +401,40 @@ class HistoryManager with ChangeNotifier {
     }
   }
 
-  ReadingStatisticsSummary getReadingStatistics({DateTime? now}) {
+  ReadingStatisticsSummary getReadingStatistics({
+    DateTime? now,
+    DateTime? month,
+    DateTime? start,
+    DateTime? end,
+    bool allTime = false,
+  }) {
     final current = now ?? DateTime.now();
     if (!isInitialized || _isCorrupted) {
-      return ReadingStatisticsSummary.empty(current);
+      return ReadingStatisticsSummary.empty(
+        current,
+        month: month,
+        start: start,
+        end: end,
+        allTime: allTime,
+      );
     }
     try {
-      return _readingStatistics.readSummary(now: current);
+      return _readingStatistics.readSummary(
+        now: current,
+        month: month,
+        start: start,
+        end: end,
+        allTime: allTime,
+      );
     } on SqliteException catch (e) {
       _handleCorruption(e);
-      return ReadingStatisticsSummary.empty(current);
+      return ReadingStatisticsSummary.empty(
+        current,
+        month: month,
+        start: start,
+        end: end,
+        allTime: allTime,
+      );
     }
   }
 
@@ -464,15 +489,12 @@ class HistoryManager with ChangeNotifier {
         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       """;
 
-  /// 與 [_insertHistorySql] 相同的寫入，但把該行現有的 `hidden` 值帶過去，
-  /// 不讓 `insert or replace` 把它重置成 NULL。
-  ///
-  /// 子查詢放在 VALUES 行內：SQLite 在 REPLACE 刪除衝突行【之前】就求值，
-  /// 讀到的是原本的標記。故意用單條語句，避免和 [_addHistoryAsync] 的
-  /// isolate 寫入產生競態。
+  /// Updates existing history without changing visibility or recreating a
+  /// record whose reading progress has been deleted.
   static const _updateHistoryKeepVisibilitySql = """
-        insert or replace into history (id, title, subtitle, cover, time, type, ep, page, readEpisode, max_page, chapter_group, hidden)
-        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (select hidden from history where id == ? and type == ?));
+        update history set id = ?, title = ?, subtitle = ?, cover = ?, time = ?,
+        type = ?, ep = ?, page = ?, readEpisode = ?, max_page = ?, chapter_group = ?
+        where id == ? and type == ?;
       """;
 
   static String _cacheKey(String id, ComicType type) => "${type.value}:$id";
@@ -572,6 +594,7 @@ class HistoryManager with ChangeNotifier {
   }
 
   void _cacheAddedHistory(History newItem) {
+    if (newItem.type == ComicType.local) _localIdsByTitle = null;
     if (_cachedHistoryIds == null) {
       updateCache();
     } else {
@@ -585,6 +608,7 @@ class HistoryManager with ChangeNotifier {
 
   void _clearCache() {
     _cachedHistoryIds = null;
+    _localIdsByTitle = null;
     cachedHistories.clear();
   }
 
@@ -632,11 +656,13 @@ class HistoryManager with ChangeNotifier {
     return save;
   }
 
-  /// 保存 [newItem] 但【不改變】它是否顯示在歷史列表裡。
+  /// Persists [newItem] without changing whether it shows in the history list.
   ///
-  /// 用於 App 自己發起的維護性寫入（補封面、本機重掃後補資料）：
-  /// [addHistory] 的語義是「用戶讀了」所以會取消隱藏，那是對的；
-  /// 但背景補完封面如果落在用戶刪除記錄之後，就會把刪掉的記錄拉回來（#270）。
+  /// For maintenance writes that refresh a record's display fields on the app's
+  /// own initiative — resolving a missing cover, or re-attaching metadata after
+  /// a local rescan. [addHistory] deliberately un-hides the row, which is right
+  /// for reading but wrong here: a background cover fetch landing after the user
+  /// deleted the record would bring it straight back to the list (issue #270).
   void updateHistoryKeepingVisibility(History newItem) {
     if (!isInitialized) return;
     _db.execute(_updateHistoryKeepVisibilitySql, [
@@ -879,7 +905,7 @@ class HistoryManager with ChangeNotifier {
   /// Permanently deletes a history record, including its reading state. Use for
   /// genuine comic removal (e.g. a local comic deleted from disk), NOT for
   /// clearing the history list — use [hide] for that.
-  void remove(String id, ComicType type) async {
+  void remove(String id, ComicType type) {
     if (!isInitialized) return;
     _db.execute(
       """
@@ -894,6 +920,7 @@ class HistoryManager with ChangeNotifier {
 
   void updateCache() {
     if (!isInitialized || _isCorrupted) return;
+    _localIdsByTitle = null;
     try {
       _cachedHistoryIds = {};
       var res = _db.select("""
@@ -919,6 +946,63 @@ class HistoryManager with ChangeNotifier {
 
   History? find(String id, ComicType type) {
     if (!isInitialized || _isCorrupted) return null;
+    final own = _findRecord(id, type);
+    if (type != ComicType.local) return own;
+    return _preferSyncedLocalRecord(id, own);
+  }
+
+  /// Local comic ids are per device, so reading a local comic on another
+  /// device leaves its record under that device's id. Once
+  /// [LocalManager.findSyncedCopy] pairs such a record with this comic, the
+  /// newer of the two carries the reading state; writes go back to that
+  /// record, so both devices share it (issue #348).
+  History? _preferSyncedLocalRecord(String id, History? own) {
+    final idsByTitle = _localRecordIdsByTitle();
+    if (idsByTitle.isEmpty || !LocalManager().isInitialized) return own;
+    final LocalComic? comic;
+    try {
+      comic = LocalManager().find(id, ComicType.local);
+    } catch (_) {
+      return own;
+    }
+    if (comic == null) return own;
+    var best = own;
+    for (final otherId in idsByTitle[comic.title] ?? const <String>[]) {
+      if (otherId == id) continue;
+      if (LocalManager().findSyncedCopy(otherId, comic.title)?.id != id) {
+        continue;
+      }
+      final other = _findRecord(otherId, ComicType.local);
+      if (other != null && (best == null || other.time.isAfter(best.time))) {
+        best = other;
+      }
+    }
+    return best;
+  }
+
+  Map<String, List<String>>? _localIdsByTitle;
+
+  Map<String, List<String>> _localRecordIdsByTitle() {
+    final cached = _localIdsByTitle;
+    if (cached != null) return cached;
+    final result = <String, List<String>>{};
+    try {
+      final rows = _db.select(
+        'select id, title from history where type == ?;',
+        [ComicType.local.value],
+      );
+      for (final row in rows) {
+        final title = row['title'];
+        if (title is! String || title.isEmpty) continue;
+        (result[title] ??= []).add(row['id'] as String);
+      }
+    } on SqliteException catch (e) {
+      _handleCorruption(e);
+    }
+    return _localIdsByTitle = result;
+  }
+
+  History? _findRecord(String id, ComicType type) {
     if (_cachedHistoryIds == null) {
       updateCache();
     }
@@ -957,6 +1041,27 @@ class HistoryManager with ChangeNotifier {
       order by time DESC;
     """);
     return res.map((element) => History.fromRow(element)).toList();
+  }
+
+  /// Every comic with reading state or reading time on this device, including
+  /// ones cleared from the history list.
+  List<ComicID> recordedComics() {
+    if (!isInitialized || _isCorrupted) return const [];
+    try {
+      return _db
+          .select('''
+            select id, type from history
+            union
+            select id, type from reading_statistics;
+          ''')
+          .map(
+            (row) => ComicID(ComicType(row['type'] as int), row['id'] as String),
+          )
+          .toList();
+    } on SqliteException catch (e) {
+      _handleCorruption(e);
+      return const [];
+    }
   }
 
   List<History> getAll() {
@@ -1075,23 +1180,17 @@ class HistoryManager with ChangeNotifier {
         try {
           const ComicStateRepository().mirrorComicDetails(comicDetails);
         } catch (_) {}
-        // Update history info while keeping reading progress
-        var updatedHistory = History.fromMap({
-          'type': history.type.value,
-          'time': history.time.millisecondsSinceEpoch,
-          'title': comicDetails.title,
-          'subtitle': comicDetails.subTitle ?? '',
-          'cover': comicDetails.cover,
-          'ep': history.ep,
-          'page': history.page,
-          'id': history.id,
-          'readEpisode': history.readEpisode.toList(),
-          'max_page': history.maxPage,
-        });
-        updatedHistory.group = history.group;
+        // Reading may have advanced or been cleared while the request ran.
+        final updatedHistory = find(history.id, history.type);
+        if (updatedHistory == null) return const _HistoryRefreshResult(true);
+        updatedHistory
+          ..title = comicDetails.title
+          ..subtitle = comicDetails.subTitle ?? ''
+          ..cover = comicDetails.cover;
 
-        // 刷新只改顯示欄位，不能把用戶已刪掉的記錄拉回列表
-        //（refresh-all 任務用的是刪除前拍的快照）
+        // A refresh only rewrites display fields, so it must not pull a record
+        // the user removed from the list back into it — the refresh-all task
+        // works from a snapshot taken before the deletion.
         updateHistoryKeepingVisibility(updatedHistory);
         return const _HistoryRefreshResult(true);
       } catch (e, s) {

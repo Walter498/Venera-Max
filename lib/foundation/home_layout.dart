@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:venera/foundation/appdata.dart';
-import 'package:venera/foundation/comic_source/comic_source.dart';
 
 /// Metadata for a single customizable section on the home page.
 ///
@@ -24,9 +23,6 @@ class HomeSectionMeta {
 /// required for migration: [normalizeHomeLayout] appends any known section
 /// missing from a stored/synced config to the end, visible by default.
 const List<HomeSectionMeta> kHomeSections = [
-  // ⑩ 源內容首頁（圖七樣式）：頂部源分頁 + 三列網格 + 换一换/更多。
-  // 放在最前面，讓首頁一打開就是這個版面。
-  HomeSectionMeta('sourceHome', 'Source Home', Icons.home_outlined),
   HomeSectionMeta('history', 'History', Icons.history),
   HomeSectionMeta('readLater', 'Read Later', Icons.watch_later_outlined),
   HomeSectionMeta('translatedComics', 'Translation Library', Icons.translate),
@@ -88,13 +84,7 @@ List<HomeSectionConfig> normalizeHomeLayout() {
   }
   for (var s in kHomeSections) {
     if (!seen.contains(s.id)) {
-      // 首頁源內容是新的主打版面：既有配置在遷移時直接插到最前，
-      // 而不是像其他新區塊那樣追加到末尾，否則使用者根本看不到它。
-      if (s.id == 'sourceHome') {
-        result.insert(0, HomeSectionConfig(s.id, true));
-      } else {
-        result.add(HomeSectionConfig(s.id, true));
-      }
+      result.add(HomeSectionConfig(s.id, true));
     }
   }
   return result;
@@ -193,25 +183,4 @@ void saveImageFavoritesTabs(List<HomeSectionConfig> tabs) {
     ...preserved,
   ];
   appdata.saveData();
-}
-
-/// ⑩ 首頁要顯示哪些漫畫源的內容。空集合代表「全部」（所有提供探索頁的源）。
-List<String> homeDisplaySourceKeys() {
-  final raw = appdata.settings['homeDisplaySources'];
-  if (raw is List) {
-    return raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
-  }
-  return const [];
-}
-
-/// 首頁實際可顯示的源：設定為空時回傳全部有探索頁的源。
-List<String> effectiveHomeDisplaySourceKeys() {
-  final configured = homeDisplaySourceKeys();
-  if (configured.isNotEmpty) {
-    return configured.where((k) => ComicSource.find(k) != null).toList();
-  }
-  return [
-    for (final s in ComicSource.all())
-      if (s.explorePages.isNotEmpty) s.key,
-  ];
 }

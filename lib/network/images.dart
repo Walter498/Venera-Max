@@ -9,6 +9,7 @@ import 'package:venera/foundation/image_translation/rate_limiter.dart';
 import 'package:venera/foundation/js_engine.dart';
 import 'package:venera/foundation/consts.dart';
 import 'package:venera/utils/translations.dart';
+import 'package:venera/utils/file_type.dart';
 import 'package:venera/utils/image.dart';
 import 'package:venera/foundation/image_provider/avif_fallback.dart';
 
@@ -67,6 +68,8 @@ class _ImageTaskHooks {
 }
 
 abstract class ImageDownloader {
+  static const thumbnailCacheDuration = Duration(days: 90);
+
   /// Disk cache key for a thumbnail/cover. Callers that may need to evict a
   /// corrupted entry must build the key through this, not by hand: a key that
   /// differs from the one used to write makes eviction a no-op, and bad bytes
@@ -99,6 +102,9 @@ abstract class ImageDownloader {
     String? cid, [
     _ImageTaskHooks? hooks,
   ]) async* {
+    // Apply AVIF fallback if this URL previously failed to decode.
+    url = AvifFallbackRegistry.instance.applyFallback(url);
+
     // A locally stored cover (a collection's custom cover, or one borrowed from
     // a downloaded member) can't go through the HTTP client: it rejects the
     // file scheme, which failed the whole download task (#206).
@@ -128,6 +134,7 @@ abstract class ImageDownloader {
         totalBytes: data.length,
         imageBytes: data,
       );
+      return;
     }
 
     final owner = _ImageConfigOwner();
@@ -263,8 +270,6 @@ abstract class ImageDownloader {
     String eid, {
     void Function(Duration? retryAfter)? onRateLimited,
   }) {
-    // AVIF 曾解碼失敗 → 自動改用 WebP
-    imageKey = AvifFallbackRegistry.instance.applyFallback(imageKey);
     final cacheKey = imageCacheKey(imageKey, sourceKey, cid, eid);
     return _shareComicImage(
       cacheKey,
@@ -330,8 +335,9 @@ abstract class ImageDownloader {
     void Function(Duration? retryAfter)? onRateLimited,
     _ImageTaskHooks? hooks,
   ]) async* {
-    // AVIF 曾解碼失敗 → 自動改用 WebP
+    // Apply AVIF fallback if this URL previously failed to decode.
     imageKey = AvifFallbackRegistry.instance.applyFallback(imageKey);
+
     final cacheKey = imageCacheKey(imageKey, sourceKey, cid, eid);
     final cache = hooks == null
         ? await CacheManager().findCache(cacheKey)
@@ -665,37 +671,4 @@ class ImageDownloadProgress {
     required this.totalBytes,
     this.imageBytes,
   });
-}
-
-/// 重新向漫畫源要一次「本章頁面清單」，回傳 [imageKey] 這一頁的新 URL。
-///
-/// 用途：圖片回 403/404 時，通常是源快取下來的頁面清單已經過期（頁數被高估、
-/// 或圖片線路換了）。與其直接失敗，重新解析一次往往就能拿到正確 URL。
-/// 找不到對應頁面時回傳 null，呼叫端照原本的錯誤處理走。
-Future<String?> _refreshComicPageUrl(
-  String sourceKey,
-  String cid,
-  String eid,
-  String imageKey,
-) async {
-  try {
-    final source = ComicSource.find(sourceKey);
-    final loader = source?.loadComicPages;
-    if (loader == null) return null;
-    final res = await loader(cid, eid);
-    if (!res.success) return null;
-    final list = res.data;
-    if (list.isEmpty) return null;
-    // 先按原本的位置對應
-    final index = list.indexOf(imageKey);
-    if (index >= 0) return list[index];
-    // 位置對不上（清單長度變了）：用檔名比對
-    final name = imageKey.split('/').last;
-    for (final url in list) {
-      if (url.endsWith('/$name')) return url;
-    }
-    return null;
-  } catch (_) {
-    return null;
-  }
 }

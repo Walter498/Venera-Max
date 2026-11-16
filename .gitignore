@@ -5,11 +5,9 @@
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -70,8 +68,3 @@ app_chapters_raw.json
 
 # Icon generation scratch dir (scripts, source images, build log)
 .icon_work/
-
-# 構建產物不入庫
-result/
-*.ipa
-build/

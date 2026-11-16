@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
+import 'app_shortcuts.dart';
 import 'appdata.dart';
 import 'log.dart';
 
@@ -101,7 +102,21 @@ abstract final class LauncherIconService {
   /// Whether this platform can switch app icons at runtime. Windows swaps only
   /// the live window/taskbar/tray icon (not the .exe's embedded icon); iOS and
   /// Android swap the real home-screen launcher icon.
-  static bool get isSupported => App.isAndroid || App.isIOS || App.isWindows;
+  static bool _ohosSupported = false;
+
+  static bool get isSupported =>
+      App.isAndroid || App.isIOS || App.isWindows ||
+      (App.isOhos && _ohosSupported);
+
+  static Future<void> initialize() async {
+    if (!App.isOhos) return;
+    try {
+      _ohosSupported =
+          await _channel.invokeMethod<bool>('supportsAlternateIcons') == true;
+    } catch (_) {
+      _ohosSupported = false;
+    }
+  }
 
   /// Whether this platform can only swap the *live* window icon, leaving the
   /// installed/pinned icon unchanged. Drives the extra caveat in the settings
@@ -146,6 +161,8 @@ abstract final class LauncherIconService {
           Log.warning('LauncherIcon', 'Native icon switch returned $ok');
           return false;
         }
+        // Shortcuts belong to the alias that was just disabled.
+        AppShortcuts.publish();
       } else if (App.isWindows) {
         await windowManager.setIcon(preset.windowsIcoAsset);
         // Keep the tray icon (if the tray is active) in step with the window.

@@ -57,11 +57,13 @@ class OrtRuntime {
     var candidates = <String Function()>[];
     if (Platform.isWindows) {
       candidates.add(() => 'onnxruntime.dll');
-    } else if (Platform.isAndroid) {
+    } else if (Platform.isAndroid || Platform.operatingSystem == 'ohos') {
       candidates.add(() => 'libonnxruntime.so');
     } else if (Platform.isLinux) {
-      candidates.add(() => 'libonnxruntime.so');
+      // The bundle ships only the soname; it matches the copy the plugin
+      // already loaded.
       candidates.add(() => 'libonnxruntime.so.1');
+      candidates.add(() => 'libonnxruntime.so');
     } else {
       candidates.add(() => 'libonnxruntime.dylib');
     }

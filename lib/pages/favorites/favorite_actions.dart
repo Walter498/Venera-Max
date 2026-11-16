@@ -1,74 +1,22 @@
-import 'dart:convert';
-import 'dart:math';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_reorderable_grid_view/entities/reorderable_animation_config.dart';
-import 'package:flutter_reorderable_grid_view/widgets/reorderable_builder.dart';
-import 'package:venera/components/components.dart';
-import 'package:venera/foundation/app.dart';
-import 'package:venera/foundation/appdata.dart';
-import 'package:venera/foundation/comic_collection_store.dart';
-import 'package:venera/foundation/comic_source/comic_source.dart';
-import 'package:venera/foundation/comic_type.dart';
-import 'package:venera/foundation/consts.dart';
-import 'package:venera/foundation/favorites.dart';
-import 'package:venera/foundation/favorites_meta.dart';
-import 'package:venera/foundation/history.dart';
-import 'package:venera/foundation/local.dart';
-import 'package:venera/foundation/log.dart';
-import 'package:venera/foundation/related_source_tasks.dart';
-import 'package:venera/foundation/res.dart';
-import 'package:venera/network/download.dart';
-import 'package:venera/network/cache.dart';
-import 'package:venera/pages/comic_details_page/comic_page.dart';
-import 'package:venera/pages/reader/reader.dart';
-import 'package:venera/pages/settings/settings_page.dart';
-import 'package:venera/utils/ext.dart';
-import 'package:venera/utils/io.dart';
-import 'package:venera/utils/opencc.dart';
-import 'package:venera/utils/tags_translation.dart';
-import 'package:venera/utils/translations.dart';
+part of 'favorites_page.dart';
 
-const _localAllFolderLabel = '^_^[%local_all%]^_^';
+/// Open a dialog to create a new favorite folder under [parent] (null for the
+/// top level). Returns the created folder's name.
+Future<String?> newFolder({String? parent}) async {
+  String? created;
+  await showDialog(
+    context: App.rootContext,
+    builder: (context) {
+      var controller = TextEditingController();
+      String? error;
+      var manager = LocalFavoritesManager();
+      var location = parent;
+      var canNest =
+          manager.supportsFolderNesting &&
+          manager.folderTree.ordered.isNotEmpty;
 
-/// The local "All" entry, exposed for tests.
-@visibleForTesting
-const localAllFolderLabel = _localAllFolderLabel;
-
-/// Restores the persisted favorites selection.
-///
-/// A stale local folder (deleted on this or another device) falls back to
-/// "unselected", but the "All" entry is a sentinel rather than a real folder
-/// table, so it never appears in [LocalFavoritesManager.folderNames] and must
-/// be exempt from that check.
-@visibleForTesting
-({String? folder, bool isNetwork}) restoreFavoriteFolder(
-  dynamic persisted,
-  bool Function(String folder) localFolderExists,
-) {
-  if (persisted is! Map) return (folder: null, isNetwork: false);
-  var name = persisted['name'];
-  var folder = name is String ? name : null;
-  var isNetwork = persisted['isNetwork'] == true;
-  if (folder != null &&
-      !isNetwork &&
-      folder != _localAllFolderLabel &&
-      !localFolderExists(folder)) {
-    return (folder: null, isNetwork: false);
-  }
-  return (folder: folder, isNetwork: isNetwork);
-}
-
-
-/// Open a dialog to create a new favorite folder.
-Future<void> newFolder() async {
-  return showDialog(
-      context: App.rootContext,
-      builder: (context) {
-        var controller = TextEditingController();
-        String? error;
-
-        return StatefulBuilder(builder: (context, setState) {
+      return StatefulBuilder(
+        builder: (context, setState) {
           return ContentDialog(
             title: "New Folder".tl,
             content: Column(
@@ -87,57 +35,178 @@ Future<void> newFolder() async {
                     }
                   },
                 ),
+                if (canNest)
+                  _FolderLocationPicker(
+                    value: location,
+                    onChanged: (v) => setState(() => location = v),
+                  ),
               ],
             ).paddingHorizontal(16),
             actions: [
-              TextButton(
-                child: Text("Import from file".tl),
-                onPressed: () async {
-                  var file = await selectFile(ext: ['json']);
-                  if (file == null) return;
-                  var data = await file.readAsBytes();
-                  try {
-                    LocalFavoritesManager().fromJson(utf8.decode(data));
-                  } catch (e) {
-                    context.showMessage(message: "Failed to import".tl);
-                    return;
-                  }
-                  context.pop();
-                },
-              ).paddingRight(4),
-              FilledButton(
-                onPressed: () {
-                  var e = validateFolderName(controller.text);
-                  if (e != null) {
-                    setState(() {
-                      error = e;
-                    });
-                  } else {
-                    LocalFavoritesManager().createFolder(controller.text);
-                    context.pop();
-                  }
-                },
-                child: Text("Create".tl),
+              Expanded(
+                child: OverflowBar(
+                  alignment: MainAxisAlignment.end,
+                  overflowAlignment: OverflowBarAlignment.end,
+                  spacing: 4,
+                  overflowSpacing: 8,
+                  children: [
+                    TextButton(
+                      child: Text("Import from file".tl),
+                      onPressed: () async {
+                        var file = await selectFile(ext: ['json']);
+                        if (file == null) return;
+                        var data = await file.readAsBytes();
+                        try {
+                          created = manager.fromJson(
+                            utf8.decode(data),
+                            parent: location,
+                          );
+                        } catch (e) {
+                          context.showMessage(message: "Failed to import".tl);
+                          return;
+                        }
+                        context.pop();
+                      },
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        var e = validateFolderName(controller.text);
+                        if (e != null) {
+                          setState(() {
+                            error = e;
+                          });
+                          return;
+                        }
+                        try {
+                          created = manager.createFolder(controller.text);
+                          if (location != null &&
+                              manager.supportsFolderNesting &&
+                              manager.existsFolder(location!)) {
+                            manager.moveFolder(created!, location);
+                          }
+                        } catch (err) {
+                          Log.error("Create Folder", err.toString());
+                          // A folder created but not moved stays at the top level,
+                          // so the dialog closes as usual; a failed create stays.
+                          if (created == null) {
+                            setState(() => error = err.toString());
+                            return;
+                          }
+                        }
+                        context.pop();
+                      },
+                      child: Text("Create".tl),
+                    ),
+                  ],
+                ),
               ),
             ],
           );
-        });
-      });
+        },
+      );
+    },
+  );
+  return created;
 }
 
-String? validateFolderName(String newFolderName) {
-  var folders = LocalFavoritesManager().folderNames;
+/// [renaming] is the folder being renamed, which may keep its own name in
+/// another letter case.
+String? validateFolderName(String newFolderName, {String? renaming}) {
+  // Folders are tables, and table names ignore letter case.
+  var lower = newFolderName.toLowerCase();
+  var taken = LocalFavoritesManager().folderNames.any(
+        (f) => f != renaming && f.toLowerCase() == lower,
+      );
   if (newFolderName.isEmpty) {
     return "Folder name cannot be empty".tl;
   } else if (newFolderName.length > 50) {
     return "Folder name is too long".tl;
-  } else if (folders.contains(newFolderName)) {
+  } else if (taken) {
     return "Folder already exists".tl;
+  } else if (LocalFavoritesManager.isReservedFolderName(newFolderName)) {
+    return "This name is reserved".tl;
   }
   return null;
 }
 
 void addFavorite(List<Comic> comics) {
+  if (comics.isEmpty) return;
+  if (comics.length == 1) {
+    final comic = comics.single;
+    final type = ComicType.fromKey(comic.sourceKey);
+    final source = type.comicSource;
+    final manager = LocalFavoritesManager();
+    showDialog(
+      context: App.rootContext,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          width: 520,
+          height: 600,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Favorite".tl,
+                        style: Theme.of(context).textTheme.titleLarge,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: "Close".tl,
+                      onPressed: context.pop,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ComicFavoriteList(
+                  cid: comic.id,
+                  type: type,
+                  isFavorite: null,
+                  onFavorite: (_, __) {},
+                  favoriteItem: FavoriteItem(
+                    id: comic.id,
+                    name: comic.title,
+                    coverPath: comic.cover,
+                    author: comic.subtitle ?? '',
+                    type: type,
+                    tags: comic.tags ?? [],
+                  ),
+                  comicSource: source,
+                  hasNetwork: source?.favoriteData != null && source!.isLogged,
+                  localFolders: manager.folderNames,
+                  added: manager.find(comic.id, type),
+                  closeOnFavorite: false,
+                  favoriteId: comic.favoriteId,
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: FilledButton(
+                    onPressed: context.pop,
+                    child: Text("Done".tl),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return;
+  }
   var folders = LocalFavoritesManager().folderNames;
 
   showDialog(
@@ -150,14 +219,19 @@ void addFavorite(List<Comic> comics) {
         selectedFolder = folders.isNotEmpty ? folders.first : null;
       }
 
+      var tree = LocalFavoritesManager().folderTree;
+      var labels = folders.map(tree.pathLabel).toList();
+
       return StatefulBuilder(builder: (context, setState) {
         return ContentDialog(
           title: "Select a folder".tl,
           content: ListTile(
             title: Text("Folder".tl),
             trailing: Select(
-              current: selectedFolder,
-              values: folders,
+              current: selectedFolder == null
+                  ? null
+                  : tree.pathLabel(selectedFolder!),
+              values: labels,
               minWidth: 112,
               onTap: (v) {
                 setState(() {
@@ -328,8 +402,9 @@ Future<List<FavoriteItem>> updateComicsInfo(String folder) async {
   return comics;
 }
 
-Future<void> sortFolders() async {
-  var folders = LocalFavoritesManager().folderNames;
+/// Reorders the subfolders of [parent] (null for the top level).
+Future<void> sortFolders([String? parent]) async {
+  var folders = [...LocalFavoritesManager().folderTree.childrenOf(parent)];
 
   await showPopUpWidget(
     App.rootContext,
@@ -370,7 +445,7 @@ Future<void> sortFolders() async {
     }),
   );
 
-  LocalFavoritesManager().updateOrder(folders);
+  LocalFavoritesManager().reorderFolders(parent, folders);
 }
 
 Future<void> importNetworkFolder(

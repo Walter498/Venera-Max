@@ -11,20 +11,60 @@
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		47AE655A2DB9680FFCD76428 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2780BF8CDC503135B465B554 /* Pods_Runner.framework */; };
-		4A3329C4638F708E593B7539 /* AltIconOrig@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 22439B104C57C8F39914614E /* AltIconOrig@2x.png */; };
-		574A223A52D6CD23ACA68714 /* AltIconOrig@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 15FC3510D9F9476E472C5305 /* AltIconOrig@3x.png */; };
-		5FD69E328A7A5A737A6434C5 /* AltIconFlat@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = BA74232D83DFF248713C279F /* AltIconFlat@3x.png */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
-		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		C0086D072CDEFE6E004596D9 /* DirectoryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0086D062CDEFE64004596D9 /* DirectoryPicker.swift */; };
+		4A3329C4638F708E593B7539 /* AltIconOrig@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 22439B104C57C8F39914614E /* AltIconOrig@2x.png */; };
+		574A223A52D6CD23ACA68714 /* AltIconOrig@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 15FC3510D9F9476E472C5305 /* AltIconOrig@3x.png */; };
 		F3D36C8C92B8F46AB2B1E0D7 /* AltIconFlat@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 85E5230C09DB38567FFD6498 /* AltIconFlat@2x.png */; };
+		5FD69E328A7A5A737A6434C5 /* AltIconFlat@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = BA74232D83DFF248713C279F /* AltIconFlat@3x.png */; };
 		FA01B2C3D4E5F60718293A01 /* AltIconMono@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FB01B2C3D4E5F60718293B01 /* AltIconMono@2x.png */; };
 		FA01B2C3D4E5F60718293A02 /* AltIconMono@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = FB01B2C3D4E5F60718293B02 /* AltIconMono@3x.png */; };
 		FA01B2C3D4E5F60718293A03 /* AltIconIllust@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FB01B2C3D4E5F60718293B03 /* AltIconIllust@2x.png */; };
 		FA01B2C3D4E5F60718293A04 /* AltIconIllust@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = FB01B2C3D4E5F60718293B04 /* AltIconIllust@3x.png */; };
+		33810000000000000000000D /* ReadingWidgets.appex in Embed App Extensions */ = {
+			isa = PBXBuildFile;
+			fileRef = 338100000000000000000002;
+			settings = {
+				ATTRIBUTES = (
+					RemoveHeadersOnCopy,
+				);
+			};
+		};
+		338100000000000000000016 /* ReadingWidgetData.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = 338100000000000000000010;
+		};
+		338100000000000000000017 /* ReadingWidgetBridge.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = 338100000000000000000011;
+		};
+		338100000000000000000018 /* ReadingWidgetData.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = 338100000000000000000010;
+		};
+		338100000000000000000019 /* ReadingWidgets.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = 338100000000000000000012;
+		};
+		33810000000000000000001E /* Localizable.strings in Resources */ = {
+			isa = PBXBuildFile;
+			fileRef = 33810000000000000000001A;
+		};
+		338100000000000000000021 /* WidgetKit.framework in Frameworks */ = {
+			isa = PBXBuildFile;
+			fileRef = 33810000000000000000001F;
+		};
+		338100000000000000000022 /* SwiftUI.framework in Frameworks */ = {
+			isa = PBXBuildFile;
+			fileRef = 338100000000000000000020;
+		};
+		338100000000000000000023 /* WidgetKit.framework in Frameworks */ = {
+			isa = PBXBuildFile;
+			fileRef = 33810000000000000000001F;
+		};
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +74,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
+		};
+		33810000000000000000000A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D;
+			proxyType = 1;
+			remoteGlobalIDString = 338100000000000000000001;
+			remoteInfo = ReadingWidgets;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -48,13 +95,22 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		33810000000000000000000C /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				33810000000000000000000D,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
-		15FC3510D9F9476E472C5305 /* AltIconOrig@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconOrig@3x.png"; sourceTree = "<group>"; };
-		22439B104C57C8F39914614E /* AltIconOrig@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconOrig@2x.png"; sourceTree = "<group>"; };
 		2780BF8CDC503135B465B554 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		29B89F848F26E839605E1D88 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
@@ -63,9 +119,7 @@
 		730F73FE38E23FCF3E461640 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
-		85E5230C09DB38567FFD6498 /* AltIconFlat@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconFlat@2x.png"; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -73,13 +127,100 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		BA74232D83DFF248713C279F /* AltIconFlat@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconFlat@3x.png"; sourceTree = "<group>"; };
 		C0086D062CDEFE64004596D9 /* DirectoryPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryPicker.swift; sourceTree = "<group>"; };
 		C22B8A9F3177D4A68EB8F66B /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		22439B104C57C8F39914614E /* AltIconOrig@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconOrig@2x.png"; sourceTree = "<group>"; };
+		15FC3510D9F9476E472C5305 /* AltIconOrig@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconOrig@3x.png"; sourceTree = "<group>"; };
+		85E5230C09DB38567FFD6498 /* AltIconFlat@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconFlat@2x.png"; sourceTree = "<group>"; };
+		BA74232D83DFF248713C279F /* AltIconFlat@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconFlat@3x.png"; sourceTree = "<group>"; };
 		FB01B2C3D4E5F60718293B01 /* AltIconMono@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconMono@2x.png"; sourceTree = "<group>"; };
 		FB01B2C3D4E5F60718293B02 /* AltIconMono@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconMono@3x.png"; sourceTree = "<group>"; };
 		FB01B2C3D4E5F60718293B03 /* AltIconIllust@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconIllust@2x.png"; sourceTree = "<group>"; };
 		FB01B2C3D4E5F60718293B04 /* AltIconIllust@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AltIconIllust@3x.png"; sourceTree = "<group>"; };
+		338100000000000000000002 /* ReadingWidgets.appex */ = {
+			isa = PBXFileReference;
+			explicitFileType = "wrapper.app-extension";
+			includeInIndex = 0;
+			path = ReadingWidgets.appex;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		338100000000000000000010 /* ReadingWidgetData.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = ReadingWidgetData.swift;
+			sourceTree = "<group>";
+		};
+		338100000000000000000011 /* ReadingWidgetBridge.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = ReadingWidgetBridge.swift;
+			sourceTree = "<group>";
+		};
+		338100000000000000000012 /* ReadingWidgets.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = ReadingWidgets.swift;
+			sourceTree = "<group>";
+		};
+		338100000000000000000013 /* Info.plist */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.xml;
+			path = Info.plist;
+			sourceTree = "<group>";
+		};
+		338100000000000000000014 /* ReadingWidgets.entitlements */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.entitlements;
+			path = ReadingWidgets.entitlements;
+			sourceTree = "<group>";
+		};
+		338100000000000000000015 /* Widgets.xcconfig */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.xcconfig;
+			path = Widgets.xcconfig;
+			sourceTree = "<group>";
+		};
+		33810000000000000000001B /* en */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.strings;
+			name = en;
+			path = Resources/en.lproj/Localizable.strings;
+			sourceTree = "<group>";
+		};
+		33810000000000000000001C /* zh-Hans */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.strings;
+			name = "zh-Hans";
+			path = "Resources/zh-Hans.lproj/Localizable.strings";
+			sourceTree = "<group>";
+		};
+		33810000000000000000001D /* zh-Hant */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.strings;
+			name = "zh-Hant";
+			path = "Resources/zh-Hant.lproj/Localizable.strings";
+			sourceTree = "<group>";
+		};
+		33810000000000000000001F /* WidgetKit.framework */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = wrapper.framework;
+			name = WidgetKit.framework;
+			path = System/Library/Frameworks/WidgetKit.framework;
+			sourceTree = SDKROOT;
+		};
+		338100000000000000000020 /* SwiftUI.framework */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = wrapper.framework;
+			name = SwiftUI.framework;
+			path = System/Library/Frameworks/SwiftUI.framework;
+			sourceTree = SDKROOT;
+		};
+		338100000000000000000024 /* Runner.entitlements */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.entitlements;
+			path = Runner.entitlements;
+			sourceTree = "<group>";
+		};
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,8 +228,17 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */,
+				338100000000000000000023 /* WidgetKit.framework in Frameworks */,
 				47AE655A2DB9680FFCD76428 /* Pods_Runner.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		338100000000000000000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				338100000000000000000021,
+				338100000000000000000022,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -106,6 +256,8 @@
 		338054802FDBAEE0548900A8 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				33810000000000000000001F /* WidgetKit.framework */,
+				338100000000000000000020 /* SwiftUI.framework */,
 				2780BF8CDC503135B465B554 /* Pods_Runner.framework */,
 			);
 			name = Frameworks;
@@ -114,7 +266,6 @@
 		9740EEB11CF90186004384FC /* Flutter */ = {
 			isa = PBXGroup;
 			children = (
-				78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */,
 				3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */,
 				9740EEB21CF90195004384FC /* Debug.xcconfig */,
 				7AFA3C8E1D35360C0083082E /* Release.xcconfig */,
@@ -126,6 +277,8 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
+				33810000000000000000000E /* WidgetsShared */,
+				33810000000000000000000F /* ReadingWidgets */,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -138,6 +291,7 @@
 		97C146EF1CF9000F007C117D /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				338100000000000000000002 /* ReadingWidgets.appex */,
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 			);
@@ -147,6 +301,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				338100000000000000000024 /* Runner.entitlements */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
@@ -178,6 +333,28 @@
 			path = Pods;
 			sourceTree = "<group>";
 		};
+		33810000000000000000000E /* WidgetsShared */ = {
+			isa = PBXGroup;
+			children = (
+				338100000000000000000010,
+				338100000000000000000011,
+				338100000000000000000012,
+				33810000000000000000001A,
+			);
+			name = WidgetsShared;
+			path = ../apple/Widgets;
+			sourceTree = "<group>";
+		};
+		33810000000000000000000F /* ReadingWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				338100000000000000000013,
+				338100000000000000000014,
+				338100000000000000000015,
+			);
+			path = ReadingWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -207,22 +384,39 @@
 				97C146EA1CF9000F007C117D /* Sources */,
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
+				33810000000000000000000C /* Embed App Extensions */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				6F6EF49660EAFC03D24BD1B3 /* [CP] Embed Pods Frameworks */,
-				AC162E3DECC8B61E43C768D9 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				33810000000000000000000B /* PBXTargetDependency */,
 			);
 			name = Runner;
-			packageProductDependencies = (
-				78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */,
-			);
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		338100000000000000000001 /* ReadingWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 338100000000000000000003;
+			buildPhases = (
+				338100000000000000000007,
+				338100000000000000000009,
+				338100000000000000000008,
+			);
+			buildRules = (
+
+			);
+			dependencies = (
+
+			);
+			name = ReadingWidgets;
+			productName = ReadingWidgets;
+			productReference = 338100000000000000000002;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -234,6 +428,13 @@
 				LastUpgradeCheck = 1510;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
+					338100000000000000000001 = {
+						CreatedOnToolsVersion = 16.4;
+						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups = { enabled = 1; };
+						};
+					};
 					331C8080294A63A400263BE5 = {
 						CreatedOnToolsVersion = 14.0;
 						TestTargetID = 97C146ED1CF9000F007C117D;
@@ -241,6 +442,9 @@
 					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 1100;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups = { enabled = 1; };
+						};
 					};
 				};
 			};
@@ -249,17 +453,17 @@
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				"zh-Hans",
+				"zh-Hant",
 				en,
 				Base,
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
-			packageReferences = (
-				781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */,
-			);
 			productRefGroup = 97C146EF1CF9000F007C117D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				338100000000000000000001 /* ReadingWidgets */,
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 			);
@@ -290,6 +494,14 @@
 				FA01B2C3D4E5F60718293A02 /* AltIconMono@3x.png in Resources */,
 				FA01B2C3D4E5F60718293A03 /* AltIconIllust@2x.png in Resources */,
 				FA01B2C3D4E5F60718293A04 /* AltIconIllust@3x.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		338100000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				33810000000000000000001E,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,23 +556,6 @@
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
 		};
-		AC162E3DECC8B61E43C768D9 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		B87B6CE9C9F95FAFD9996EFB /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -398,9 +593,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				338100000000000000000016 /* ReadingWidgetData.swift in Sources */,
+				338100000000000000000017 /* ReadingWidgetBridge.swift in Sources */,
 				C0086D072CDEFE6E004596D9 /* DirectoryPicker.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		338100000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				338100000000000000000018,
+				338100000000000000000019,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -411,6 +617,11 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		33810000000000000000000B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 338100000000000000000001;
+			targetProxy = 33810000000000000000000A;
 		};
 /* End PBXTargetDependency section */
 
@@ -429,6 +640,16 @@
 				97C147001CF9000F007C117D /* Base */,
 			);
 			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		33810000000000000000001A /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				33810000000000000000001B,
+				33810000000000000000001C,
+				33810000000000000000001D,
+			);
+			name = Localizable.strings;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
@@ -477,7 +698,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = iphoneos;
@@ -490,6 +711,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
@@ -511,7 +733,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = ""; CODE_SIGNING_REQUIRED = NO; CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -528,7 +750,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = ""; CODE_SIGNING_REQUIRED = NO; CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -543,7 +765,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = ""; CODE_SIGNING_REQUIRED = NO; CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -603,7 +825,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -654,7 +876,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = iphoneos;
@@ -669,6 +891,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 9740EEB21CF90195004384FC /* Debug.xcconfig */;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
@@ -691,6 +914,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
@@ -707,6 +931,90 @@
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
+		};
+		338100000000000000000004 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 338100000000000000000015;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ReadingWidgets/ReadingWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ReadingWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.kyosee.venera.ReadingWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		338100000000000000000005 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 338100000000000000000015;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ReadingWidgets/ReadingWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ReadingWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.kyosee.venera.ReadingWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		338100000000000000000006 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 338100000000000000000015;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ReadingWidgets/ReadingWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ReadingWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.kyosee.venera.ReadingWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
 		};
 /* End XCBuildConfiguration section */
 
@@ -741,21 +1049,17 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		338100000000000000000003 /* Build configuration list for PBXNativeTarget "ReadingWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				338100000000000000000004,
+				338100000000000000000005,
+				338100000000000000000006,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage;
-		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = FlutterGeneratedPluginSwiftPackage;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 97C146E61CF9000F007C117D /* Project object */;
 }

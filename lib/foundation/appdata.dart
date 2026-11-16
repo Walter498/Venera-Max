@@ -10,8 +10,9 @@ import 'package:venera/foundation/source_platform.dart';
 import 'package:venera/utils/data_sync.dart';
 import 'package:venera/utils/init.dart';
 import 'package:venera/utils/io.dart';
+import 'package:venera/utils/sync_skip.dart';
 
-class Appdata with Init {
+class Appdata with Init, ChangeNotifier {
   Appdata._create();
 
   final Settings settings = Settings._create();
@@ -32,9 +33,13 @@ class Appdata with Init {
       // Atomic replace: a kill mid-write used to truncate appdata.json, and
       // the load path resets a corrupt file — silently wiping every setting
       // (WebDAV credentials, dataVersion, ...) on the next launch.
-      futures.add(
-        writeStringAtomic(FilePath.join(App.dataPath, 'appdata.json'), data),
-      );
+      if (App.isBackgroundTask) {
+        writeStringAtomicSync(FilePath.join(App.dataPath, 'appdata.json'), data);
+      } else {
+        futures.add(
+          writeStringAtomic(FilePath.join(App.dataPath, 'appdata.json'), data),
+        );
+      }
 
       var disableSyncFields = json["settings"]["disableSyncFields"] as String;
       var json4sync = jsonDecode(data);
@@ -42,18 +47,23 @@ class Appdata with Init {
       for (var field in disabledFields) {
         json4sync["settings"].remove(field);
       }
+      if (disabledFields.contains(searchHistoryField)) {
+        json4sync.remove('searchHistory');
+      }
       var data4sync = jsonEncode(json4sync);
-      futures.add(
-        writeStringAtomic(
-          FilePath.join(App.dataPath, 'syncdata.json'),
-          data4sync,
-        ),
-      );
-
-      await Future.wait(futures);
+      if (App.isBackgroundTask) {
+        writeStringAtomicSync(FilePath.join(App.dataPath, 'syncdata.json'), data4sync);
+      } else {
+        futures.add(
+          writeStringAtomic(FilePath.join(App.dataPath, 'syncdata.json'), data4sync),
+        );
+        await Future.wait(futures);
+      }
     } finally {
       _isSavingData = false;
     }
+    // Collection settings can change in place without invoking Settings.[]=.
+    notifyListeners();
     if (sync) {
       // Funnel through the auto-upload gate: honors the user's auto-sync
       // toggle (a configured-but-disabled device must NOT upload on every
@@ -162,6 +172,14 @@ class Appdata with Init {
     // device's own system animations look like, so it stays with the device
     // (#194) rather than travelling from one phone to a tablet or desktop.
     "enablePredictiveBack",
+    // E-ink refresh is tuned to this device's panel; a phone or desktop
+    // receiving it would flash on every page turn.
+    "einkFullRefresh",
+    "einkRefreshColor",
+    "einkRefreshInterval",
+    "einkRefreshDuration",
+    "einkRipplePageTurn",
+    "einkRippleSpeed",
     // Throughput presets and their raw values are device-local. A desktop's
     // custom concurrency must never replace a phone's memory-safe tuning.
     "imageTranslationPerformancePreset",
@@ -169,13 +187,23 @@ class Appdata with Init {
     "imageTranslationOcrWorkers",
     "imageTranslationImageConcurrency",
     "imageTranslationLlmConcurrency",
+    // Shortcuts follow the machine: modifiers differ between macOS and the
+    // rest, and a global hotkey free on one PC may be taken on another.
+    "keyboardShortcuts",
   ];
 
+  /// [customFields] are the user's `disableSyncFields` entries; category
+  /// tokens expand to every key they cover (see [SyncSkipSelection]).
   @visibleForTesting
   static Set<String> syncDisabledFields(Iterable<String> customFields) => {
     ..._disableSync,
-    ...customFields,
+    ...SyncSkipSelection.fromEntries(customFields).skippedFields,
   };
+
+  /// Whether this device keeps [field] out of WebDAV sync.
+  bool isSyncSkipped(String field) => syncDisabledFields(
+    splitField(settings["disableSyncFields"] as String),
+  ).contains(field);
 
   /// Sync data from another device.
   ///
@@ -184,17 +212,16 @@ class Appdata with Init {
   /// just-downloaded (and possibly stale) data straight back to the server.
   /// Hence the final [saveData] is called with `sync: false`.
   void syncData(Map<String, dynamic> data) {
+    final disabledFields = syncDisabledFields(
+      splitField(settings["disableSyncFields"] as String),
+    );
     if (data['settings'] is Map) {
       var settings = data['settings'] as Map<String, dynamic>;
-
-      List<String> customDisableSync = splitField(
-        this.settings["disableSyncFields"] as String,
-      );
 
       int localDataVersion = _asVersion(this.settings['dataVersion']);
 
       for (var key in settings.keys) {
-        if (!syncDisabledFields(customDisableSync).contains(key)) {
+        if (!disabledFields.contains(key)) {
           this.settings[key] = settings[key];
         }
       }
@@ -211,7 +238,12 @@ class Appdata with Init {
         incomingDataVersion,
       );
     }
-    searchHistory = List.from(data['searchHistory'] ?? []);
+    // Absent when the sender skips it; like a skipped setting, that must
+    // leave this device's copy alone rather than clear it.
+    if (!disabledFields.contains(searchHistoryField) &&
+        data['searchHistory'] is List) {
+      searchHistory = List.from(data['searchHistory']);
+    }
     var implicitDataChanged = false;
     final syncedImplicitData = data['implicitData'];
     if (syncedImplicitData is Map) {
@@ -266,7 +298,13 @@ class Appdata with Init {
     };
   }
 
-  void writeImplicitData() async {
+  Future<void> writeImplicitData() async {
+    if (App.isBackgroundTask) {
+      writeStringAtomicSync(
+        FilePath.join(App.dataPath, 'implicitData.json'), jsonEncode(implicitData),
+      );
+      return;
+    }
     while (_isSavingData) {
       await Future.delayed(const Duration(milliseconds: 20));
     }
@@ -374,10 +412,13 @@ class Settings with ChangeNotifier {
     'blockedCommentWords': [],
     'defaultSearchTarget': null,
     'autoPageTurningInterval': 5, // in seconds
-    'autoScrollSpeed': 300, // 連續模式自動滾動速度（像素/秒）
-    // 連續模式上滑／下滑切換下一章所需距離（像素）。越小越容易觸發。
-    'changeChapterOffset': 160,
+    // Continuous modes only: 'scroll' replaces page turns with steady
+    // scrolling at autoScrollSpeed. See foundation/auto_page_turning.dart.
+    'autoPageTurningMode': 'page', // page, scroll
+    'autoScrollSpeed': 15, // 1 - 30, higher is faster
     'readerMode': 'galleryLeftToRight', // values of [ReaderMode]
+    'adaptiveReading': false,
+    'adaptivePagedMode': 'galleryLeftToRight',
     'enableContinuousChapterReading': true,
     'readerScreenPicNumberForLandscape': 1, // 1 - 5
     'readerScreenPicNumberForPortrait': 1, // 1 - 5
@@ -405,6 +446,7 @@ class Settings with ChangeNotifier {
     'longPressZoomPosition': "press", // press, center
     'checkUpdateOnStart': true,
     'autoCleanHistoryDays': '0', // retention days; '0' keeps history forever
+    'clearReadingProgressOnSingleHistoryDelete': false,
     'limitImageWidth': true,
     // Image width as a percentage of viewport height when limitImageWidth is on
     // (40 - 150). Above the window's own width/height ratio the cap stops
@@ -413,6 +455,9 @@ class Settings with ChangeNotifier {
     'imageWidthPercent': 70,
     // Desktop only: enter fullscreen automatically when the reader opens.
     'autoFullscreenOnRead': false,
+    // Desktop keyboard shortcut overrides, action name -> encoded binding
+    // ('' = unbound). Absent actions use the defaults in AppShortcuts.
+    'keyboardShortcuts': <String, dynamic>{},
     // Drop a comic from "Read Later" once reading it starts; history takes over
     // from there.
     'autoRemoveFromReadLater': false,
@@ -447,6 +492,7 @@ class Settings with ChangeNotifier {
     'requireDisclaimerConsent': false,
     'disclaimerConsented': false,
     'onClickFavorite': 'viewDetail', // viewDetail, read
+    'onClickLocalComic': 'viewDetail', // viewDetail, read
     'enableDnsOverrides': false,
     'dnsOverrides': {},
     // Off by default: logging every successful request costs a disk write per
@@ -458,6 +504,7 @@ class Settings with ChangeNotifier {
     'customImageProcessing': defaultCustomImageProcessing,
     'sni': true,
     'autoAddLanguageFilter': 'none', // none, chinese, english, japanese
+    'languageFilterSources': [], // source keys picked by the user
     'comicSourceListUrl': _defaultSourceListUrl,
     'comicSourceLibraries': [],
     'comicSourceProvenance': <String, dynamic>{},
@@ -483,9 +530,16 @@ class Settings with ChangeNotifier {
     'showSingleImageOnFirstPage': false,
     'enableDoubleTapToZoom': true,
     'reverseChapterOrder': false,
-    // 章節面板：按標題話號排序（來源順序不可靠時的保險），預設關
-    'chapterSortByNumber': false,
+    // Per-comic chapter order overrides. Values are chapter IDs in display
+    // order and are synced with the rest of the user's settings.
+    'chapterOrderOverrides': <String, dynamic>{},
+    // Gallery pairing moved by hand, per chapter; see GalleryPageShifts.
+    // Synced like chapter order.
+    'galleryPageShifts': <String, dynamic>{},
     'showSystemStatusBar': false,
+    // Mobile only: hold off the screen timeout for the whole reading session,
+    // not just while auto page turning.
+    'readerKeepScreenOn': false,
     'comicSpecificSettings': <String, Map<String, dynamic>>{},
     'deviceSpecificSettings': <String, Map<String, dynamic>>{},
     'deviceId': '',
@@ -495,10 +549,10 @@ class Settings with ChangeNotifier {
     'readerCenterPageOnTurn': false,
     // 连续模式相邻图片之间的间隙（逻辑像素，0 = 紧贴）。
     'readerPageSpacing': 0.0, // 0 - 50
+    // Continuous (top to bottom): cut landscape pages into stacked halves.
+    'splitWidePages': 'off', // off, rightFirst, leftFirst
     'localFavoritesFirst': true,
     'autoCloseFavoritePanel': false,
-    // ⑩ 首頁顯示源：首頁要展示哪些漫畫源的內容。空 = 全部（有探索頁的源）。
-    'homeDisplaySources': <String>[],
     'showChapterComments': true, // show chapter comments in reader
     'chapterCommentsHeightScale': 2.0, // footer viewport relative to legacy 3-row preview
     'commentsFontSize': 14.0, // font size for comment body & user name text
@@ -519,13 +573,31 @@ class Settings with ChangeNotifier {
     'readerImageEnhanceClarity': 0.0, // 0.0 - 1.0 mid-radius local contrast
     'readerImageEnhanceContrast': 0.0, // 0.0 - 1.0 level-stretch amount
     'readerImageEnhanceVibrance': 0.0, // 0.0 - 1.0 colour-page saturation lift
+    // E-ink full refresh in gallery modes (see EinkRefresher). Device-local:
+    // flashing only helps an e-ink panel, so it must not follow sync to a phone.
+    'einkFullRefresh': false,
+    'einkRefreshColor': 'white', // white, black, blackThenWhite
+    'einkRefreshInterval': 1, // page turns between refreshes, 1 - 10
+    'einkRefreshDuration': 150, // ms per refresh frame, 50 - 1000
+    // Native page-turn ripple on supported e-readers (see EinkPanel). While
+    // on, it replaces the slide animation of tap and key turns in gallery modes.
+    'einkRipplePageTurn': false,
+    'einkRippleSpeed': 'standard', // slower, standard, faster
     // 本地漫画翻译（模型按需下载，见 foundation/image_translation/）。
     // 注意：翻译是否开启按漫画独立存储于 implicitData
     // ['imageTranslationEnabledComics']，不走这里的全局阅读器设置通道——翻译
     // 消耗 token，绝不能一开即对所有漫画全局生效。此键为历史遗留，已不再读取。
     'enableImageTranslation': false,
-    'imageTranslationSource': 'auto', // auto, ja, zh, en, ko
-    'imageTranslationTarget': 'zh', // zh, zh-TW, en
+    'imageTranslationSource': 'auto', // auto or a code from TranslationSources
+    'imageTranslationTarget': 'zh', // a code from TranslationTargets
+    // User-added target languages, [{code, name}]; synced like providers.
+    'imageTranslationCustomTargets': <dynamic>[],
+    // User-added source languages with their own recognition model
+    // [{code, name, model, dict, height, size}], and an optional replacement
+    // detector {url, size}. Synced; the model files themselves are not, so
+    // each device downloads them.
+    'imageTranslationCustomSources': <dynamic>[],
+    'imageTranslationCustomDetector': <String, dynamic>{},
     'imageTranslationHfEndpoint':
         'https://huggingface.co', // model download endpoint (mirrorable)
     // 用户自己的 OpenAI 兼容端点；App 不预置任何站点或密钥。
@@ -613,6 +685,23 @@ class Settings with ChangeNotifier {
       () => <String, dynamic>{},
     )[key] = value;
     notifyListeners();
+  }
+
+  /// Writes [key] into the scope [getReaderSetting] reads it from: the
+  /// comic's own settings when enabled, else this device's, else global.
+  void setEffectiveReaderSetting(
+    String? comicId,
+    String? sourceKey,
+    String key,
+    dynamic value,
+  ) {
+    if (isComicSpecificSettingsEnabled(comicId, sourceKey)) {
+      setReaderSetting(comicId!, sourceKey!, key, value);
+    } else if (isDeviceSpecificSettingsEnabled()) {
+      setDeviceReaderSetting(key, value);
+    } else {
+      this[key] = value;
+    }
   }
 
   void resetComicReaderSettings(String key) {

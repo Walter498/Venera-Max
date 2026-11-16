@@ -5,14 +5,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_saf/flutter_saf.dart';
 import 'package:venera/foundation/app.dart';
+import 'package:venera/foundation/app_shortcuts.dart';
 import 'package:venera/foundation/cache_manager.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
+import 'package:venera/foundation/eink_screen.dart';
 import 'package:venera/foundation/history.dart';
 import 'package:venera/foundation/image_enhance_shader.dart';
 import 'package:venera/foundation/image_translation/pre_translation_tasks.dart';
 import 'package:venera/foundation/js_engine.dart';
+import 'package:venera/foundation/launcher_icon.dart';
 import 'package:venera/foundation/log.dart';
+import 'package:venera/foundation/onboarding.dart';
+import 'package:venera/foundation/ohos_follow_scheduler.dart';
 import 'package:venera/foundation/related_source_tasks.dart';
+import 'package:venera/foundation/reading_widget.dart';
 import 'package:venera/network/app_dio_io.dart';
 import 'package:venera/network/cookie_jar.dart';
 import 'package:venera/pages/comic_source_page.dart';
@@ -42,9 +48,13 @@ extension _FutureInit<T> on Future<T> {
 
 /// Critical initialization that must complete before UI renders.
 /// Only includes what's needed for theme, locale, and basic app state.
-Future<void> init() async {
+Future<void> init({bool interactive = true}) async {
   await App.init().wait();
-  if (App.isAndroid) {
+  // Never load shared state before the background extension has released it.
+  await OhosFollowScheduler.acquireUiData();
+  if (interactive) await OnboardingStore.instance.load(App.dataPath);
+  await LauncherIconService.initialize().wait();
+  if (App.isAndroid || App.isOhos || App.isIOS || App.isMacOS) {
     startAppLinkCapture();
   }
   await appdata.init().wait();
@@ -84,9 +94,7 @@ Future<void> initDeferred() async {
     CacheManager().setLimitSize(appdata.settings['cacheSize']);
     RelatedSourceTaskManager.instance;
     _checkOldConfigs();
-    _autoCleanHistory();
     if (App.isAndroid) {
-      initAndroidExtras();
       await trySetHighRefreshRate();
     }
     FlutterError.onError = (details) {
@@ -184,6 +192,22 @@ void checkUpdates() {
   PreTranslationTaskManager.instance.resumePendingTasks();
 }
 
+/// Start navigation and scheduled work after setup, agreement and app unlock.
+void startInteractiveServices() {
+  _autoCleanHistory();
+  ReadingWidgetService.instance.start();
+  if (App.isAndroid) initAndroidExtras();
+  if (App.isOhos) {
+    handleLinks();
+    handleTextShare();
+    handleNotificationRoute();
+  }
+  if (App.isIOS || App.isMacOS) handleLinks();
+  if (App.isIOS) handleNotificationRoute();
+  AppShortcuts.start();
+  checkUpdates();
+}
+
 Future<void> initPlatformServices() async {
   await Future.wait([_initRhttp(), SAFTaskWorker().init()]);
 }
@@ -200,6 +224,8 @@ void initAndroidExtras() {
   handleLinks();
   handleTextShare();
   handleNotificationRoute();
+  // Settled before settings or search ask whether to offer the ripple.
+  unawaited(EinkPanel.probeRipple());
 }
 
 Future<void> trySetHighRefreshRate() async {

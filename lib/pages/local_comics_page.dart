@@ -9,7 +9,7 @@ import 'package:venera/foundation/log.dart';
 import 'package:venera/pages/comic_details_page/comic_page.dart';
 import 'package:venera/pages/webdav_migration_dialog.dart';
 import 'package:venera/pages/downloading_page.dart';
-import 'package:venera/pages/favorites/favorite_actions.dart';
+import 'package:venera/pages/favorites/favorites_page.dart';
 import 'package:venera/utils/io.dart';
 import 'package:venera/utils/translations.dart';
 import 'package:venera/pages/home_page.dart';
@@ -29,6 +29,8 @@ class _LocalComicsPageState extends State<LocalComicsPage>
 
   late LocalSortType sortType;
 
+  bool _sortingBySize = false;
+
   String keyword = "";
 
   bool searchMode = false;
@@ -45,7 +47,9 @@ class _LocalComicsPageState extends State<LocalComicsPage>
   List<LocalComic> _collectComics() {
     List<LocalComic> all;
     if (keyword.isEmpty) {
-      all = LocalManager().getComics(sortType);
+      all = LocalManager().getComics(
+        sortType.isSize ? LocalSortType.defaultSort : sortType,
+      );
     } else {
       all = LocalManager().search(keyword);
     }
@@ -67,6 +71,26 @@ class _LocalComicsPageState extends State<LocalComicsPage>
     setState(() {
       comics = _collectComics();
     });
+    _sortBySize();
+  }
+
+  Future<void> _sortBySize() async {
+    if (!sortType.isSize || _sortingBySize) return;
+    final currentComics = comics;
+    final currentSort = sortType;
+    setState(() => _sortingBySize = true);
+    final sorted = await sortLocalComicsBySize(
+      currentComics,
+      descending: currentSort == LocalSortType.sizeDesc,
+    );
+    if (!mounted) return;
+    final unchanged = identical(comics, currentComics) && sortType == currentSort;
+    setState(() {
+      _sortingBySize = false;
+      if (unchanged) comics = sorted;
+    });
+    // Coalesce changes received while scanning and discard stale results.
+    if (!unchanged) _sortBySize();
   }
 
   late TabController _tabController;
@@ -80,6 +104,7 @@ class _LocalComicsPageState extends State<LocalComicsPage>
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_onTabChanged);
     super.initState();
+    _sortBySize();
   }
 
   @override
@@ -103,9 +128,11 @@ class _LocalComicsPageState extends State<LocalComicsPage>
       currentTab = nextTab;
       comics = _collectComics();
     });
+    _sortBySize();
   }
 
   void sort() {
+    var selectedSort = sortType;
     showDialog(
       context: context,
       builder: (context) {
@@ -113,10 +140,10 @@ class _LocalComicsPageState extends State<LocalComicsPage>
           return ContentDialog(
             title: "Sort".tl,
             content: RadioGroup<LocalSortType>(
-              groupValue: sortType,
+              groupValue: selectedSort,
               onChanged: (v) {
                 setState(() {
-                  sortType = v ?? sortType;
+                  selectedSort = v ?? selectedSort;
                 });
               },
               child: Column(
@@ -149,12 +176,21 @@ class _LocalComicsPageState extends State<LocalComicsPage>
                     title: Text("Last Read".tl),
                     value: LocalSortType.lastRead,
                   ),
+                  RadioListTile<LocalSortType>(
+                    title: Text("Size Asc".tl),
+                    value: LocalSortType.sizeAsc,
+                  ),
+                  RadioListTile<LocalSortType>(
+                    title: Text("Size Desc".tl),
+                    value: LocalSortType.sizeDesc,
+                  ),
                 ],
               ),
             ),
             actions: [
               FilledButton(
                 onPressed: () {
+                  sortType = selectedSort;
                   appdata.implicitData["local_sort"] = sortType.value;
                   appdata.writeImplicitData();
                   Navigator.pop(context);
@@ -362,13 +398,17 @@ class _LocalComicsPageState extends State<LocalComicsPage>
                 ),
               ),
             ),
+          if (sortType.isSize && _sortingBySize)
+            const SliverToBoxAdapter(child: LinearProgressIndicator()),
           if (comics.isEmpty)
             _emptyLibrary()
           else
             SliverGridComics(
             comics: comics,
             enableHero: false,
+            hideBlocked: false,
             selections: selectedItems,
+            enableContextMenu: !multiSelectMode,
             onLongPressed: (c, heroID) {
               setState(() {
                 multiSelectMode = true;
@@ -385,6 +425,8 @@ class _LocalComicsPageState extends State<LocalComicsPage>
                 var comic = c as LocalComic;
                 if (comic.status == LocalComicStatus.notDownloaded) {
                   _showNotDownloadedDialog(comic);
+                } else if (appdata.settings['onClickLocalComic'] == 'read') {
+                  comic.read();
                 } else {
                   // Unified entry: open the comic detail page (same as online
                   // comics). The detail page loads local data first so it opens
@@ -399,6 +441,16 @@ class _LocalComicsPageState extends State<LocalComicsPage>
             menuBuilder: (c) {
               return [
                 MenuEntry(
+                  action: MenuAction.select,
+                  icon: Icons.checklist,
+                  text: 'Multi-Select'.tl,
+                  onClick: () => setState(() {
+                    multiSelectMode = true;
+                    selectedItems[c as LocalComic] = true;
+                  }),
+                ),
+                MenuEntry(
+                  group: MenuGroup.more,
                   icon: Icons.folder_open,
                   text: "Open Folder".tl,
                   onClick: () {
@@ -406,6 +458,8 @@ class _LocalComicsPageState extends State<LocalComicsPage>
                   },
                 ),
                 MenuEntry(
+                  action: MenuAction.remove,
+                  destructive: true,
                   icon: Icons.delete,
                   text: "Delete".tl,
                   onClick: () {
@@ -497,6 +551,7 @@ class _LocalComicsPageState extends State<LocalComicsPage>
                           comics = _collectComics();
                         });
                         _tabController.index = 0;
+                        _sortBySize();
                       }
                     : _openImport,
               ),
@@ -570,6 +625,7 @@ class _LocalComicsPageState extends State<LocalComicsPage>
       case ExportPhase.packaging:
         return "Packaging".tl;
       case ExportPhase.writing:
+        if (task.saveWithDialog) return "Save exported file".tl;
         var pct = task.writeProgress;
         if (pct != null) {
           return "Writing to folder @p%".tlParams({
@@ -634,13 +690,14 @@ class _LocalComicsPageState extends State<LocalComicsPage>
       context.showMessage(message: "An export task is already running".tl);
       return;
     }
-    var folder = await _pickExportFolder();
+    var folder = App.isOhos ? '' : await _pickExportFolder();
     if (folder == null || !mounted) return;
     var task = manager.startExport(
       folderPath: folder,
       format: format,
       comics: comics,
       merged: merged,
+      saveWithDialog: App.isOhos,
     );
     if (task == null) return;
     var controller = showLoadingDialog(
@@ -710,27 +767,37 @@ class _LocalComicsPageState extends State<LocalComicsPage>
       context: App.rootContext,
       builder: (context) {
         bool removeComicFile = true;
-        bool removeFavoriteAndHistory = true;
+        bool removeFavorites = true;
+        bool removeHistory = true;
         return StatefulBuilder(builder: (context, state) {
           return ContentDialog(
             title: "Delete".tl,
             content: Column(
               children: [
-                CheckboxListTile(
-                  title: Text("Remove local favorite and history".tl),
-                  value: removeFavoriteAndHistory,
+                SwitchListTile(
+                  title: Text("Remove local favorite".tl),
+                  value: removeFavorites,
                   onChanged: (v) {
                     state(() {
-                      removeFavoriteAndHistory = !removeFavoriteAndHistory;
+                      removeFavorites = v;
                     });
                   },
                 ),
-                CheckboxListTile(
+                SwitchListTile(
+                  title: Text("Remove history".tl),
+                  value: removeHistory,
+                  onChanged: (v) {
+                    state(() {
+                      removeHistory = v;
+                    });
+                  },
+                ),
+                SwitchListTile(
                   title: Text("Also remove files on disk".tl),
                   value: removeComicFile,
                   onChanged: (v) {
                     state(() {
-                      removeComicFile = !removeComicFile;
+                      removeComicFile = v;
                     });
                   },
                 )
@@ -750,8 +817,9 @@ class _LocalComicsPageState extends State<LocalComicsPage>
                   context.pop();
                   LocalManager().batchDeleteComics(
                     comics,
-                    removeComicFile,
-                    removeFavoriteAndHistory,
+                    removeFileOnDisk: removeComicFile,
+                    removeFavorites: removeFavorites,
+                    removeHistory: removeHistory,
                   );
                   isDeleted = true;
                 },
@@ -768,16 +836,19 @@ class _LocalComicsPageState extends State<LocalComicsPage>
   List<MenuEntry> exportActions(List<LocalComic> comics) {
     return [
       MenuEntry(
+        group: MenuGroup.export,
         icon: Icons.outbox_outlined,
         text: "Export as cbz".tl,
         onClick: () => _startExportTask(comics, ExportFormat.cbz),
       ),
       MenuEntry(
+        group: MenuGroup.export,
         icon: Icons.picture_as_pdf_outlined,
         text: "Export as pdf".tl,
         onClick: () => _startExportTask(comics, ExportFormat.pdf),
       ),
       MenuEntry(
+        group: MenuGroup.export,
         icon: Icons.import_contacts_outlined,
         text: "Export as epub".tl,
         onClick: () => _startExportTask(comics, ExportFormat.epub),
@@ -788,6 +859,12 @@ class _LocalComicsPageState extends State<LocalComicsPage>
 
 /// Opens the folder containing the comic in the system file explorer
 Future<void> openComicFolder(LocalComic comic) async {
+  if (App.isOhos) {
+    App.rootContext.showMessage(
+      message: "Opening folders in the system file manager is unavailable on this device".tl,
+    );
+    return;
+  }
   try {
     final folderPath = comic.baseDir;
 

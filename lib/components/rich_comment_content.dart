@@ -34,6 +34,10 @@ class CommentContent extends StatelessWidget {
   /// [DefaultTextStyle] (used by compact previews that must not scale).
   final double? fontSize;
 
+  /// A single tap on the text that is not on a link. The selectable text
+  /// takes such taps, so whatever is underneath never sees them.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     if (!text.contains('<') && !text.contains('http')) {
@@ -157,6 +161,9 @@ class RichCommentContent extends StatefulWidget {
   /// Explicit font size for the comment body. When null, inherits the ambient
   /// [DefaultTextStyle] (used by compact previews that must not scale).
   final double? fontSize;
+
+  /// See [CommentContent.onTap].
+  final VoidCallback? onTap;
 
   @override
   State<RichCommentContent> createState() => _RichCommentContentState();

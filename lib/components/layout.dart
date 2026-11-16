@@ -76,21 +76,9 @@ class SliverGridDelegateWithFixedHeight extends SliverGridDelegate {
 }
 
 class SliverGridDelegateWithComics extends SliverGridDelegate {
-  SliverGridDelegateWithComics(
-      {this.overrideBrief, this.forceColumns, this.detailedItemHeight});
+  SliverGridDelegateWithComics();
 
-  /// 強制簡潔(網格)或詳細(列表)模式；null = 跟隨全域設定。
-  final bool? overrideBrief;
-
-  /// 強制列數（首頁 4x2 版面用）；null = 按寬度自適應。
-  final int? forceColumns;
-
-  /// 詳細模式的卡片高度（null = 預設 168）。收藏頁需要高一點才能顯示
-  /// 更多資訊行（作者/頁數/更新/上次閱讀…）。
-  final double? detailedItemHeight;
-
-  bool get useBriefMode =>
-      overrideBrief ?? (appdata.settings['comicDisplayMode'] == 'brief');
+  final bool useBriefMode = appdata.settings['comicDisplayMode'] == 'brief';
 
   final double scale = (appdata.settings['comicTileScale'] as num).toDouble();
 
@@ -108,7 +96,7 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
     double scale,
   ) {
     const minCrossAxisExtent = 360;
-    final itemHeight = (detailedItemHeight ?? 168) * scale;
+    final itemHeight = 168 * scale;
     final width = constraints.crossAxisExtent;
     var crossItems = width ~/ minCrossAxisExtent;
     crossItems = math.max(1, crossItems);
@@ -132,10 +120,6 @@ class SliverGridDelegateWithComics extends SliverGridDelegate {
     int crossAxisCount =
         (constraints.crossAxisExtent / (maxCrossAxisExtent + crossAxisSpacing))
             .ceil();
-    // 指定列數時直接用（首頁 4 列版面）
-    if (forceColumns != null && forceColumns! >= 1) {
-      crossAxisCount = forceColumns!;
-    }
     // Ensure a minimum count of 1, can be zero and result in an infinite extent
     // below when the window size is 0.
     crossAxisCount = math.max(1, crossAxisCount);
