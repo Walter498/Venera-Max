@@ -1037,7 +1037,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
         child: SizedBox(
           width: MediaQuery.sizeOf(context).width,
           height: vertical ? null : MediaQuery.sizeOf(context).height,
-          child: gestures?.wrapChapterComments(comments) ?? comments,
+          child: comments,
         ),
       );
     }

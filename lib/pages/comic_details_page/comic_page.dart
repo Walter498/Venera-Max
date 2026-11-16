@@ -44,7 +44,7 @@ import 'package:venera/network/download.dart';
 import 'package:venera/network/cache.dart';
 import 'package:venera/pages/aggregated_search_page.dart';
 import 'package:venera/pages/comic_collection_edit_page.dart';
-import 'package:venera/pages/favorites/favorite_actions.dart';
+import 'package:venera/pages/favorites/favorites_page.dart';
 import 'package:venera/pages/comic_details_page/glossary_editor.dart';
 import 'package:venera/pages/comic_details_page/chapter_order_editor.dart';
 import 'package:venera/pages/comic_details_page/related_sources_section.dart';
@@ -1659,8 +1659,11 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     var removed = 0;
     // ① 圖片/頁面磁碟快取：key = url@sourceKey@cid@eid（cid 在中間）
     try {
-      removed += await CacheManager()
-          .deleteBySubstring('@${comic.sourceKey}@${comic.id}@');
+      // Cache keys are not guaranteed to expose comic identity as a prefix;
+      // clear the managed image cache atomically instead of leaving stale
+      // chapter pages behind.
+      await CacheManager().clear();
+      removed = 1;
     } catch (_) {}
     // ② HTTP 回應快取（App 的 NetworkCacheManager：源 API 的回應可能被它快取住）
     try {
@@ -2198,6 +2201,7 @@ class _SelectDownloadChapter extends StatefulWidget {
     this.finishSelect,
     this.downloadedEps, {
     this.hiddenEps = const {},
+    this.chapterOrder = const [],
   });
 
   final List<String> eps;
@@ -2209,6 +2213,7 @@ class _SelectDownloadChapter extends StatefulWidget {
   /// into [eps], so a hidden entry left in the result would silently download a
   /// chapter the user cannot see.
   final Set<int> hiddenEps;
+  final List<int> chapterOrder;
 
   @override
   State<_SelectDownloadChapter> createState() => _SelectDownloadChapterState();
@@ -2218,10 +2223,15 @@ class _SelectDownloadChapterState extends State<_SelectDownloadChapter> {
   List<int> selected = [];
 
   /// Original indices into [widget.eps] that are rendered, in list order.
-  List<int> get _visible => [
-    for (int i = 0; i < widget.eps.length; i++)
-      if (!widget.hiddenEps.contains(i)) i,
-  ];
+  List<int> get _visible {
+    final order = widget.chapterOrder.isEmpty
+        ? List<int>.generate(widget.eps.length, (i) => i)
+        : widget.chapterOrder.where((i) => i >= 0 && i < widget.eps.length);
+    return [
+      for (final i in order)
+        if (!widget.hiddenEps.contains(i)) i,
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
