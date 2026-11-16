@@ -887,7 +887,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
               _SliderSetting(
                 title: "Number of images preloaded".tl,
                 settingsIndex: "preloadImageCount",
-                min: 1,
+                interval: 1,
                 max: 16,
                 comicId: isEnabledSpecificSettings ? widget.comicId : null,
                 comicSource: isEnabledSpecificSettings
