@@ -399,6 +399,8 @@ class Settings with ChangeNotifier {
     'comicDisplayMode': 'detailed', // detailed, brief
     'comicTileScale': 1.00, // 0.75-1.25
     'color': 'system', // red, pink, purple, green, orange, blue
+    // iOS shell background: system keeps the native layered dark surface.
+    'backgroundColor': 'system', // system, slate, midnight
     'theme_mode': 'system', // light, dark, system
     'newFavoriteAddTo': 'end', // start, end
     'moveFavoriteAfterRead': 'none', // none, end, start

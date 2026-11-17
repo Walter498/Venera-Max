@@ -191,10 +191,12 @@ final class NativeTabBarFactory: NSObject, FlutterPlatformViewFactory {
 
 final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
   private static let symbols = [
+    // Use SF Symbols with distinct silhouettes. In particular, avoid the
+    // generic square glyphs that made the tab bar look like four tiles.
     "house", "house.fill",
-    "bookmark", "bookmark.fill",
-    "bubble.left.and.bubble.right", "bubble.left.and.bubble.right.fill",
-    "square.grid.2x2", "square.grid.2x2.fill",
+    "books.vertical", "books.vertical.fill",
+    "person.2", "person.2.fill",
+    "rectangle.grid.2x2", "rectangle.grid.2x2.fill",
   ]
 
   private let container: UIView
@@ -225,7 +227,11 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
     tabBar.delegate = self
     tabBar.isTranslucent = true
     tabBar.isOpaque = false
-    tabBar.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
+    // The Flutter platform view includes the home indicator inset. Let the
+    // UIKit bar fill that whole frame so the inset cannot reveal a black
+    // rectangle underneath the material.
+    tabBar.frame = container.bounds
+    tabBar.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     tabBar.items = Self.items(from: args)
     tabBar.selectedItem = tabBar.items?.first(where: {
       $0.tag == ((args as? [String: Any])?["selectedIndex"] as? Int ?? 0)

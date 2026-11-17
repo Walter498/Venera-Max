@@ -44,6 +44,7 @@ const syncSkipCategories = <SyncSkipCategory>[
     "Theme, comic tiles, home layout and start page",
     [
       "color",
+      "backgroundColor",
       "theme_mode",
       "comicDisplayMode",
       "comicTileScale",

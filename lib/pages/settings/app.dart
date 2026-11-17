@@ -180,6 +180,18 @@ class _AppSettingsState extends State<AppSettings> {
                     },
                   ),
                   SelectSetting(
+                    title: "Background Color".tl,
+                    settingKey: "backgroundColor",
+                    optionTranslation: {
+                      "system": "System".tl,
+                      "slate": "Slate".tl,
+                      "midnight": "Midnight".tl,
+                    },
+                    onChanged: () {
+                      App.forceRebuild();
+                    },
+                  ),
+                  SelectSetting(
                     title: "Language".tl,
                     settingKey: "language",
                     optionTranslation: const {

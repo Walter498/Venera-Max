@@ -262,16 +262,26 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       brightness: brightness,
       tones: FlexTones.vividBackground(brightness),
     );
-    final tokens = VeneraDesignTokens.fromScheme(colors);
+    // Keep the iOS shell in the native dark surface hierarchy instead of
+    // falling back to OLED black. The value is intentionally a background
+    // preference (not an accent color) so controls retain their contrast.
+    final background = brightness == Brightness.dark
+        ? switch (appdata.settings['backgroundColor']) {
+            'slate' => const Color(0xFF202124),
+            'midnight' => const Color(0xFF111318),
+            _ => const Color(0xFF1C1C1E),
+          }
+        : const Color(0xFFF2F2F7);
+    final themedColors = colors.copyWith(surface: background);
+    final tokens = VeneraDesignTokens.fromScheme(themedColors);
     final isDark = brightness == Brightness.dark;
     return ThemeData(
       useMaterial3: true,
-      colorScheme: colors,
+      colorScheme: themedColors,
       // iOS grouped surfaces are neutral and let the content carry the colour.
-      // The accent remains available through ColorScheme for actions and state.
-      scaffoldBackgroundColor: brightness == Brightness.light
-          ? const Color(0xFFF2F2F7)
-          : const Color(0xFF000000),
+      // Never use pure black for the app shell: it erases the native surface
+      // hierarchy and makes the bottom material look like an opaque block.
+      scaffoldBackgroundColor: background,
       textTheme: TextTheme(
         displayLarge: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
         displayMedium: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
