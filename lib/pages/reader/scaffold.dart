@@ -380,29 +380,13 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     );
     final tokens = VeneraDesignTokens.of(context);
 
-    return BlurEffect(
-      blur: App.isIOS ? tokens.blurSigma : 15,
+    return ReaderTopGlass(
       borderRadius: BorderRadius.circular(tokens.sectionRadius),
+      borderColor: tokens.borderSubtle,
+      blurSigma: App.isIOS ? tokens.blurSigma : 15,
       child: Container(
         decoration: BoxDecoration(
-          color: App.isIOS
-              ? tokens.glassSurface
-              : context.colorScheme.surface.toOpacity(
-                  appdata.settings['ui_style'] == 'glass' ? 0.72 : 0.94,
-                ),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              tokens.glassSurface,
-              tokens.glassStrongSurface.withValues(alpha: 0.72),
-            ],
-          ),
           borderRadius: BorderRadius.circular(tokens.sectionRadius),
-          border: Border.all(
-            color: tokens.borderSubtle,
-            width: VeneraDesignTokens.hairline,
-          ),
         ),
         child: Padding(
           padding: EdgeInsets.zero,
@@ -415,7 +399,10 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                 child: epName == null
                     ? Text(
                         context.reader.widget.name,
-                        style: ts.s16.copyWith(fontWeight: FontWeight.w600),
+                        style: ts.s16.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )
@@ -426,6 +413,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                           Text(
                             context.reader.widget.name,
                             style: const TextStyle(
+                              color: Colors.white,
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
@@ -434,7 +422,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                           ),
                           Text(
                             epName,
-                            style: ts.s12.withColor(tokens.mutedText),
+                            style: ts.s12.withColor(Colors.white70),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1053,7 +1041,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     child: Text(
                       percentText,
-                      style: const TextStyle(fontSize: 13),
+                      style: const TextStyle(fontSize: 13, color: Colors.white),
                     ),
                   ),
                 )
@@ -1067,7 +1055,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     child: Text(
                       indicatorText,
-                      style: const TextStyle(fontSize: 13),
+                      style: const TextStyle(fontSize: 13, color: Colors.white),
                     ),
                   ),
                 ),
@@ -1173,41 +1161,53 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
     return SizedBox(
       height: 48,
-      child: Row(
-        children: [
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              (scrolls ? "Auto scroll speed" : "Auto page turning interval").tl,
-              style: ts.s14,
-              overflow: TextOverflow.ellipsis,
+      child: IconTheme.merge(
+        data: const IconThemeData(color: Colors.white),
+        child: Row(
+          children: [
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                (scrolls ? "Auto scroll speed" : "Auto page turning interval").tl,
+                style: ts.s14.copyWith(color: Colors.white),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          IconButton(
-            tooltip: "Decrease".tl,
-            icon: const Icon(Icons.remove),
-            onPressed: value > min ? () => set(value - 1) : null,
-          ),
-          SizedBox(
-            width: 40,
-            child: Text(
-              scrolls ? '$value' : '${value}s',
-              textAlign: TextAlign.center,
-              style: ts.s14,
+            IconButton(
+              tooltip: "Decrease".tl,
+              style: IconButton.styleFrom(
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white54,
+              ),
+              icon: const Icon(Icons.remove),
+              onPressed: value > min ? () => set(value - 1) : null,
             ),
-          ),
-          IconButton(
-            tooltip: "Increase".tl,
-            icon: const Icon(Icons.add),
-            onPressed: value < max ? () => set(value + 1) : null,
-          ),
-          const SizedBox(width: 4),
-          TextButton(
-            onPressed: () => reader.stopAutoPageTurning(),
-            child: Text("Stop".tl),
-          ),
-          const SizedBox(width: 8),
-        ],
+            SizedBox(
+              width: 40,
+              child: Text(
+                scrolls ? '$value' : '${value}s',
+                textAlign: TextAlign.center,
+                style: ts.s14.copyWith(color: Colors.white),
+              ),
+            ),
+            IconButton(
+              tooltip: "Increase".tl,
+              style: IconButton.styleFrom(
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white54,
+              ),
+              icon: const Icon(Icons.add),
+              onPressed: value < max ? () => set(value + 1) : null,
+            ),
+            const SizedBox(width: 4),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              onPressed: () => reader.stopAutoPageTurning(),
+              child: Text("Stop".tl),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
       ),
     );
   }
@@ -1738,15 +1738,15 @@ class _ReaderBottomLabeledButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(item.icon, size: 22, color: context.colorScheme.onSurface),
+              Icon(item.icon, size: 22, color: Colors.white),
               const SizedBox(height: 4),
               Text(
                 item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 11,
-                  color: context.colorScheme.onSurfaceVariant,
+                  color: Colors.white70,
                 ),
               ),
             ],

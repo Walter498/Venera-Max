@@ -157,43 +157,156 @@ class ReaderBottomGlass extends StatelessWidget {
               ),
             ),
           ),
+              // A subtle constant base keeps the auto-turn row readable even
+              // at the clear edge of the transition. The gradient below still
+              // carries the clear-to-dark hierarchy over that base.
+              Positioned.fill(
+                child: ColoredBox(color: Color(0x24000000)),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    // More, smaller steps keep the transition broad and slow
+                    // instead of dropping the controls onto a hard black edge.
+                    stops: const [0, 0.14, 0.30, 0.48, 0.66, 0.84, 1],
+                    colors: [
+                      surfaceColor.withValues(alpha: 0),
+                      surfaceColor.withValues(alpha: 0.05),
+                      surfaceColor.withValues(alpha: 0.10),
+                      surfaceColor.withValues(alpha: 0.17),
+                      surfaceColor.withValues(alpha: 0.25),
+                      surfaceColor.withValues(alpha: 0.33),
+                      surfaceColor.withValues(alpha: 0.40),
+                    ],
+                  ),
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: borderRadius,
+                    border: Border.all(color: borderColor, width: 0.5),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      // The dark ramp starts earlier and has more intermediate
+                      // stops so the speed row and progress remain legible.
+                      stops: [0, 0.16, 0.38, 0.58, 0.76, 0.9, 1],
+                      colors: [
+                        Color(0x00000000),
+                        Color(0x08000000),
+                        Color(0x2E000000),
+                        Color(0x66000000),
+                        Color(0x85000000),
+                        Color(0x9E000000),
+                        Color(0xB8000000),
+                      ],
+                    ),
+                  ),
+                  child: child,
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dark, slow-gradient glass for the top reader controls. The top edge keeps
+/// a translucent dark base rather than becoming fully clear, while the lower
+/// edge settles into a denser tint behind the action buttons and title.
+class ReaderTopGlass extends StatelessWidget {
+  const ReaderTopGlass({
+    required this.borderRadius,
+    required this.borderColor,
+    required this.blurSigma,
+    required this.child,
+    super.key,
+  });
+
+  final BorderRadius borderRadius;
+  final Color borderColor;
+  final double blurSigma;
+  final Widget child;
+
+  static const blurBands = 16;
+
+  @visibleForTesting
+  static double sigmaAt(double progress, double maxSigma) {
+    final t = ((progress - 0.08) / 0.92).clamp(0.0, 1.0);
+    return maxSigma * t * t * (3 - 2 * t);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          Positioned.fill(
+            child: BackdropGroup(
+              child: IgnorePointer(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => Stack(
+                    children: [
+                      for (var i = 0; i < blurBands; i++)
+                        if (sigmaAt(i / (blurBands - 1), blurSigma) > 0)
+                          Positioned(
+                            top: constraints.maxHeight * i / blurBands,
+                            height: constraints.maxHeight / blurBands,
+                            left: 0,
+                            right: 0,
+                            child: ClipRect(
+                              key: ValueKey('reader-top-blur-band-$i'),
+                              child: BackdropFilter.grouped(
+                                filter: ui.ImageFilter.blur(
+                                  sigmaX: sigmaAt(
+                                    i / (blurBands - 1),
+                                    blurSigma,
+                                  ),
+                                  sigmaY: sigmaAt(
+                                    i / (blurBands - 1),
+                                    blurSigma,
+                                  ),
+                                ),
+                                child: const SizedBox.expand(),
+                              ),
+                            ),
+                          ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           DecoratedBox(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              borderRadius: borderRadius,
+              border: Border.all(color: borderColor, width: 0.5),
+              gradient: const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                // Keep the upper edge readable against the artwork while
-                // giving the controls a denser material to sit on.
-                stops: const [0, 0.2, 0.5, 0.72, 1],
+                // Small steps deliberately slow the clear-to-dark change so
+                // the title and every action remain readable across the card.
+                stops: [0, 0.12, 0.28, 0.46, 0.64, 0.82, 1],
                 colors: [
-                  surfaceColor.withValues(alpha: 0),
-                  surfaceColor.withValues(alpha: 0.06),
-                  surfaceColor.withValues(alpha: 0.14),
-                  surfaceColor.withValues(alpha: 0.24),
-                  surfaceColor.withValues(alpha: 0.34),
+                  Color(0x26000000),
+                  Color(0x32000000),
+                  Color(0x45000000),
+                  Color(0x5E000000),
+                  Color(0x78000000),
+                  Color(0x92000000),
+                  Color(0xAD000000),
                 ],
               ),
             ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: borderRadius,
-                border: Border.all(color: borderColor, width: 0.5),
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  // The dark ramp is intentionally broad: the bottom
-                  // controls should remain legible over bright comic art.
-                  stops: [0, 0.34, 0.58, 0.78, 1],
-                  colors: [
-                    Color(0x00000000),
-                    Color(0x00000000),
-                    Color(0x2E000000),
-                    Color(0x6B000000),
-                    Color(0xAD000000),
-                  ],
-                ),
+            child: IconTheme.merge(
+              data: const IconThemeData(color: Colors.white),
+              child: DefaultTextStyle.merge(
+                style: const TextStyle(color: Colors.white),
+                child: child,
               ),
-              child: child,
             ),
           ),
         ],
