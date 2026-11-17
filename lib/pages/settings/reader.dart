@@ -439,7 +439,7 @@ class _ReaderSettingsState extends State<ReaderSettings> {
       showHeader: !widget.showSearch,
       intro: Material(
         color: context.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
         child: Column(
           children: [
             SwitchListTile(
@@ -1806,7 +1806,7 @@ class _ReadingModeTile extends StatelessWidget {
             ? colors.primaryContainer.withValues(alpha: 0.45)
             : colors.surfaceContainerLow,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
           side: BorderSide(
             color: selected ? colors.primary : colors.outlineVariant,
           ),

@@ -282,8 +282,9 @@ class _PostListViewState extends State<PostListView> {
       ]);
     }
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _openCreatePost,
+        label: const Text('發帖'),
         elevation: 0,
         backgroundColor: context.colorScheme.primary,
         foregroundColor: context.colorScheme.onPrimary,
@@ -292,7 +293,7 @@ class _PostListViewState extends State<PostListView> {
             VeneraDesignTokens.of(context).controlRadius,
           ),
         ),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -335,12 +336,11 @@ class PostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = VeneraDesignTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
         color: tokens.contentSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(tokens.sectionRadius),
-          side: BorderSide(color: tokens.borderSubtle, width: .7),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -348,7 +348,7 @@ class PostCard extends StatelessWidget {
         onTap: () => context.to(
             () => PostDetailPage(postId: post.id, initial: post)),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(VeneraDesignTokens.space16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -363,15 +363,17 @@ class PostCard extends StatelessWidget {
                   child: Text(post.nickname,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w600)),
                 ),
                 Text(liziRelativeTime(post.createdAt),
                     style: TextStyle(
-                        fontSize: 11, color: context.colorScheme.outline)),
+                        fontSize: 13, color: tokens.mutedText)),
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert,
-                      size: 18, color: context.colorScheme.outline),
+                  icon: Icon(Icons.more_horiz,
+                      size: 20, color: tokens.mutedText),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                   onSelected: (v) async {
                     if (v != 'delete') return;
                     try {
@@ -387,7 +389,8 @@ class PostCard extends StatelessWidget {
                 ),
               ]),
               const SizedBox(height: 8),
-              Text(post.content, maxLines: 5, overflow: TextOverflow.ellipsis),
+              Text(post.content, maxLines: 5, overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4)),
               if (post.comics.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 SizedBox(
@@ -413,7 +416,7 @@ class PostCard extends StatelessWidget {
                           child: Text(c.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 10)),
+                              style: const TextStyle(fontSize: 11)),
                         ),
                       ]);
                     },
@@ -427,14 +430,14 @@ class PostCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text('${post.viewCount}',
                     style: TextStyle(
-                        fontSize: 11, color: context.colorScheme.outline)),
+                        fontSize: 13, color: tokens.mutedText)),
                 const SizedBox(width: 12),
                 Icon(Icons.chat_bubble_outline,
                     size: 14, color: context.colorScheme.outline),
                 const SizedBox(width: 4),
                 Text('${post.commentCount}',
                     style: TextStyle(
-                        fontSize: 11, color: context.colorScheme.outline)),
+                        fontSize: 13, color: tokens.mutedText)),
                 const SizedBox(width: 12),
                 Icon(
                   post.isLiked ? Icons.favorite : Icons.favorite_border,
@@ -446,7 +449,7 @@ class PostCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text('${post.likeCount}',
                     style: TextStyle(
-                        fontSize: 11, color: context.colorScheme.outline)),
+                        fontSize: 13, color: tokens.mutedText)),
               ]),
             ],
           ),

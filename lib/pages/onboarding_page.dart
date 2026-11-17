@@ -470,7 +470,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                 : Text(
                                     (i + 1).toString(),
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       color: i == _step
                                           ? colors.onPrimary
                                           : colors.onSurfaceVariant,
@@ -527,7 +527,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   Text(
                     'VeneraX',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       color: colors.onSurfaceVariant.withValues(alpha: .6),
                     ),
                   ),
@@ -781,7 +781,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                 : 'Optional permissions can wait. You can still continue.')
                             .tl,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           height: 1.7,
                           color: colors.onSurfaceVariant,
                         ),

@@ -223,7 +223,7 @@ class _SettingsDestinationState extends State<_SettingsDestination> {
                       color: context.colorScheme.primary,
                       width: 2,
                     ),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
                   ),
                 ),
               ),

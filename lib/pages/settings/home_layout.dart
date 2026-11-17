@@ -97,7 +97,7 @@ class _HomeLayoutSettingsState extends State<HomeLayoutSettings> {
           color: context.colorScheme.outlineVariant,
           width: 0.6,
         ),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
       ),
       child: Opacity(
         opacity: config.visible ? 1 : 0.45,
@@ -264,7 +264,7 @@ class _ImageFavoritesTabTile extends StatelessWidget {
           color: context.colorScheme.outlineVariant,
           width: 0.6,
         ),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
       ),
       child: Opacity(
         opacity: visible ? 1 : 0.45,

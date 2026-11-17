@@ -116,7 +116,7 @@ class _ImageEnhancePreviewState extends State<ImageEnhancePreview> {
           child: AspectRatio(
             aspectRatio: _previewAspect,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
               child: image == null
                   ? ColoredBox(color: colorScheme.surfaceContainerHighest)
                   : ListenableBuilder(

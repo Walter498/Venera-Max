@@ -94,7 +94,7 @@ class _AppSettingsState extends State<AppSettings> {
                               : colors.outlineVariant,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
                         ),
                       ),
                       onPressed: () {

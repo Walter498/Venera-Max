@@ -442,7 +442,7 @@ class _LlmProviderEditorState extends State<_LlmProviderEditor> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: context.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).controlRadius),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

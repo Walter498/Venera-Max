@@ -196,10 +196,7 @@ class _TasksPageState extends State<TasksPage>
       data: theme.copyWith(
         cardTheme: theme.cardTheme.copyWith(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
+            borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
           ),
         ),
         expansionTileTheme: theme.expansionTileTheme.copyWith(
@@ -208,7 +205,7 @@ class _TasksPageState extends State<TasksPage>
         ),
       ),
       child: Scaffold(
-        backgroundColor: theme.colorScheme.surfaceContainerLowest,
+        backgroundColor: VeneraDesignTokens.of(context).contentSurface,
         appBar: Appbar(title: Text("Tasks".tl)),
         body: Align(
           alignment: Alignment.topCenter,
@@ -229,7 +226,7 @@ class _TasksPageState extends State<TasksPage>
                     ),
                     if (_tabController.index == 1)
                       Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.only(right: VeneraDesignTokens.space8),
                         child: IconButton(
                           icon: const Icon(Icons.delete_sweep_outlined),
                           tooltip: "Clear History".tl,

@@ -285,7 +285,7 @@ class _LogsPageState extends State<LogsPage> {
       padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
       decoration: BoxDecoration(
         color: colors.tertiaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).controlRadius),
       ),
       child: Row(
         children: [
@@ -523,7 +523,7 @@ class _LogEntryCard extends StatelessWidget {
             ? colors.errorContainer.withValues(alpha: 0.28)
             : colors.surfaceContainerLow,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).controlRadius),
           side: BorderSide(
             color: item.level == LogLevel.info
                 ? colors.outlineVariant.withValues(alpha: 0.7)

@@ -92,10 +92,10 @@ class _LauncherIconSettingsState extends State<LauncherIconSettings> {
               : context.colorScheme.outlineVariant,
           width: isSelected ? 1.6 : 0.6,
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).controlRadius),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).controlRadius),
         onTap: applying ? null : () => _select(preset),
         child: Padding(
           padding: const EdgeInsets.all(12),

@@ -123,7 +123,7 @@ class _SyncConfigQrDialogState extends State<_SyncConfigQrDialog> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
                 color: context.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).controlRadius),
               ),
               child: Text(
                 pin == null ? '— — — — — —' : _spacedPin(pin),
@@ -363,7 +363,7 @@ class _SyncConfigScanPageState extends State<_SyncConfigScanPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
               ),
               child: Text(
                 "Point the camera at the sync QR code on the other device".tl,

@@ -309,7 +309,7 @@ class _AgreementPanelState extends State<AgreementPanel> {
                             Text(
                               'v$kDisclaimerVersion · $kDisclaimerDate',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 11,
                                 height: 1.6,
                                 color: colors.onSurfaceVariant,
                               ),
@@ -498,7 +498,7 @@ class _AgreementPanelState extends State<AgreementPanel> {
                           'End of terms'.tl,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             color: colors.onSurfaceVariant,
                             height: 1.8,
                           ),
@@ -508,7 +508,7 @@ class _AgreementPanelState extends State<AgreementPanel> {
                             'v$kDisclaimerVersion · $kDisclaimerDate',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               color: colors.onSurfaceVariant,
                               height: 1.8,
                             ),
