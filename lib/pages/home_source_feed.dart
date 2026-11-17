@@ -5,7 +5,6 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/home_layout.dart';
-import 'package:venera/pages/search_page.dart';
 import 'package:venera/utils/ext.dart';
 import 'package:venera/utils/translations.dart';
 
@@ -339,11 +338,7 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
               _load();
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: "Search".tl,
-            onPressed: () => context.to(() => const SearchPage()),
-          ),
+          // 搜索入口统一放在首页顶部，避免在源内容区重复出现。
           const SizedBox(width: 4),
         ],
       ),

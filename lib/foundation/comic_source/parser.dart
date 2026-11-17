@@ -1170,6 +1170,37 @@ class ComicSourceParser {
     };
   }
 
+  /// Converts a source favorite response at the JS boundary.
+  ///
+  /// Source scripts are untyped and a malformed response used to flow into
+  /// `Comic.fromJson` directly. When one item was a number (most commonly a
+  /// pagination/count value accidentally returned in `comics`), Dart raised
+  /// `double is not a subtype of Map<String, dynamic>` and the whole favorites
+  /// page became unusable. Validate the envelope and each item here so the
+  /// error is reported by the network page instead of escaping as a cast.
+  List<Comic> _parseFavoriteComics(dynamic response) {
+    if (response is! Map) {
+      throw FormatException(
+        "Invalid favorites response: expected an object, got ${response.runtimeType}",
+      );
+    }
+    final rawComics = response['comics'];
+    if (rawComics is! List) {
+      throw FormatException(
+        "Invalid favorites response: 'comics' must be a list, got ${rawComics.runtimeType}",
+      );
+    }
+    return rawComics.asMap().entries.map((entry) {
+      final item = entry.value;
+      if (item is! Map) {
+        throw FormatException(
+          "Invalid favorites response: comics[${entry.key}] must be an object, got ${item.runtimeType}",
+        );
+      }
+      return Comic.fromJson(Map<String, dynamic>.from(item), _key!);
+    }).toList();
+  }
+
   FavoriteData? _loadFavoriteData() {
     if (!_checkExists("favorites")) return null;
 
@@ -1230,11 +1261,8 @@ class ComicSourceParser {
               ${jsonEncode(page)}, ${jsonEncode(folder)})
           """);
             return Res(
-              List.generate(
-                res["comics"].length,
-                (index) => Comic.fromJson(res["comics"][index], _key!),
-              ),
-              subData: res["maxPage"],
+              _parseFavoriteComics(res),
+              subData: res is Map ? res["maxPage"] : null,
             );
           } catch (e, s) {
             Log.error("Network", "$e\n$s");
@@ -1255,11 +1283,8 @@ class ComicSourceParser {
               ${jsonEncode(next)}, ${jsonEncode(folder)})
           """);
             return Res(
-              List.generate(
-                res["comics"].length,
-                (index) => Comic.fromJson(res["comics"][index], _key!),
-              ),
-              subData: res["next"],
+              _parseFavoriteComics(res),
+              subData: res is Map ? res["next"] : null,
             );
           } catch (e, s) {
             Log.error("Network", "$e\n$s");

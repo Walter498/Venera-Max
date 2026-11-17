@@ -167,6 +167,14 @@ class _SearchPageState extends State<SearchPage> {
     controller = SearchBarController(onSearch: search);
     appdata.settings.addListener(updateSearchSourcesIfNeeded);
     super.initState();
+    // The home-page entry is a navigation affordance, not an editable field.
+    // Request focus after the route has mounted so Flutter also presents the
+    // platform keyboard (requesting it synchronously is ignored on iOS).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || searchSources.isEmpty) return;
+      focusNode.requestFocus();
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+    });
   }
 
   @override
