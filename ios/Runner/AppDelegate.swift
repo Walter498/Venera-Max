@@ -190,6 +190,18 @@ final class NativeTabBarFactory: NSObject, FlutterPlatformViewFactory {
 }
 
 private final class NativeBottomMaterialView: UIVisualEffectView {
+  private let tintLayer = CAGradientLayer()
+
+  override init(effect: UIVisualEffect?) {
+    super.init(effect: effect)
+    layer.addSublayer(tintLayer)
+  }
+
+  required init?(coder: NSCoder) {
+    super.init(coder: coder)
+    layer.addSublayer(tintLayer)
+  }
+
   override func layoutSubviews() {
     super.layoutSubviews()
     let mask = (layer.mask as? CAGradientLayer) ?? CAGradientLayer()
@@ -203,6 +215,18 @@ private final class NativeBottomMaterialView: UIVisualEffectView {
     mask.startPoint = CGPoint(x: 0.5, y: 0.0)
     mask.endPoint = CGPoint(x: 0.5, y: 1.0)
     layer.mask = mask
+
+    // The material supplies the blur. This very light tint supplies the
+    // requested gradual fade-to-dark at the bottom without a black block.
+    tintLayer.frame = bounds
+    tintLayer.colors = [
+      UIColor.clear.cgColor,
+      UIColor.black.withAlphaComponent(0.035).cgColor,
+      UIColor.black.withAlphaComponent(0.12).cgColor,
+    ]
+    tintLayer.locations = [0.0, 0.58, 1.0]
+    tintLayer.startPoint = CGPoint(x: 0.5, y: 0.0)
+    tintLayer.endPoint = CGPoint(x: 0.5, y: 1.0)
   }
 }
 

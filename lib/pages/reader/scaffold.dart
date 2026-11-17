@@ -312,7 +312,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           Positioned(
             right: VeneraDesignTokens.space16,
             bottom:
-                context.padding.bottom + bottomBarHeight + VeneraDesignTokens.space28,
+                context.padding.bottom + bottomBarHeight + VeneraDesignTokens.space24,
             child: IgnorePointer(child: _buildChapterTranslationChip()),
           ),
         Positioned(
