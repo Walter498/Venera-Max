@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:venera/components/components.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/image_enhance_shader.dart';
 import 'package:venera/foundation/log.dart';

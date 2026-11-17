@@ -652,7 +652,8 @@ abstract mixin class _ComicPageActions {
           icon: Icons.refresh_rounded,
           text: 'Refresh'.tl,
           onClick: () => unawaited(_refreshComicDetails()),
-        ), Toggling notifies the service, which
+        ),
+      // Toggling notifies the service, which
       // the detail page listens to, so the pre-translate button appears/hides
       // in sync (when the engine is also ready).
       MenuEntry(
