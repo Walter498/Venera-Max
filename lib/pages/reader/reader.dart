@@ -240,6 +240,15 @@ class _ReaderState extends State<Reader>
     );
   }
 
+  /// The reader action is intentionally available for every comic. Enabling the
+  /// per-comic switch here keeps the first tap useful instead of requiring a
+  /// round trip through comic details or settings, while [translateCurrentChapter]
+  /// still owns readiness checks and task de-duplication.
+  void startTranslationFromReader() {
+    ImageTranslationService.setEnabledForComic(cid, type.sourceKey, true);
+    translateCurrentChapter();
+  }
+
   /// The maximum page number for images only (excluding chapter comments page).
   /// This is used for display purposes and history recording.
   @override

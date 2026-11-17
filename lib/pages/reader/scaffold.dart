@@ -237,15 +237,13 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
   bool get compactBars =>
       App.isMobile && MediaQuery.orientationOf(context) == Orientation.landscape;
 
-  /// Compact top bar height. The floor follows the text scale: the title area
-  /// stacks a 16sp and a 12sp line when a chapter name is present, so a fixed
-  /// 48 overflows once the system font is enlarged.
-  double get topBarHeight => compactBars
-      ? math.min(
-          kTopBarHeight,
-          math.max(48.0, MediaQuery.textScalerOf(context).scale(16 + 12) + 16),
-        )
-      : kTopBarHeight;
+  /// Compact top bar height. The title area stacks a 16sp and a 12sp line
+  /// when a chapter name is present, so a fixed 48 overflows once the system
+  /// font is enlarged.
+  double get topBarHeight => math.max(
+        compactBars ? 48.0 : kTopBarHeight,
+        MediaQuery.textScalerOf(context).scale(44) + 12,
+      );
 
   double get bottomBarHeight => compactBars ? 56.0 : kBottomBarHeight;
 
@@ -312,13 +310,14 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         if (!isOnChapterCommentsPage) buildStatusInfo(),
         if (_chapterTranslationTask != null)
           Positioned(
-            right: 16,
-            bottom: 112,
+            right: VeneraDesignTokens.space16,
+            bottom:
+                context.padding.bottom + bottomBarHeight + VeneraDesignTokens.space28,
             child: IgnorePointer(child: _buildChapterTranslationChip()),
           ),
         Positioned(
-          right: 16,
-          bottom: 36,
+          right: VeneraDesignTokens.space16,
+          bottom: context.padding.bottom + bottomBarHeight + VeneraDesignTokens.space12,
           child: IgnorePointer(
             ignoring: showFloatingButtonValue == 0,
             child: AnimatedSlide(
@@ -332,14 +331,13 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           ),
         ),
         Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          // Preserve the normal 56px bar; enlarged text needs room for both
-          // title lines rather than overflowing an off-screen 56px Column.
-          height: math.max(kTopBarHeight,
-              MediaQuery.textScalerOf(context).scale(44) + 12) +
-              context.padding.top,
+          top: context.padding.top + VeneraDesignTokens.space12,
+          left: context.padding.left + VeneraDesignTokens.space12,
+          right: context.padding.right + VeneraDesignTokens.space12,
+          // The chrome is a card inside the safe area, not an edge-to-edge
+          // scrim. Keeping the inset outside the card also prevents the
+          // backdrop blur from turning into a solid black block at the notch.
+          height: topBarHeight,
           child: AnimatedSlide(
             duration: _readerChromeAnimationDuration,
             curve: Curves.easeOutCubic,
@@ -348,9 +346,9 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           ),
         ),
         Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
+          bottom: context.padding.bottom + VeneraDesignTokens.space12,
+          left: context.padding.left + VeneraDesignTokens.space12,
+          right: context.padding.right + VeneraDesignTokens.space12,
           child: AnimatedSlide(
             duration: _readerChromeAnimationDuration,
             curve: Curves.easeOutCubic,
@@ -381,23 +379,30 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
     return BlurEffect(
       blur: App.isIOS ? tokens.blurSigma : 15,
+      borderRadius: BorderRadius.circular(tokens.sectionRadius),
       child: Container(
-        padding: EdgeInsets.only(top: context.padding.top),
         decoration: BoxDecoration(
           color: App.isIOS
-              ? tokens.glassStrongSurface
+              ? tokens.glassSurface
               : context.colorScheme.surface.toOpacity(
                   appdata.settings['ui_style'] == 'glass' ? 0.72 : 0.94,
                 ),
-          border: Border(
-            bottom: BorderSide(color: tokens.separator, width: VeneraDesignTokens.hairline),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              tokens.glassSurface,
+              tokens.glassStrongSurface.withValues(alpha: 0.72),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(tokens.sectionRadius),
+          border: Border.all(
+            color: tokens.borderSubtle,
+            width: VeneraDesignTokens.hairline,
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.only(
-            left: context.padding.left,
-            right: context.padding.right,
-          ),
+          padding: EdgeInsets.zero,
           child: Row(
             children: [
               const SizedBox(width: 8),
@@ -450,16 +455,14 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                     onPressed: pickChaptersAndDownload,
                   ),
                 ),
-              ...buildTranslationControls(),
-              if (ImageTranslationService.isEnabledForComic(
-                    context.reader.cid, context.reader.type.sourceKey))
-                Tooltip(
-                  message: "Translate current chapter".tl,
-                  child: IconButton(
-                    icon: const Icon(Icons.translate_rounded),
-                    onPressed: context.reader.translateCurrentChapter,
-                  ),
+              Tooltip(
+                message: "Translate current chapter".tl,
+                child: IconButton(
+                  icon: const Icon(Icons.translate_rounded),
+                  onPressed: context.reader.startTranslationFromReader,
                 ),
+              ),
+              ...buildTranslationControls(),
               MenuButton(entries: buildMoreMenuEntries()),
               Tooltip(
                 message: "Settings".tl,
@@ -938,6 +941,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
   }
 
   Widget buildBottom() {
+    final tokens = VeneraDesignTokens.of(context);
     // Use maxPage for display (excluding chapter comments page)
     final displayPage = context.reader.page.clamp(1, context.reader.maxPage);
     var text = "E${context.reader.chapter} : P$displayPage";
@@ -1026,7 +1030,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
     Widget child = SizedBox(
       height: math.max(
-        kBottomBarHeight,
+        bottomBarHeight,
         (56 + buttonHeight + 1).ceilToDouble(),
       ),
       child: Column(
@@ -1091,24 +1095,25 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       );
     }
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: App.isMobile ? 12 : 0,
-        right: App.isMobile ? 12 : 0,
-        bottom: App.isMobile ? 8 : 0,
-      ),
-      child: VeneraGlass(
-        strong: true,
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          padding: EdgeInsets.only(bottom: context.padding.bottom),
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: context.padding.left,
-              right: context.padding.right,
-            ),
-            child: child,
+    return VeneraGlass(
+      // A translucent regular glass layer keeps the page visible through the
+      // controls. The inset gradient adds depth without the old black scrim.
+      strong: false,
+      borderRadius: BorderRadius.circular(tokens.sectionRadius),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              tokens.glassSurface.withValues(alpha: 0.22),
+              tokens.glassStrongSurface.withValues(alpha: 0.08),
+            ],
           ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: VeneraDesignTokens.space12),
+          child: child,
         ),
       ),
     );
