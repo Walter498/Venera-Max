@@ -262,19 +262,260 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       brightness: brightness,
       tones: FlexTones.vividBackground(brightness),
     );
+    final tokens = VeneraDesignTokens.fromScheme(colors);
+    final isDark = brightness == Brightness.dark;
     return ThemeData(
       useMaterial3: true,
       colorScheme: colors,
       scaffoldBackgroundColor: colors.surface,
-      extensions: [VeneraDesignTokens.fromScheme(colors)],
+      extensions: [tokens],
       dividerTheme: DividerThemeData(
-        color: colors.outlineVariant.withValues(alpha: .26),
-        thickness: .5,
-        space: .5,
+        color: tokens.separator,
+        thickness: VeneraDesignTokens.hairline,
+        space: VeneraDesignTokens.hairline,
       ),
-      sliderTheme: appSliderTheme(colors),
+      splashFactory: App.isIOS ? NoSplash.splashFactory : null,
+      // iOS-tuned filled buttons: 44pt-friendly height, control radius,
+      // restrained elevation, no stretched Material look.
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(
+            horizontal: VeneraDesignTokens.space20,
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(tokens.controlRadius),
+          ),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(
+            horizontal: VeneraDesignTokens.space20,
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(tokens.controlRadius),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(
+            horizontal: VeneraDesignTokens.space20,
+          ),
+          side: BorderSide(
+            color: tokens.borderStrong,
+            width: VeneraDesignTokens.hairline,
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(tokens.controlRadius),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(
+            horizontal: VeneraDesignTokens.space12,
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(tokens.controlRadius),
+          ),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size.square(44),
+          shape: const CircleBorder(),
+        ),
+      ),
+      // Flat, hairline-bordered cards — no heavy Material drop shadows.
+      cardTheme: CardThemeData(
+        elevation: 0,
+        clipBehavior: Clip.antiAlias,
+        color: tokens.controlSurface,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.cardRadius),
+          side: BorderSide(
+            color: tokens.borderSubtle,
+            width: VeneraDesignTokens.hairline,
+          ),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        minVerticalPadding: VeneraDesignTokens.space12,
+        iconColor: tokens.mutedText,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.cardRadius),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? Colors.white
+              : (isDark ? const Color(0xFFE5E5EA) : Colors.white),
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? colors.primary
+              : (isDark
+                  ? const Color(0xFF39393D)
+                  : const Color(0xFFE9E9EA)),
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+        trackOutlineWidth: const WidgetStatePropertyAll(0.0),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
+        side: BorderSide(color: tokens.borderStrong, width: 1.5),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? colors.primary
+              : tokens.borderStrong,
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        side: BorderSide(
+          color: tokens.borderSubtle,
+          width: VeneraDesignTokens.hairline,
+        ),
+        shape: const StadiumBorder(),
+        backgroundColor: tokens.controlSurface,
+        selectedColor: colors.primary,
+        labelStyle: TextStyle(color: colors.onSurface),
+        secondaryLabelStyle: TextStyle(color: colors.onPrimary),
+        showCheckmark: false,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: SegmentedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(tokens.controlRadius),
+          ),
+          side: BorderSide(
+            color: tokens.borderSubtle,
+            width: VeneraDesignTokens.hairline,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: tokens.controlSurface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: VeneraDesignTokens.space16,
+          vertical: VeneraDesignTokens.space12,
+        ),
+        hintStyle: TextStyle(color: tokens.mutedText),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          borderSide: BorderSide(
+            color: tokens.borderSubtle,
+            width: VeneraDesignTokens.hairline,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          borderSide: BorderSide(
+            color: tokens.borderSubtle,
+            width: VeneraDesignTokens.hairline,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          borderSide: BorderSide(color: colors.primary, width: 1.2),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        elevation: 0,
+        backgroundColor: tokens.controlSurfacePressed,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.sectionRadius),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: tokens.controlSurfacePressed,
+        elevation: 0,
+        showDragHandle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(tokens.sectionRadius),
+          ),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        backgroundColor: isDark
+            ? const Color(0xFF2C2C2E)
+            : const Color(0xFF323234),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        elevation: 0,
+        color: tokens.controlSurfacePressed,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          side: BorderSide(
+            color: tokens.borderSubtle,
+            width: VeneraDesignTokens.hairline,
+          ),
+        ),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          elevation: const WidgetStatePropertyAll(0),
+          backgroundColor: WidgetStatePropertyAll(tokens.controlSurfacePressed),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(tokens.controlRadius),
+              side: BorderSide(
+                color: tokens.borderSubtle,
+                width: VeneraDesignTokens.hairline,
+              ),
+            ),
+          ),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF2C2C2E)
+              : const Color(0xFF323234),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        textStyle: const TextStyle(color: Colors.white, fontSize: 12),
+      ),
       fontFamily: font,
       fontFamilyFallback: fallback,
+      sliderTheme: appSliderTheme(colors),
       // ExpansionTile shows top/bottom divider lines when expanded by default.
       // Override globally with borderless shapes so no expandable tile (task
       // cards, reader settings groups, source dialogs, etc.) renders stray
