@@ -1,14 +1,11 @@
 part of 'components.dart';
 
-/// Use Flutter's iOS system-rendered selection menu whenever the engine says it
-/// is available, while preserving the normal Flutter toolbar on iOS < 16 and
-/// on non-iOS platforms.
+/// Builds Venera's text selection menu for editable search fields.
 ///
-/// Material/TextField has the same default in Flutter 3.44.3. Keeping the
-/// builder explicit on Venera's search fields is intentional: it prevents a
-/// future theme or field-level override from silently switching these fields
-/// back to a Flutter-rendered menu. The system path owns Cut/Copy/Paste and
-/// Live Text, so clipboard behavior and the Scan Text action remain native.
+/// iOS 16 and later render the menu in UIKit. The native path receives the
+/// regular Flutter-generated items (including Cut/Copy/Paste/Share/Scan Text)
+/// plus the two OpenCC actions. Older iOS versions and other platforms use the
+/// same item list with [AdaptiveTextSelectionToolbar.buttonItems].
 Widget veneraTextContextMenuBuilder(
   BuildContext context,
   EditableTextState editableTextState,
@@ -16,14 +13,137 @@ Widget veneraTextContextMenuBuilder(
   final systemSupported =
       SystemContextMenu.isSupportedByField(editableTextState);
   _probeSystemContextMenu(context, editableTextState, systemSupported);
+
+  final selectedText = _selectedText(editableTextState);
   if (systemSupported) {
+    final items = SystemContextMenu.getDefaultItems(editableTextState);
+    items.addAll(
+      _openCcSystemItems(editableTextState, selectedText),
+    );
     return SystemContextMenu.editableText(
       editableTextState: editableTextState,
+      // Supplying the defaults explicitly is important: custom native items
+      // otherwise replace, rather than extend, the system menu.
+      items: items,
     );
   }
-  return AdaptiveTextSelectionToolbar.editableText(
-    editableTextState: editableTextState,
+
+  final buttonItems = <ContextMenuButtonItem>[
+    ...editableTextState.contextMenuButtonItems,
+    ..._openCcButtonItems(editableTextState, selectedText),
+  ];
+  return AdaptiveTextSelectionToolbar.buttonItems(
+    buttonItems: buttonItems,
+    anchors: editableTextState.contextMenuAnchors,
   );
+}
+
+String? _selectedText(EditableTextState editableTextState) {
+  try {
+    final value = editableTextState.textEditingValue;
+    final selection = value.selection;
+    if (!selection.isValid || selection.isCollapsed) return null;
+    if (selection.start < 0 || selection.end > value.text.length) return null;
+    final text = selection.textInside(value.text);
+    if (text.isEmpty ||
+        (!_containsChinese(text) &&
+            !OpenCC.hasChineseSimplified(text) &&
+            !OpenCC.hasChineseTraditional(text))) {
+      return null;
+    }
+    return text;
+  } catch (_) {
+    // OpenCC is initialized during app startup. A field opened before startup
+    // completes keeps the normal system menu instead of crashing the editor.
+    return null;
+  }
+}
+
+bool _containsChinese(String text) {
+  return text.runes.any(
+    (rune) =>
+        (rune >= 0x3400 && rune <= 0x4DBF) ||
+        (rune >= 0x4E00 && rune <= 0x9FFF) ||
+        (rune >= 0xF900 && rune <= 0xFAFF),
+  );
+}
+
+List<ContextMenuButtonItem> _openCcButtonItems(
+  EditableTextState editableTextState,
+  String? selectedText,
+) {
+  if (selectedText == null) return const <ContextMenuButtonItem>[];
+  return [
+    ContextMenuButtonItem(
+      label: 'Simplified'.tl,
+      onPressed: () => _replaceSelection(
+        editableTextState,
+        OpenCC.traditionalToSimplified,
+      ),
+    ),
+    ContextMenuButtonItem(
+      label: 'Traditional'.tl,
+      onPressed: () => _replaceSelection(
+        editableTextState,
+        OpenCC.simplifiedToTraditional,
+      ),
+    ),
+  ];
+}
+
+List<IOSSystemContextMenuItem> _openCcSystemItems(
+  EditableTextState editableTextState,
+  String? selectedText,
+) {
+  if (selectedText == null) return const <IOSSystemContextMenuItem>[];
+  return [
+    IOSSystemContextMenuItemCustom(
+      title: 'Simplified'.tl,
+      onPressed: () => _replaceSelection(
+        editableTextState,
+        OpenCC.traditionalToSimplified,
+      ),
+    ),
+    IOSSystemContextMenuItemCustom(
+      title: 'Traditional'.tl,
+      onPressed: () => _replaceSelection(
+        editableTextState,
+        OpenCC.simplifiedToTraditional,
+      ),
+    ),
+  ];
+}
+
+void _replaceSelection(
+  EditableTextState editableTextState,
+  String Function(String) convert,
+) {
+  final value = editableTextState.textEditingValue;
+  final selection = value.selection;
+  if (!selection.isValid || selection.isCollapsed) return;
+  if (selection.start < 0 || selection.end > value.text.length) return;
+
+  // Re-read the current selection when the action is tapped. This avoids
+  // replacing a stale range if the field changed while the menu was visible.
+  final currentText = selection.textInside(value.text);
+  if (currentText.isEmpty) return;
+  final String converted;
+  try {
+    converted = convert(currentText);
+  } catch (_) {
+    editableTextState.hideToolbar(false);
+    return;
+  }
+  if (converted != currentText) {
+    // TextEditingValue.replaced adjusts both selection endpoints and composing
+    // ranges. OpenCC is one code point to one code point, so an existing
+    // selection remains valid after conversion instead of jumping the caret.
+    editableTextState.userUpdateTextEditingValue(
+      value.replaced(selection, converted),
+      SelectionChangedCause.toolbar,
+    );
+  }
+  editableTextState.hideToolbar(false);
 }
 
 bool _didProbeSystemContextMenu = false;

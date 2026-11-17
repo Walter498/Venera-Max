@@ -209,9 +209,9 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
   }
 
   void openOrClose() {
-    // Auto turning owns the bottom bar: hiding it would also hide the live
-    // speed/interval controls. Stop auto turning before closing the chrome.
-    if (_isOpen && context.reader.autoPageTurning) return;
+    // Toggling the reader chrome is independent from the auto-turn state. The
+    // reader keeps scrolling when the bars are hidden; only the reader's
+    // explicit stop action or a double tap stops auto turning.
     // Keep the platform chrome stable for the whole reading session. Changing
     // it here changes Android's viewport while an image stream may still be
     // resolving, which can strand the rebuilt page in its loading state (#210).

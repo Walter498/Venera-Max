@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/components.dart';
+import 'package:venera/foundation/appdata.dart';
 import 'package:venera/utils/translations.dart';
 
 // The detail page renders the full description below its header, so the
@@ -58,32 +59,36 @@ void main() {
     expect(find.text('A long synopsis'), findsOneWidget);
   });
 
-  testWidgets('detailed grid keeps the compact one-column contract', (
-    tester,
-  ) async {
+  testWidgets('favorite grid follows native display settings', (tester) async {
+    final originalMode = appdata.settings['comicDisplayMode'];
+    final originalScale = appdata.settings['comicTileScale'];
+    addTearDown(() {
+      appdata.settings['comicDisplayMode'] = originalMode;
+      appdata.settings['comicTileScale'] = originalScale;
+    });
+    appdata.settings['comicDisplayMode'] = 'detailed';
+    appdata.settings['comicTileScale'] = 0.80;
+
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: CustomScrollView(
-          slivers: [
-            SliverGridComics(
-              comics: const [],
-              forceDetailedMode: true,
-              forceColumns: 1,
-              detailedItemHeight: 300,
-            ),
-          ],
+          slivers: [SliverGridComics(comics: <Comic>[])],
         ),
       ),
     );
 
     final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
     final delegate = grid.gridDelegate as SliverGridDelegateWithComics;
-    expect(delegate.forceColumns, 1);
-    expect(delegate.detailedItemHeight, 300);
+    expect(delegate.useBriefMode, isFalse);
+    expect(delegate.scale, closeTo(0.80, 0.0001));
+    expect(delegate.forceBriefMode, isFalse);
+    expect(delegate.forceDetailedMode, isFalse);
+    expect(delegate.forceColumns, isNull);
+    expect(delegate.detailedItemHeight, isNull);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('fixed shelf height keeps the reading metadata rows', (
+  testWidgets('favorite metadata fields remain available without detail loads', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -110,10 +115,8 @@ void main() {
       ),
     );
 
-    // A fixed 300 logical-pixel shelf tile must retain the fields added for
-    // the library (in particular chapter count and last-read time) without
-    // expanding with the device text scale. Less important trailing rows may
-    // be clipped by ComicDescription's height budget.
+    // These fields are supplied from the favorite/history state; the shelf
+    // must not replace them with per-card detail requests.
     for (final value in [
       'Favorite artist',
       'Fixture source',

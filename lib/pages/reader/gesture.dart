@@ -238,7 +238,7 @@ class _ReaderGestureDetectorState
       return;
     }
     final location = event.globalPosition;
-    if (!_enableDoubleTapToZoom) {
+    if (!_enableDoubleTapToZoom && !context.reader.autoPageTurning) {
       onTap(location);
       return;
     }

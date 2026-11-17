@@ -461,16 +461,11 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
                   slivers: [
                     SliverGridComics(
                       comics: items,
-                      forceDetailedMode: true,
-                      // Keep the historical compact detailed shelf card. The
-                      // metadata list is still complete; ComicDescription
-                      // clips rows to the available height instead of making
-                      // every card grow with the text scale.
-                      forceColumns: 1,
+                      // Display mode, tile scale, and resulting layout all come
+                      // from the native browsing settings. Keep the favorite
+                      // metadata supplied by ComicTile; it is resolved from
+                      // local stores and does not issue one request per tile.
                       hideBlocked: false,
-                      detailedItemHeight: 300,
-                      // ComicTile resolves last-read and chapter count from the
-                      // existing history/domain stores; no per-card requests.
                       selections: _editMode
                           ? {
                               for (final c in items)

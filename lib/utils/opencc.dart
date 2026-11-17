@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 abstract class OpenCC {
-  static late final Map<int, int> _s2t;
-  static late final Map<int, int> _t2s;
+  // Keep conversions harmless before the asynchronous asset initialization
+  // finishes. This also makes context-menu callbacks safe during startup.
+  static Map<int, int> _s2t = <int, int>{};
+  static Map<int, int> _t2s = <int, int>{};
 
   static Future<void> init() async {
     var data = await rootBundle.load("assets/opencc.txt");
