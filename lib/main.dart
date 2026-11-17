@@ -267,7 +267,35 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colors,
-      scaffoldBackgroundColor: colors.surface,
+      // iOS grouped surfaces are neutral and let the content carry the colour.
+      // The accent remains available through ColorScheme for actions and state.
+      scaffoldBackgroundColor: brightness == Brightness.light
+          ? const Color(0xFFF2F2F7)
+          : const Color(0xFF000000),
+      textTheme: TextTheme(
+        displayLarge: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
+        displayMedium: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
+        headlineLarge: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+        headlineMedium: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+        headlineSmall: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        titleLarge: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+        titleMedium: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+        titleSmall: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        bodyLarge: const TextStyle(fontSize: 17, height: 1.35),
+        bodyMedium: const TextStyle(fontSize: 16, height: 1.35),
+        bodySmall: const TextStyle(fontSize: 15, height: 1.3),
+        labelLarge: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        labelMedium: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        labelSmall: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+      ),
+      appBarTheme: AppBarTheme(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+        iconTheme: IconThemeData(color: colors.onSurfaceVariant),
+      ),
       extensions: [tokens],
       dividerTheme: DividerThemeData(
         color: tokens.separator,

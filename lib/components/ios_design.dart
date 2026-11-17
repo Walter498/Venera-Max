@@ -244,9 +244,18 @@ class VeneraSegmentedControl extends StatelessWidget {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: i == selected
-                            ? scheme.primary.withValues(alpha: .16)
+                            ? scheme.surface
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(13),
+                        boxShadow: i == selected
+                            ? [
+                                BoxShadow(
+                                  color: scheme.shadow.withValues(alpha: .12),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Text(
                         labels[i],

@@ -123,9 +123,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
       );
     }
 
-    final surfaceColor = App.isIOS
-        ? tokens.glassSurface
-        : tokens.controlSurface;
+    final surfaceColor = tokens.controlSurface;
     final surface = DecoratedBox(
       decoration: BoxDecoration(
         color: surfaceColor,
@@ -139,16 +137,6 @@ class _AppSearchFieldState extends State<AppSearchField> {
         child: SizedBox(height: height, child: content),
       ),
     );
-    if (!App.isIOS) return surface;
-    return ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(
-          sigmaX: tokens.blurSigma,
-          sigmaY: tokens.blurSigma,
-        ),
-        child: surface,
-      ),
-    );
+    return surface;
   }
 }

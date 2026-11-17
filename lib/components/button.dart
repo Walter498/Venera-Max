@@ -356,15 +356,21 @@ class _IconButtonState extends State<_IconButton> {
         },
         child: Tooltip(
           message: widget.tooltip ?? "",
-          child: Container(
-            decoration: BoxDecoration(
-              color: isHover
-                  ? Theme.of(context).colorScheme.outlineVariant.toOpacity(0.4)
-                  : null,
-              borderRadius: BorderRadius.circular((iconSize + 12) / 2),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: VeneraDesignTokens.minTouchTarget,
+              minHeight: VeneraDesignTokens.minTouchTarget,
             ),
-            padding: const EdgeInsets.all(6),
-            child: icon,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isHover
+                    ? Theme.of(context).colorScheme.outlineVariant.toOpacity(0.4)
+                    : null,
+                borderRadius: BorderRadius.circular((iconSize + 12) / 2),
+              ),
+              padding: const EdgeInsets.all(6),
+              child: icon,
+            ),
           ),
         ),
       ),

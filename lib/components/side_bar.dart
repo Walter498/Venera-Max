@@ -28,7 +28,8 @@ class SideBarRoute<T> extends PopupRoute<T> {
   bool _barrierSawPointerDown = false;
 
   @override
-  Color? get barrierColor => showBarrier ? Colors.black54 : Colors.transparent;
+  Color? get barrierColor =>
+      showBarrier ? const Color(0x33000000) : Colors.transparent;
 
   @override
   bool get barrierDismissible => dismissible;
@@ -94,21 +95,20 @@ class SideBarRoute<T> extends PopupRoute<T> {
 
     final sideBarWidth = math.min(width, MediaQuery.sizeOf(context).width);
 
+    final tokens = VeneraDesignTokens.of(context);
     body = Container(
       decoration: BoxDecoration(
         borderRadius: showSideBar
-            ? const BorderRadius.horizontal(left: Radius.circular(16))
+            ? BorderRadius.horizontal(left: Radius.circular(tokens.sectionRadius))
             : null,
-        color: Theme.of(context).colorScheme.surfaceTint,
-        boxShadow: context.brightness == ui.Brightness.dark
-            ? [
-                BoxShadow(
-                  color: Colors.white.withAlpha(50),
-                  blurRadius: 10,
-                  offset: Offset(0, 2),
-                ),
-              ]
-            : null,
+        color: App.isIOS ? tokens.glassStrongSurface : tokens.controlSurfacePressed,
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: .14),
+            blurRadius: 18,
+            offset: const Offset(-2, 0),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       constraints: BoxConstraints(maxWidth: sideBarWidth),

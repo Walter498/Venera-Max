@@ -58,6 +58,7 @@ class ComicDescription extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
     final descriptionParts = _descriptionParts();
     final source = _clean(badge) ?? _derivedSource(descriptionParts);
     final update = _clean(updateText) ?? _updateTextFromTags();
@@ -90,21 +91,22 @@ class ComicDescription extends StatelessWidget {
                 ),
               )
               .toList(),
-          Colors.lightBlue,
+          tokens.accent,
         )
       else if (authors != null)
-        _infoRow(context, "Authors".tl, authors, Colors.lightBlue),
+        _infoRow(context, "Authors".tl, authors, tokens.accent),
       // Keep the detailed library order stable: pages → update → chapter/last
       // read → source → tags. The first rows are the useful shelf summary.
-      if (pages != null) _infoRow(context, "Pages".tl, pages, Colors.teal),
-      if (update != null) _infoRow(context, "Update".tl, update, Colors.cyan),
+      if (pages != null)
+        _infoRow(context, "Pages".tl, pages, context.colorScheme.secondary),
+      if (update != null)
+        _infoRow(context, "Update".tl, update, tokens.mutedText),
       if (chaptersText != null)
-        _infoRow(context, "Chapters".tl, chaptersText!, Colors.amber),
+        _infoRow(context, "Chapters".tl, chaptersText!, context.colorScheme.tertiary),
       if (lastReadTimeText != null)
-        _infoRow(context, "Last read".tl, lastReadTimeText!, Colors.deepPurple),
-      if (source != null) _infoRow(context, "Source".tl, source, Colors.cyan),
-      // Language remains before ordinary tags so a compact card can retain
-      // the source-provided language marker.
+        _infoRow(context, "Last read".tl, lastReadTimeText!, tokens.mutedText),
+      if (source != null)
+        _infoRow(context, "Source".tl, source, tokens.mutedText),
       if (languageItems.isNotEmpty && onTapTag != null)
         _actionRow(
           context,
@@ -117,15 +119,10 @@ class ComicDescription extends StatelessWidget {
                 ),
               )
               .toList(),
-          Colors.indigo,
+          tokens.accent,
         )
       else if (languageItems.isNotEmpty)
-        _infoRow(
-          context,
-          "Language".tl,
-          _tagText(languageItems)!,
-          Colors.indigo,
-        ),
+        _infoRow(context, "Language".tl, _tagText(languageItems)!, tokens.accent),
       if (tagItems.isNotEmpty && onTapTag != null)
         _actionRow(
           context,
@@ -138,15 +135,16 @@ class ComicDescription extends StatelessWidget {
                 ),
               )
               .toList(),
-          Colors.pinkAccent,
+          tokens.accent,
         )
       else if (tagText != null)
-        _infoRow(context, "Tags".tl, tagText, Colors.pinkAccent),
-      if (status != null) _infoRow(context, "Status".tl, status, Colors.purple),
+        _infoRow(context, "Tags".tl, tagText, tokens.accent),
+      if (status != null)
+        _infoRow(context, "Status".tl, status, tokens.warning),
       if (progress != null)
-        _infoRow(context, "Progress".tl, progress, Colors.green),
+        _infoRow(context, "Progress".tl, progress, tokens.success),
       if (showDescription && fallbackDescription != null)
-        _infoRow(context, "Description".tl, fallbackDescription, Colors.orange),
+        _infoRow(context, "Description".tl, fallbackDescription, tokens.mutedText),
     ];
 
     return LayoutBuilder(

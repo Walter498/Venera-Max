@@ -93,17 +93,11 @@ class _HomeSectionSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = VeneraDesignTokens.of(context);
-    final radius = BorderRadius.circular(tokens.sectionRadius);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Material(
         color: tokens.contentSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: radius,
-          side: BorderSide(color: tokens.borderSubtle, width: .7),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: child,
+      child: child,
       ),
     );
   }
@@ -122,13 +116,12 @@ class _HomeCountBadge extends StatelessWidget {
         height: 22,
         padding: const EdgeInsets.symmetric(horizontal: 7),
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: context.colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(11),
-        ),
         child: Text(
           count.toString(),
-          style: Theme.of(context).textTheme.labelSmall,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: VeneraDesignTokens.of(context).mutedText,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
@@ -488,7 +481,7 @@ class _SearchBar extends StatelessWidget {
     return SliverToBoxAdapter(
       child: Container(
         height: height,
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -612,7 +605,7 @@ class _SyncButtonState extends State<_SyncButton> with WidgetsBindingObserver {
     return Padding(
       padding: const EdgeInsets.only(left: 8),
       child: Material(
-        color: App.isIOS ? tokens.glassSurface : tokens.controlSurface,
+        color: tokens.controlSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(tokens.controlRadius),
           side: BorderSide(color: tokens.borderSubtle, width: .7),

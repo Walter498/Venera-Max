@@ -309,34 +309,16 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
                 final selected = i == _selected;
-                return GestureDetector(
-                  onTap: () => _select(i),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? context.colorScheme.primaryContainer
-                          : null,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: selected
-                            ? Colors.transparent
-                            : context.colorScheme.outlineVariant,
-                        width: 0.6,
-                      ),
-                    ),
-                    child: Text(
-                      sources[i].name,
-                      style: ts.s14.copyWith(
-                        fontWeight: selected ? FontWeight.w600 : null,
-                        color: selected
-                            ? context.colorScheme.onPrimaryContainer
-                            : null,
-                      ),
-                    ),
+                return SizedBox(
+                height: 44,
+                child: Center(
+                  child: VeneraChip(
+                    label: sources[i].name,
+                    selected: selected,
+                    onTap: () => _select(i),
                   ),
-                );
+                ),
+              );
               },
             ),
           ),
@@ -373,19 +355,10 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
         children: [
-          Container(
-            width: 4,
-            height: 18,
-            decoration: BoxDecoration(
-              color: context.colorScheme.primary,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: Text(
               part.title.isEmpty ? "Recommended".tl : part.title,
-              style: ts.s18.copyWith(fontWeight: FontWeight.w600),
+              style: ts.s20.copyWith(fontWeight: FontWeight.w600),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -407,29 +380,13 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
         itemBuilder: (context, i) {
           final entry = weeks[i];
           final selected = entry.$1 == _weekday;
-          return GestureDetector(
-            onTap: () => setState(() => _weekday = entry.$1),
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: selected ? context.colorScheme.primaryContainer : null,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected
-                      ? Colors.transparent
-                      : context.colorScheme.outlineVariant,
-                  width: 0.6,
-                ),
-              ),
-              child: Text(
-                _weekdayNames[entry.$1],
-                style: ts.s14.copyWith(
-                  fontWeight: selected ? FontWeight.w600 : null,
-                  color: selected
-                      ? context.colorScheme.onPrimaryContainer
-                      : null,
-                ),
+          return SizedBox(
+            height: 44,
+            child: Center(
+              child: VeneraChip(
+                label: _weekdayNames[entry.$1],
+                selected: selected,
+                onTap: () => setState(() => _weekday = entry.$1),
               ),
             ),
           );

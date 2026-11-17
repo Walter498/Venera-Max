@@ -355,6 +355,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   Widget _commentTile(BuildContext context, LiziCommunityComment c,
       {int indent = 0, Map<int, LiziCommunityComment>? byId}) {
+    final tokens = VeneraDesignTokens.of(context);
     String? replyTo;
     if (c.replyToUserId != null && byId != null) {
       for (final other in byId.values) {
@@ -382,27 +383,31 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: context.colorScheme.outline)),
+                        color: tokens.mutedText)),
               ),
               const SizedBox(width: 8),
               Text(liziRelativeTime(c.createdAt),
                   style: TextStyle(
-                      fontSize: 11, color: context.colorScheme.outline)),
+                      fontSize: 13, color: tokens.mutedText)),
             ]),
             if (replyTo != null)
               Text('回覆 @$replyTo',
                   style: TextStyle(
-                      fontSize: 11, color: context.colorScheme.primary)),
+                      fontSize: 13, color: tokens.accent)),
             const SizedBox(height: 2),
             Text(c.content),
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Row(children: [
-                InkWell(
-                  onTap: () => _toggleCommentLike(c),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: InkWell(
+                    onTap: () => _toggleCommentLike(c),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(
                       _likedComments.contains(c.id)
                           ? Icons.favorite
@@ -419,15 +424,23 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             color: context.colorScheme.outline)),
                   ]),
                 ),
+                ),
                 const SizedBox(width: 12),
-                InkWell(
-                  onTap: () => setState(() {
-                    _replyToId = c.id;
-                    _replyToName = c.nickname;
-                  }),
-                  child: Text('回覆',
-                      style: TextStyle(
-                          fontSize: 11, color: context.colorScheme.primary)),
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: InkWell(
+                    onTap: () => setState(() {
+                      _replyToId = c.id;
+                      _replyToName = c.nickname;
+                    }),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Center(
+                      child: Text('回覆',
+                          style: TextStyle(
+                              fontSize: 13, color: tokens.accent)),
+                    ),
+                  ),
                 ),
               ]),
             ),
