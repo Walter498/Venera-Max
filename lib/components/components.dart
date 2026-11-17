@@ -56,6 +56,7 @@ part 'menu.dart';
 part 'mobile_menu.dart';
 part 'message.dart';
 part 'navigation_bar.dart';
+part 'native_tab_bar.dart';
 part 'pop_up_widget.dart';
 part 'scroll.dart';
 part 'search_field.dart';

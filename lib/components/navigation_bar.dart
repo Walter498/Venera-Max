@@ -298,6 +298,15 @@ class NaviPaneState extends State<NaviPane>
   }
 
   Widget buildBottom() {
+    if (App.isIOS) {
+      return _NativeIosTabBar(
+        items: widget.paneItems,
+        selectedIndex: currentPage,
+        onSelected: updatePage,
+      );
+    }
+    // Non-iOS platforms keep the existing adaptive Flutter navigation.
+    // iOS uses the UIKit UITabBar above and never paints this custom bar.
     // Liquid Glass：全寬毛玻璃條（含底部安全區，不留黑色空隙）
     if (appdata.settings['ui_style'] == 'glass') {
       return ClipRRect(
@@ -846,7 +855,9 @@ class _NaviMainViewState extends State<_NaviMainView> {
           ),
         ),
         if (shouldShowAppBar)
-          appdata.settings['ui_style'] == 'glass'
+          App.isIOS
+              ? state.buildBottom()
+              : appdata.settings['ui_style'] == 'glass'
               ? state.buildBottom()
               : state.buildBottom().paddingBottom(context.padding.bottom),
       ],

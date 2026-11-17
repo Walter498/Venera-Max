@@ -26,13 +26,15 @@ import Foundation // 添加此行
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    let messenger = engineBridge.applicationRegistrar.messenger()
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    ReadingWidgetBridge.register(messenger: engineBridge.applicationRegistrar.messenger())
+    NativeTabBarFactory.register(with: engineBridge.pluginRegistry.registrar(forPlugin: "VeneraNativeTabBar"), messenger: messenger)
+    ReadingWidgetBridge.register(messenger: messenger)
     flutterRegistrar = engineBridge.pluginRegistry
       .registrar(forPlugin: "VeneraAppDelegate")
     FlutterEventChannel(
       name: "venera/notification_route",
-      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+      binaryMessenger: messenger
     ).setStreamHandler(appShortcuts)
     flutterRegistrar?.addSceneDelegate(appShortcuts)
 
@@ -143,6 +145,146 @@ import Foundation // 添加此行
 
   func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
     flutterResult?(nil)
+  }
+}
+
+/// UIKit-backed home navigation bar. Flutter embeds this view as a platform
+/// view and only owns the selected page state; the pixels are produced by
+/// Apple's UITabBar.
+final class NativeTabBarFactory: NSObject, FlutterPlatformViewFactory {
+  private static let viewType = "venera/native_tab_bar"
+  private let messenger: FlutterBinaryMessenger
+
+  init(messenger: FlutterBinaryMessenger) {
+    self.messenger = messenger
+    super.init()
+  }
+
+  static func register(
+    with registrar: FlutterPluginRegistrar?,
+    messenger: FlutterBinaryMessenger
+  ) {
+    guard let registrar else { return }
+    registrar.register(
+      NativeTabBarFactory(messenger: messenger),
+      withId: viewType
+    )
+  }
+
+  func create(
+    withFrame frame: CGRect,
+    viewIdentifier viewId: Int64,
+    arguments args: Any?
+  ) -> FlutterPlatformView {
+    NativeTabBarView(
+      frame: frame,
+      viewIdentifier: viewId,
+      arguments: args,
+      messenger: messenger
+    )
+  }
+
+  func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol {
+    FlutterStandardMessageCodec.sharedInstance()
+  }
+}
+
+final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
+  private static let symbols = [
+    "house", "house.fill",
+    "bookmark", "bookmark.fill",
+    "bubble.left.and.bubble.right", "bubble.left.and.bubble.right.fill",
+    "square.grid.2x2", "square.grid.2x2.fill",
+  ]
+
+  private let container: UIView
+  private let tabBar: UITabBar
+  private let channel: FlutterMethodChannel
+
+  init(
+    frame: CGRect,
+    viewIdentifier viewId: Int64,
+    arguments args: Any?,
+    messenger: FlutterBinaryMessenger
+  ) {
+    container = UIView(frame: frame)
+    tabBar = UITabBar(frame: CGRect(
+      x: 0,
+      y: 0,
+      width: frame.width,
+      height: 64
+    ))
+    channel = FlutterMethodChannel(
+      name: "venera/native_tab_bar/\(viewId)",
+      binaryMessenger: messenger
+    )
+    super.init()
+
+    container.backgroundColor = .systemBackground
+    tabBar.delegate = self
+    tabBar.isTranslucent = false
+    tabBar.backgroundColor = .systemBackground
+    tabBar.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
+    tabBar.items = Self.items(from: args)
+    tabBar.selectedItem = tabBar.items?.first(where: {
+      $0.tag == ((args as? [String: Any])?["selectedIndex"] as? Int ?? 0)
+    })
+    container.addSubview(tabBar)
+
+    if #available(iOS 13.0, *) {
+      let appearance = UITabBarAppearance()
+      appearance.configureWithOpaqueBackground()
+      appearance.backgroundColor = .systemBackground
+      tabBar.standardAppearance = appearance
+      if #available(iOS 15.0, *) {
+        tabBar.scrollEdgeAppearance = appearance
+      }
+    }
+
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self else {
+        result(nil)
+        return
+      }
+      DispatchQueue.main.async {
+        switch call.method {
+        case "setSelectedIndex":
+          let index = call.arguments as? Int ?? 0
+          self.tabBar.selectedItem = self.tabBar.items?.first(where: {
+            $0.tag == index
+          })
+          result(nil)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
+    }
+  }
+
+  static func items(from args: Any?) -> [UITabBarItem] {
+    let labels = (args as? [String: Any])?["labels"] as? [String] ?? []
+    return labels.enumerated().map { index, label in
+      let symbolIndex = min(index * 2, symbols.count - 2)
+      return UITabBarItem(
+        title: label,
+        image: UIImage(systemName: symbols[symbolIndex]),
+        selectedImage: UIImage(systemName: symbols[symbolIndex + 1])
+      )
+    }.enumerated().map { index, item in
+      item.tag = index
+      return item
+    }
+  }
+
+  func view() -> UIView {
+    container
+  }
+
+  func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+    guard let index = tabBar.items?.firstIndex(where: { $0 === item }) else {
+      return
+    }
+    channel.invokeMethod("onTabSelected", arguments: index)
   }
 }
 
