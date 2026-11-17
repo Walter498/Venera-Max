@@ -1166,6 +1166,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     final ep = history!.ep;
     final group = history!.group;
     final text = "${"Last Reading".tl}: ${_positionText(ep, page, group)}";
+    final tokens = VeneraDesignTokens.of(context);
 
     // 之前的閱讀位置：只列【兩筆】—— 加上當前那行，共三行
     // （用戶要求：上次閱讀 / 上上次 / 上上上次；按時間倒序，最近在前）
@@ -1206,8 +1207,9 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: context.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        color: tokens.controlSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: tokens.borderSubtle, width: VeneraDesignTokens.hairline),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2017,54 +2019,66 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
     final active = isActive ?? false;
     final foreground = active
         ? context.colorScheme.primary
-        : context.colorScheme.onSurfaceVariant;
+        : context.colorScheme.onSurface;
+    final background = active
+        ? context.colorScheme.primaryContainer
+        : tokens.controlSurface;
+    final radius = BorderRadius.circular(tokens.controlRadius);
     return Material(
-      color: active
-          ? context.colorScheme.primaryContainer
-          : context.colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: () {
-          if (!(isLoading ?? false)) {
-            onPressed();
-          }
-        },
-        onLongPress: onLongPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: IconTheme.merge(
-          data: IconThemeData(size: 19, color: foreground),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isLoading ?? false)
-                    SizedBox(
-                      width: 19,
-                      height: 19,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.8,
-                        color: foreground,
+      color: background,
+      borderRadius: radius,
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: active ? context.colorScheme.primary.withValues(alpha: .55) : tokens.borderStrong,
+            width: VeneraDesignTokens.hairline,
+          ),
+        ),
+        child: InkWell(
+          onTap: () {
+            if (!(isLoading ?? false)) {
+              onPressed();
+            }
+          },
+          onLongPress: onLongPressed,
+          borderRadius: radius,
+          child: IconTheme.merge(
+            data: IconThemeData(size: 19, color: foreground),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isLoading ?? false)
+                      SizedBox(
+                        width: 19,
+                        height: 19,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.8,
+                          color: foreground,
+                        ),
+                      )
+                    else
+                      active ? (activeIcon ?? icon) : icon,
+                    const SizedBox(width: 8),
+                    Text(
+                      text,
+                      style: TextStyle(
+                        color: active
+                            ? context.colorScheme.onPrimaryContainer
+                            : context.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
                       ),
-                    )
-                  else
-                    active ? (activeIcon ?? icon) : icon,
-                  const SizedBox(width: 8),
-                  Text(
-                    text,
-                    style: TextStyle(
-                      color: active
-                          ? context.colorScheme.onPrimaryContainer
-                          : context.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
