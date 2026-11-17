@@ -224,7 +224,6 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
     container.isOpaque = false
     tabBar.delegate = self
     tabBar.isTranslucent = true
-    tabBar.backgroundColor = .clear
     tabBar.isOpaque = false
     tabBar.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
     tabBar.items = Self.items(from: args)
@@ -233,12 +232,18 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
     })
     container.addSubview(tabBar)
 
-    if #available(iOS 13.0, *) {
+    // iOS 26+ owns the Liquid Glass treatment for system tab bars. Do not
+    // replace it with a hand-painted clear/black background. On iOS 17–25,
+    // use the equivalent system material fallback so content remains visible
+    // while tab labels stay readable.
+    if #available(iOS 26.0, *) {
+      tabBar.backgroundColor = nil
+    } else {
       let appearance = UITabBarAppearance()
-      appearance.configureWithTransparentBackground()
-      appearance.backgroundColor = .clear
-      appearance.backgroundEffect = nil
-      appearance.shadowColor = .clear
+      appearance.configureWithDefaultBackground()
+      appearance.backgroundEffect = UIBlurEffect(style: .systemMaterial)
+      appearance.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.78)
+      appearance.shadowColor = UIColor.separator.withAlphaComponent(0.28)
       tabBar.standardAppearance = appearance
       if #available(iOS 15.0, *) {
         tabBar.scrollEdgeAppearance = appearance

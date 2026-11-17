@@ -42,6 +42,8 @@ class SimpleComicTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
+    final scheme = Theme.of(context).colorScheme;
     Widget cover = _buildCover();
     // A collection's cover arrives asynchronously the first time its members
     // load, so this tile has to rebuild when the store fills it in.
@@ -72,22 +74,22 @@ class SimpleComicTile extends StatelessWidget {
                     Container(
                       height: 24,
                       width: 24,
-                      color: Colors.green,
-                      child: const Icon(
+                      color: scheme.primary,
+                      child: Icon(
                         Icons.bookmark_rounded,
                         size: 16,
-                        color: Colors.white,
+                        color: scheme.onPrimary,
                       ),
                     ),
                   if (showReadLater)
                     Container(
                       height: 24,
                       width: 24,
-                      color: Colors.orange,
-                      child: const Icon(
+                      color: scheme.tertiary,
+                      child: Icon(
                         Icons.watch_later_rounded,
                         size: 15,
-                        color: Colors.white,
+                        color: scheme.onTertiary,
                       ),
                     ),
                 ],
@@ -111,13 +113,14 @@ class SimpleComicTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: Colors.black.toOpacity(0.55),
+                color: tokens.glassStrongSurface,
                 borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: tokens.borderSubtle, width: .6),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.library_books_outlined,
                 size: 12,
-                color: Colors.white,
+                color: scheme.onSurface,
               ),
             ),
           ),
@@ -145,7 +148,7 @@ class SimpleComicTile extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(tokens.cardRadius),
         color: Theme.of(context).colorScheme.secondaryContainer,
       ),
       clipBehavior: Clip.antiAlias,
@@ -157,7 +160,7 @@ class SimpleComicTile extends StatelessWidget {
     }
 
     child = AnimatedTapRegion(
-      borderRadius: 8,
+      borderRadius: tokens.cardRadius,
       onTap:
           onTap ??
           () {
@@ -187,6 +190,10 @@ class SimpleComicTile extends StatelessWidget {
                 comic.title.replaceAll('\n', ''),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: tokens.mutedText,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ),

@@ -92,17 +92,15 @@ class _HomeSectionSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(8);
+    final tokens = VeneraDesignTokens.of(context);
+    final radius = BorderRadius.circular(tokens.sectionRadius);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Material(
-        color: context.colorScheme.surfaceContainerLow,
+        color: tokens.contentSurface,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
-          side: BorderSide(
-            color: context.colorScheme.outlineVariant.toOpacity(0.35),
-            width: 0.6,
-          ),
+          side: BorderSide(color: tokens.borderSubtle, width: .7),
         ),
         clipBehavior: Clip.antiAlias,
         child: child,
@@ -271,41 +269,12 @@ class _HomePageState extends State<HomePage> {
   int homeTab = 0;
 
   Widget _buildHomeTabs() {
-    Widget tab(String text, int index) {
-      final active = homeTab == index;
-      return InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => setState(() => homeTab = index),
-        child: Container(
-          margin: const EdgeInsets.only(right: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: active ? context.colorScheme.primaryContainer : null,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active
-                  ? context.colorScheme.onPrimaryContainer
-                  : context.colorScheme.onSurface,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 38,
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
-          tab('首页', 0),
-          tab('更新', 1),
-          tab('排行', 2),
-        ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
+      child: VeneraSegmentedControl(
+        labels: const ['首页', '更新', '排行'],
+        selectedIndex: homeTab,
+        onChanged: (index) => setState(() => homeTab = index),
       ),
     );
   }
@@ -534,23 +503,12 @@ class _SearchBar extends StatelessWidget {
             _SyncButton(height: height),
             Padding(
               padding: const EdgeInsets.only(left: 8),
-              child: SizedBox.square(
-                dimension: height,
-                child: Material(
-                  color: context.colorScheme.surfaceContainerHigh,
-                  shape: const CircleBorder(),
-                  clipBehavior: Clip.antiAlias,
-                  child: IconButton(
-                    onPressed: onEdit,
-                    tooltip: editing ? 'Done'.tl : 'Edit Home'.tl,
-                    style: IconButton.styleFrom(
-                      fixedSize: Size.square(height),
-                      foregroundColor: context.colorScheme.onSurfaceVariant,
-                    ),
-                    icon: Icon(
-                      editing ? Icons.check_rounded : Icons.tune_rounded,
-                    ),
-                  ),
+              child: VeneraIconButton(
+                size: height,
+                onPressed: onEdit,
+                tooltip: editing ? 'Done'.tl : 'Edit Home'.tl,
+                icon: Icon(
+                  editing ? Icons.check_rounded : Icons.tune_rounded,
                 ),
               ),
             ),
@@ -650,11 +608,15 @@ class _SyncButtonState extends State<_SyncButton> with WidgetsBindingObserver {
         ? 'Changes pending upload'.tl
         : 'Sync Data'.tl;
 
+    final tokens = VeneraDesignTokens.of(context);
     return Padding(
       padding: const EdgeInsets.only(left: 8),
       child: Material(
-        color: context.colorScheme.surfaceContainerHigh,
-        shape: const CircleBorder(),
+        color: App.isIOS ? tokens.glassSurface : tokens.controlSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          side: BorderSide(color: tokens.borderSubtle, width: .7),
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: syncing

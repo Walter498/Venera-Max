@@ -263,7 +263,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       tones: FlexTones.vividBackground(brightness),
     );
     return ThemeData(
+      useMaterial3: true,
       colorScheme: colors,
+      scaffoldBackgroundColor: colors.surface,
+      extensions: [VeneraDesignTokens.fromScheme(colors)],
+      dividerTheme: DividerThemeData(
+        color: colors.outlineVariant.withValues(alpha: .26),
+        thickness: .5,
+        space: .5,
+      ),
       sliderTheme: appSliderTheme(colors),
       fontFamily: font,
       fontFamilyFallback: fallback,

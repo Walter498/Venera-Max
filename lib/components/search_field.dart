@@ -1,7 +1,7 @@
 part of 'components.dart';
 
-/// The one search-input look used across the app: a pill-shaped filled box with
-/// a leading search icon and an inline clear button.
+/// The shared iOS-oriented search surface used across the app: a compact
+/// rounded control with a leading search icon and an inline clear button.
 ///
 /// Passing [onTap] turns it into a read-only entry point that opens a real
 /// search page instead of accepting text.
@@ -53,9 +53,12 @@ class _AppSearchFieldState extends State<AppSearchField> {
 
   @override
   Widget build(BuildContext context) {
-    var height = widget.height ?? AppSearchField.defaultHeight;
-    var radius = BorderRadius.circular(height / 2);
-    var hint = widget.hintText ?? "Search".tl;
+    final height = widget.height ?? AppSearchField.defaultHeight;
+    final tokens = VeneraDesignTokens.of(context);
+    final radius = BorderRadius.circular(
+      math.min(tokens.controlRadius, height / 2),
+    );
+    final hint = widget.hintText ?? "Search".tl;
 
     Widget content;
     if (widget.onTap != null) {
@@ -120,11 +123,32 @@ class _AppSearchFieldState extends State<AppSearchField> {
       );
     }
 
-    return Material(
-      color: context.colorScheme.surfaceContainerHigh,
+    final surfaceColor = App.isIOS
+        ? tokens.glassSurface
+        : tokens.controlSurface;
+    final surface = DecoratedBox(
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: radius,
+        border: Border.all(color: tokens.borderSubtle, width: .7),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(height: height, child: content),
+      ),
+    );
+    if (!App.isIOS) return surface;
+    return ClipRRect(
       borderRadius: radius,
-      clipBehavior: Clip.antiAlias,
-      child: SizedBox(height: height, child: content),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(
+          sigmaX: tokens.blurSigma,
+          sigmaY: tokens.blurSigma,
+        ),
+        child: surface,
+      ),
     );
   }
 }

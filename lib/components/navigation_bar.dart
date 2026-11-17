@@ -271,16 +271,25 @@ class NaviPaneState extends State<NaviPane>
   }
 
   Widget buildTop() {
+    final tokens = VeneraDesignTokens.of(context);
     return Material(
+      color: tokens.glassSurface,
       child: Container(
         padding: const EdgeInsets.only(left: 16, right: 16),
         height: _kTopBarHeight,
         width: double.infinity,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: tokens.borderSubtle, width: .6),
+          ),
+        ),
         child: Row(
           children: [
             Text(
               widget.paneItems[currentPage].label,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const Spacer(),
             for (var action in widget.paneActions)
@@ -288,6 +297,7 @@ class NaviPaneState extends State<NaviPane>
                 message: action.label,
                 child: IconButton(
                   icon: Icon(action.icon),
+                  color: tokens.mutedText,
                   onPressed: action.onTap,
                 ),
               ),
