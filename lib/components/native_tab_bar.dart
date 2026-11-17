@@ -74,8 +74,13 @@ class _NativeIosTabBarState extends State<_NativeIosTabBar> {
                 shaderCallback: (bounds) => const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0x66000000), Colors.black],
-                  stops: [0, .48, 1],
+                  colors: [
+                    Colors.transparent,
+                    Color(0x55000000),
+                    Color(0xD9000000),
+                    Colors.black,
+                  ],
+                  stops: [0, .34, .74, 1],
                 ).createShader(bounds),
                 child: BackdropFilter(
                   // ShaderMask creates a saveLayer; src prevents the filtered
@@ -89,10 +94,11 @@ class _NativeIosTabBarState extends State<_NativeIosTabBar> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Theme.of(context).colorScheme.surface.withValues(alpha: 0),
-                          Theme.of(context).colorScheme.surface.withValues(alpha: .35),
-                          Colors.black.withValues(alpha: .12),
+                          Theme.of(context).colorScheme.surface.withValues(alpha: .20),
+                          Colors.black.withValues(alpha: .26),
+                          Colors.black.withValues(alpha: .40),
                         ],
-                        stops: const [0, .62, 1],
+                        stops: const [0, .34, .72, 1],
                       ),
                     ),
                   ),
