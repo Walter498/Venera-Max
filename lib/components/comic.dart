@@ -463,6 +463,7 @@ class ComicTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
     final type = forceBriefMode
         ? 'brief'
         : forceDetailedMode
@@ -513,7 +514,7 @@ class ComicTile extends StatelessWidget {
                   Container(
                     height: 24,
                     width: 24,
-                    color: Colors.green,
+                    color: tokens.success,
                     child: const Icon(
                       Icons.bookmark_rounded,
                       size: 16,
@@ -524,7 +525,7 @@ class ComicTile extends StatelessWidget {
                   Container(
                     height: 24,
                     width: 24,
-                    color: Colors.orange,
+                    color: tokens.warning,
                     child: const Icon(
                       Icons.watch_later_rounded,
                       size: 15,
@@ -534,7 +535,7 @@ class ComicTile extends StatelessWidget {
                 if (tileHistory != null)
                   Container(
                     height: 24,
-                    color: Colors.blue.toOpacity(0.9),
+                    color: tokens.accent.withValues(alpha: .9),
                     constraints: const BoxConstraints(minWidth: 24),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: CustomPaint(
@@ -723,6 +724,7 @@ class ComicTile extends StatelessWidget {
   ) {
     return LayoutBuilder(
       builder: (context, constrains) {
+        final tokens = VeneraDesignTokens.of(context);
         final height = math.max(0.0, constrains.maxHeight - 28);
         // Tall library rows must leave enough width for metadata on phones.
         final coverWidth = math.min(height * 0.68, constrains.maxWidth * 0.30);
@@ -736,14 +738,8 @@ class ComicTile extends StatelessWidget {
           height: double.infinity,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: context.colorScheme.outlineVariant,
-                blurRadius: 1,
-                offset: const Offset(0, 1),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(tokens.cardRadius),
+            boxShadow: const [],
           ),
           clipBehavior: Clip.antiAlias,
           child: Stack(
@@ -789,10 +785,10 @@ class ComicTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(tokens.cardRadius),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(tokens.cardRadius),
               onTap: _onTap,
               onLongPress: enableLongPressed
                   ? () => _onLongPressed(context)
@@ -854,17 +850,12 @@ class ComicTile extends StatelessWidget {
   ) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final tokens = VeneraDesignTokens.of(context);
         Widget image = Container(
           decoration: BoxDecoration(
             color: context.colorScheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.toOpacity(0.2),
-                blurRadius: 2,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(tokens.cardRadius),
+            boxShadow: const [],
           ),
           clipBehavior: Clip.antiAlias,
           child: buildImage(context),
@@ -875,7 +866,7 @@ class ComicTile extends StatelessWidget {
         }
 
         return InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(tokens.cardRadius),
           onTap: _onTap,
           onLongPress: enableLongPressed ? () => _onLongPressed(context) : null,
           onSecondaryTapDown: (detail) => onSecondaryTap(detail, context),

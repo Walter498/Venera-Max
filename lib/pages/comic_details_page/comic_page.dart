@@ -801,51 +801,15 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         child: Text(comic.title),
       ),
       actions: [
-        // 清除本漫畫快取（用戶指定位置：返回鍵右邊）
-        IconButton(
-          icon: const Icon(Icons.cleaning_services_outlined),
-          tooltip: '清除本漫畫快取',
-          onPressed: clearComicCache,
-        ),
-        // 合集：章節清單 ↔ 封面網格 視圖切換
-        if (ComicCollectionStore.isCollectionSourceKey(widget.sourceKey))
-          IconButton(
-            icon: Icon(
-              ComicCollectionStore.detailDisplayMode ==
-                      CollectionDetailDisplayMode.covers
-                  ? Icons.view_list_outlined
-                  : Icons.grid_view_outlined,
-            ),
-            tooltip: (ComicCollectionStore.detailDisplayMode ==
-                        CollectionDetailDisplayMode.covers
-                    ? 'Show chapters'
-                    : 'Show covers')
-                .tl,
-            onPressed: _toggleCollectionDetailMode,
-          ),
-        if (!isDownloaded)
-          IconButton(
-            onPressed: download,
-            icon: const Icon(Icons.download_outlined),
-            tooltip: 'Download'.tl,
-          ),
         IconButton(
           onPressed: share,
-          icon: const Icon(Icons.share),
+          icon: const Icon(Icons.share_outlined),
           tooltip: 'Share'.tl,
         ),
-        if (widget.sourceKey == 'local' ||
-            ComicSource.find(widget.sourceKey)?.loadComicInfo != null)
-          IconButton(
-            onPressed: _detailsRefreshing
-                ? null
-                : () => unawaited(_refreshComicDetails()),
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh'.tl,
-          ),
         IconButton(
           onPressed: showMoreActions,
           icon: const Icon(Icons.more_horiz),
+          tooltip: 'More'.tl,
         ),
       ],
     );
@@ -910,7 +874,9 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       child: Hero(
         tag: "cover${widget.heroID}",
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(
+            VeneraDesignTokens.of(context).cardRadius,
+          ),
           child: SizedBox(
             width: width,
             height: width / 0.72,
@@ -998,14 +964,14 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   }
 
   Widget _buildReadingActions({bool isWide = false, double? maxHeight}) {
-    // 按钮拉高后 M3 默认 StadiumBorder 会变成椭圆/胶囊，统一用矩形圆角。
+    final tokens = VeneraDesignTokens.of(context);
+    // The reading action is the primary action: keep it prominent, but use
+    // the same control geometry as every other iOS surface in the app.
     final buttonShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(tokens.controlRadius),
     );
-    // 宽屏按钮被拉到封面高度，默认 14/19 的字号图标偏小、比例失衡；
-    // 宽屏统一放大一档（16/24），窄屏保持原样。
-    final double labelSize = isWide ? 16 : 14;
-    final double iconSize = isWide ? 24 : 19;
+    final double labelSize = 17;
+    final double iconSize = 20;
     final filledStyle = FilledButton.styleFrom(
       shape: buttonShape,
       textStyle: TextStyle(fontSize: labelSize, fontWeight: FontWeight.w600),
@@ -1369,35 +1335,32 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       return const SliverPadding(padding: EdgeInsets.zero);
     }
 
-    int i = 0;
-
     Widget buildTag({
       required String text,
       VoidCallback? onTap,
       bool isTitle = false,
     }) {
-      Color color;
-      if (isTitle) {
-        const colors = [
-          Colors.blue,
-          Colors.cyan,
-          Colors.red,
-          Colors.pink,
-          Colors.purple,
-          Colors.indigo,
-          Colors.teal,
-          Colors.green,
-          Colors.lime,
-          Colors.yellow,
-        ];
-        color = context.useBackgroundColor(colors[(i++) % (colors.length)]);
-      } else {
-        color = context.colorScheme.surfaceContainerLow;
-      }
+      final tokens = VeneraDesignTokens.of(context);
+      // Namespace labels are intentionally quiet; only the values use a
+      // filled surface. Colour no longer changes meaning from one comic to
+      // another, and the same semantic colours work in dark mode.
+      final color = isTitle ? Colors.transparent : tokens.controlSurface;
+      final textColor = isTitle ? tokens.mutedText : context.colorScheme.onSurface;
+      final borderRadius = BorderRadius.circular(
+        isTitle ? tokens.cardRadius : tokens.pillRadius,
+      );
+      final padding = isTitle
+          ? const EdgeInsets.symmetric(horizontal: 4, vertical: 4)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
 
-      final borderRadius = BorderRadius.circular(12);
-
-      const padding = EdgeInsets.symmetric(horizontal: 16, vertical: 6);
+      Widget content = Text(
+        text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: isTitle ? 13 : 14,
+          fontWeight: isTitle ? FontWeight.w600 : FontWeight.w500,
+        ),
+      ).padding(padding);
 
       if (onTap != null) {
         return Material(
@@ -1427,28 +1390,26 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                 ),
               ]);
             },
-            child: Text(text).padding(padding),
+            child: content,
           ),
         );
-      } else {
-        Widget tag = Container(
-          decoration: BoxDecoration(color: color, borderRadius: borderRadius),
-          child: Text(text).padding(padding),
-        );
-        // Namespace headers (isTitle) are just labels — only the actual values
-        // are worth copying.
-        if (!isTitle) {
-          tag = GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onLongPress: () {
-              Clipboard.setData(ClipboardData(text: text));
-              context.showMessage(message: "Copied".tl);
-            },
-            child: tag,
-          );
-        }
-        return tag;
       }
+
+      Widget tag = Container(
+        decoration: BoxDecoration(color: color, borderRadius: borderRadius),
+        child: content,
+      );
+      if (!isTitle) {
+        tag = GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onLongPress: () {
+            Clipboard.setData(ClipboardData(text: text));
+            context.showMessage(message: "Copied".tl);
+          },
+          child: tag,
+        );
+      }
+      return tag;
     }
 
     String formatTime(String time) {
@@ -3245,13 +3206,15 @@ class _ComicPageLoadingPlaceHolder extends StatelessWidget {
         width: width,
         decoration: BoxDecoration(
           color: color ?? context.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(radius ?? 10),
+          borderRadius: BorderRadius.circular(
+            radius ?? VeneraDesignTokens.of(context).cardRadius,
+          ),
         ),
       );
     }
 
     return Shimmer(
-      color: context.isDarkMode ? Colors.grey.shade700 : Colors.white,
+      color: VeneraDesignTokens.of(context).controlSurfacePressed,
       child: Column(
         children: [
           Appbar(title: Text(""), backgroundColor: context.colorScheme.surface),

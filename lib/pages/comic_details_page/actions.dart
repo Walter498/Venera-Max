@@ -621,7 +621,38 @@ abstract mixin class _ComicPageActions {
       comic.sourceKey,
     );
     showMenuX(context, Offset(context.width - 16, context.padding.top), [
-      // Per-comic AI translation switch. Toggling notifies the service, which
+      MenuEntry(
+        icon: Icons.cleaning_services_outlined,
+        text: '清除本漫畫快取',
+        onClick: clearComicCache,
+      ),
+      if (ComicCollectionStore.isCollectionSourceKey(widget.sourceKey))
+        MenuEntry(
+          icon: ComicCollectionStore.detailDisplayMode ==
+                  CollectionDetailDisplayMode.covers
+              ? Icons.view_list_outlined
+              : Icons.grid_view_outlined,
+          text: (ComicCollectionStore.detailDisplayMode ==
+                      CollectionDetailDisplayMode.covers
+                  ? 'Show chapters'
+                  : 'Show covers')
+              .tl,
+          onClick: _toggleCollectionDetailMode,
+        ),
+      if (!isDownloaded)
+        MenuEntry(
+          icon: Icons.download_outlined,
+          text: 'Download'.tl,
+          onClick: download,
+        ),
+      if ((widget.sourceKey == 'local' ||
+              ComicSource.find(widget.sourceKey)?.loadComicInfo != null) &&
+          !_detailsRefreshing)
+        MenuEntry(
+          icon: Icons.refresh_rounded,
+          text: 'Refresh'.tl,
+          onClick: () => unawaited(_refreshComicDetails()),
+        ), Toggling notifies the service, which
       // the detail page listens to, so the pre-translate button appears/hides
       // in sync (when the engine is also ready).
       MenuEntry(

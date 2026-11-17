@@ -272,26 +272,33 @@ class NaviPaneState extends State<NaviPane>
 
   Widget buildTop() {
     final tokens = VeneraDesignTokens.of(context);
-    return Material(
-      color: tokens.glassSurface,
+    final bar = Material(
+      color: App.isIOS ? tokens.glassSurface : tokens.contentSurface,
       child: Container(
-        padding: const EdgeInsets.only(left: 16, right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         height: _kTopBarHeight,
         width: double.infinity,
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: tokens.borderSubtle, width: .6),
+            bottom: BorderSide(
+              color: tokens.separator,
+              width: VeneraDesignTokens.hairline,
+            ),
           ),
         ),
         child: Row(
           children: [
-            Text(
-              widget.paneItems[currentPage].label,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                widget.paneItems[currentPage].label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.2,
+                ),
               ),
             ),
-            const Spacer(),
             for (var action in widget.paneActions)
               Tooltip(
                 message: action.label,
@@ -305,9 +312,13 @@ class NaviPaneState extends State<NaviPane>
         ),
       ),
     );
+    return App.isIOS
+        ? BlurEffect(blur: tokens.blurSigma, child: bar)
+        : bar;
   }
 
   Widget buildBottom() {
+    final tokens = VeneraDesignTokens.of(context);
     if (App.isIOS) {
       return _NativeIosTabBar(
         items: widget.paneItems,
@@ -320,27 +331,23 @@ class NaviPaneState extends State<NaviPane>
     // Liquid Glass：全寬毛玻璃條（含底部安全區，不留黑色空隙）
     if (appdata.settings['ui_style'] == 'glass') {
       return ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: BorderRadius.zero,
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ui.ImageFilter.blur(
+            sigmaX: tokens.blurSigma,
+            sigmaY: tokens.blurSigma,
+          ),
           child: Container(
             // 高度含安全區，由本組件自己吃（外層不再 paddingBottom）
             height: _kBottomBarHeight + context.padding.bottom,
             padding: EdgeInsets.only(bottom: context.padding.bottom),
             decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHigh
-                  .withOpacity(0.55),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(22)),
+              color: tokens.glassSurface,
+              borderRadius: BorderRadius.zero,
               border: Border(
                 top: BorderSide(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outlineVariant
-                      .withOpacity(0.35),
-                  width: 0.6,
+                  color: tokens.separator,
+                  width: VeneraDesignTokens.hairline,
                 ),
               ),
             ),
@@ -536,18 +543,22 @@ class _SideNaviWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final icon = Icon(enabled ? entry.activeIcon : entry.icon);
+    final tokens = VeneraDesignTokens.of(context);
+    final icon = Icon(
+      enabled ? entry.activeIcon : entry.icon,
+      color: enabled ? tokens.accent : tokens.mutedText,
+    );
+    final radius = BorderRadius.circular(tokens.controlRadius);
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: radius,
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: VeneraDesignTokens.motionFast,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        height: 38,
+        constraints: const BoxConstraints(minHeight: 44),
         decoration: BoxDecoration(
-          color: enabled ? colorScheme.primaryContainer : null,
-          borderRadius: BorderRadius.circular(12),
+          color: enabled ? tokens.selectedSurface : null,
+          borderRadius: radius,
         ),
         child: showTitle
             ? Row(
@@ -664,27 +675,26 @@ class _SingleBottomNaviWidgetState extends State<_SingleBottomNaviWidget>
 
   Widget buildContent() {
     final value = controller.value;
-    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = VeneraDesignTokens.of(context);
     final icon = Icon(
       widget.enabled ? widget.entry.activeIcon : widget.entry.icon,
+      color: widget.enabled ? tokens.accent : tokens.mutedText,
     );
     final iconSlot = SizedBox(
       height: 30,
       child: Container(
         width: 64,
         decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(12)),
-          color: isHovering ? colorScheme.surfaceContainer : Colors.transparent,
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          color: isHovering ? tokens.controlSurfacePressed : Colors.transparent,
         ),
         child: Center(
           child: Container(
             width: 32 + value * 32,
             height: 28,
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.all(Radius.circular(12)),
-              color: value != 0
-                  ? colorScheme.secondaryContainer
-                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(tokens.controlRadius),
+              color: value != 0 ? tokens.selectedSurface : Colors.transparent,
             ),
             child: Center(child: icon),
           ),
@@ -703,10 +713,9 @@ class _SingleBottomNaviWidgetState extends State<_SingleBottomNaviWidget>
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 11,
-            height: 1.0,
-            color: widget.enabled
-                ? colorScheme.primary
-                : colorScheme.onSurfaceVariant,
+            height: 1.1,
+            fontWeight: widget.enabled ? FontWeight.w600 : FontWeight.w500,
+            color: widget.enabled ? tokens.accent : tokens.mutedText,
           ),
         ),
       ],

@@ -251,29 +251,40 @@ class _AppbarState extends State<Appbar> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
     var content = Container(
       decoration: BoxDecoration(
         color:
             widget.backgroundColor ??
             Theme.of(context).appBarTheme.backgroundColor ??
-            context.colorScheme.surface.toOpacity(0.86),
+            (widget.style == AppbarStyle.blur
+                ? (App.isIOS ? tokens.glassStrongSurface : tokens.glassSurface)
+                : context.colorScheme.surface.toOpacity(0.86)),
       ),
       height: _kAppBarHeight + context.padding.top,
       child: Row(
         children: [
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           widget.leading ??
               Tooltip(
                 message: "Back".tl,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back),
+                  icon: Icon(
+                    App.isIOS
+                        ? Icons.arrow_back_ios_new_rounded
+                        : Icons.arrow_back_rounded,
+                    size: App.isIOS ? 20 : 24,
+                  ),
                   onPressed: () => Navigator.maybePop(context),
                 ),
               ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: DefaultTextStyle(
-              style: DefaultTextStyle.of(context).style.copyWith(fontSize: 20),
+              style: DefaultTextStyle.of(context).style.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               child: widget.title,
@@ -290,11 +301,15 @@ class _AppbarState extends State<Appbar> {
             widget.backgroundColor ??
             Theme.of(context).appBarTheme.backgroundColor ??
             context.colorScheme.surface,
-        elevation: _scrolledUnder ? 2 : 0,
+        elevation: _scrolledUnder ? 0.5 : 0,
+        shadowColor: context.colorScheme.shadow.toOpacity(0.2),
         child: content,
       );
     } else {
-      return BlurEffect(blur: _scrolledUnder ? 15 : 0, child: content);
+      return BlurEffect(
+        blur: _scrolledUnder ? tokens.blurSigma : 0,
+        child: content,
+      );
     }
   }
 }
@@ -369,21 +384,29 @@ class _MySliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   ) {
     var body = Row(
       children: [
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         leading ??
             (Navigator.of(context).canPop()
                 ? Tooltip(
                     message: "Back".tl,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
+                      icon: Icon(
+                        App.isIOS
+                            ? Icons.arrow_back_ios_new_rounded
+                            : Icons.arrow_back_rounded,
+                        size: App.isIOS ? 20 : 24,
+                      ),
                       onPressed: () => Navigator.maybePop(context),
                     ),
                   )
                 : const SizedBox()),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
           child: DefaultTextStyle(
-            style: DefaultTextStyle.of(context).style.copyWith(fontSize: 20),
+            style: DefaultTextStyle.of(context).style.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             child: title,
@@ -397,11 +420,13 @@ class _MySliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     if (style == AppbarStyle.blur) {
       return SizedBox.expand(
         child: BlurEffect(
-          blur: 15,
+          blur: VeneraDesignTokens.of(context).blurSigma,
           child: Material(
             color:
                 Theme.of(context).appBarTheme.backgroundColor ??
-                context.colorScheme.surface.toOpacity(0.86),
+                (App.isIOS
+                    ? VeneraDesignTokens.of(context).glassStrongSurface
+                    : context.colorScheme.surface.toOpacity(0.86)),
             elevation: 0,
             borderRadius: BorderRadius.circular(radius),
             child: body,
@@ -414,7 +439,8 @@ class _MySliverAppBarDelegate extends SliverPersistentHeaderDelegate {
           color:
               Theme.of(context).appBarTheme.backgroundColor ??
               context.colorScheme.surface,
-          elevation: shrinkOffset == 0 ? 0 : 2,
+          elevation: shrinkOffset == 0 ? 0 : 0.5,
+          shadowColor: context.colorScheme.shadow.toOpacity(0.2),
           borderRadius: BorderRadius.circular(radius),
           child: body,
         ),
@@ -691,6 +717,7 @@ class _AppTabBarState extends State<AppTabBar> {
   }
 
   Widget buildTab(int i) {
+    final isSelected = i == _controller.animation?.value.round();
     return InkWell(
       onTap: () => onTabClicked(i),
       borderRadius: BorderRadius.circular(tabRadius),
@@ -700,10 +727,10 @@ class _AppTabBarState extends State<AppTabBar> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: DefaultTextStyle(
             style: DefaultTextStyle.of(context).style.copyWith(
-              color: i == _controller.animation?.value.round()
+              color: isSelected
                   ? context.colorScheme.primary
-                  : context.colorScheme.onSurface,
-              fontWeight: FontWeight.w500,
+                  : context.colorScheme.onSurfaceVariant,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
             child: widget.tabs[i],
           ),

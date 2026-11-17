@@ -1,6 +1,6 @@
 part of 'reader.dart';
 
-const _readerChromeAnimationDuration = Duration(milliseconds: 140);
+const _readerChromeAnimationDuration = VeneraDesignTokens.motionBase;
 
 // Native sliders can return values just below an integer page.
 @visibleForTesting
@@ -161,10 +161,13 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         ? (elapsed * (total - processed) / processed).round()
         : null;
     final eta = remaining == null ? '估算中' : '约 ${remaining}s';
-    return Material(
-      color: context.colorScheme.surfaceContainerHigh,
-      elevation: 4,
-      borderRadius: BorderRadius.circular(18),
+    final tokens = VeneraDesignTokens.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: tokens.glassStrongSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: tokens.separator, width: VeneraDesignTokens.hairline),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         child: Row(
@@ -184,7 +187,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
               const SizedBox(width: 5),
               Text(
                 '失败 ${task.failed}',
-                style: TextStyle(color: context.colorScheme.error, fontSize: 11),
+                style: TextStyle(color: tokens.destructive, fontSize: 11),
               ),
             ],
           ],
@@ -374,21 +377,21 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     final epName = context.reader.widget.chapters?.titles.elementAtOrNull(
       context.reader.chapter - 1,
     );
+    final tokens = VeneraDesignTokens.of(context);
 
     return BlurEffect(
+      blur: App.isIOS ? tokens.blurSigma : 15,
       child: Container(
         padding: EdgeInsets.only(top: context.padding.top),
         decoration: BoxDecoration(
-          color: context.colorScheme.surface.toOpacity(
-              appdata.settings['ui_style'] == 'glass' ? 0.55 : 0.92),
-          border: appdata.settings['ui_style'] == 'glass'
-              ? null
-              : Border(
-                  bottom: BorderSide(
-                    color: Colors.grey.toOpacity(0.5),
-                    width: 0.5,
-                  ),
+          color: App.isIOS
+              ? tokens.glassStrongSurface
+              : context.colorScheme.surface.toOpacity(
+                  appdata.settings['ui_style'] == 'glass' ? 0.72 : 0.94,
                 ),
+          border: Border(
+            bottom: BorderSide(color: tokens.separator, width: VeneraDesignTokens.hairline),
+          ),
         ),
         child: Padding(
           padding: EdgeInsets.only(
@@ -404,7 +407,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                 child: epName == null
                     ? Text(
                         context.reader.widget.name,
-                        style: ts.s18,
+                        style: ts.s16.copyWith(fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )
@@ -414,13 +417,16 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                         children: [
                           Text(
                             context.reader.widget.name,
-                            style: ts.s16,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             epName,
-                            style: ts.s12,
+                            style: ts.s12.withColor(tokens.mutedText),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1085,27 +1091,24 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       );
     }
 
-    return BlurEffect(
-      child: Container(
-        decoration: BoxDecoration(
-          color: context.colorScheme.surface.toOpacity(
-              appdata.settings['ui_style'] == 'glass' ? 0.55 : 0.92),
-          border: (isOpen && appdata.settings['ui_style'] != 'glass')
-              ? Border(
-                  top: BorderSide(
-                    color: Colors.grey.toOpacity(0.5),
-                    width: 0.5,
-                  ),
-                )
-              : null,
-        ),
-        padding: EdgeInsets.only(bottom: context.padding.bottom),
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: context.padding.left,
-            right: context.padding.right,
+    return Padding(
+      padding: EdgeInsets.only(
+        left: App.isMobile ? 12 : 0,
+        right: App.isMobile ? 12 : 0,
+        bottom: App.isMobile ? 8 : 0,
+      ),
+      child: VeneraGlass(
+        strong: true,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: EdgeInsets.only(bottom: context.padding.bottom),
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: context.padding.left,
+              right: context.padding.right,
+            ),
+            child: child,
           ),
-          child: child,
         ),
       ),
     );
@@ -1546,23 +1549,25 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
   Widget buildEpChangeButton() {
     final extraWidth = context.padding.left + context.padding.right;
+    final tokens = VeneraDesignTokens.of(context);
     if (context.reader.widget.chapters == null) return const SizedBox();
+    final radius = BorderRadius.circular(tokens.controlRadius);
+    final icon = Icon(
+      lastValue == 1
+          ? Icons.arrow_forward_ios
+          : Icons.arrow_back_ios_outlined,
+      size: 24,
+      color: context.colorScheme.onSurface,
+    );
     switch (showFloatingButtonValue) {
       case 0:
-        return Container(
+        return SizedBox(
           width: 58 + extraWidth,
           height: 58,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(
-            lastValue == 1
-                ? Icons.arrow_forward_ios
-                : Icons.arrow_back_ios_outlined,
-            size: 24,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
+          child: VeneraGlass(
+            borderRadius: radius,
+            strong: true,
+            child: Center(child: icon),
           ),
         );
       case -1:
@@ -1570,10 +1575,9 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         return SizedBox(
           width: 58 + extraWidth,
           height: 58,
-          child: Material(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-            elevation: 2,
+          child: VeneraGlass(
+            borderRadius: radius,
+            strong: true,
             child: InkWell(
               onTap: () {
                 if (showFloatingButtonValue == 1) {
@@ -1583,12 +1587,12 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
                 }
                 setFloatingButton(0);
               },
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: radius,
               child: Center(
                 child: Icon(
                   _getArrowIcon(isReversed, showFloatingButtonValue),
                   size: 24,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  color: context.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -1734,27 +1738,31 @@ class _ReaderBottomLabeledButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final tokens = VeneraDesignTokens.of(context);
+    return VeneraPressable(
       onTap: item.onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(item.icon, size: 22, color: context.colorScheme.onSurface),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: context.colorScheme.onSurfaceVariant,
+      borderRadius: BorderRadius.circular(tokens.controlRadius),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(item.icon, size: 22, color: context.colorScheme.onSurface),
+              const SizedBox(height: 4),
+              Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1844,7 +1852,7 @@ class _BatteryWidgetState extends State<_BatteryWidget> {
       batteryIcon = Icons.battery_0_bar_sharp;
     } else {
       batteryIcon = Icons.battery_alert_sharp;
-      batteryColor = Colors.red;
+      batteryColor = VeneraDesignTokens.of(context).destructive;
     }
 
     return Row(
@@ -1972,7 +1980,7 @@ class _SelectImageOverlayContentState
         widget.onTap(details.globalPosition);
       },
       child: Container(
-        color: Colors.black.withAlpha(50),
+        color: context.colorScheme.scrim.withValues(alpha: .2),
         child: Align(
           alignment: Alignment(0, -0.8),
           child: Container(

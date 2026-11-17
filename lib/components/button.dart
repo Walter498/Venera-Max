@@ -149,6 +149,8 @@ class Button extends StatefulWidget {
 class _ButtonState extends State<Button> {
   bool isHover = false;
 
+  bool isPressed = false;
+
   bool isLoading = false;
 
   @override
@@ -192,6 +194,15 @@ class _ButtonState extends State<Button> {
       onExit: (_) => setState(() => isHover = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
+        onTapDown: (_) {
+          if (!isLoading) setState(() => isPressed = true);
+        },
+        onTapUp: (_) {
+          if (isPressed) setState(() => isPressed = false);
+        },
+        onTapCancel: () {
+          if (isPressed) setState(() => isPressed = false);
+        },
         onTap: () {
           if (isLoading) return;
           widget.onPressed();
@@ -201,41 +212,48 @@ class _ButtonState extends State<Button> {
             widget.onPressedAt!(offset);
           }
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: padding,
-          constraints: const BoxConstraints(minWidth: 76, minHeight: 32),
-          decoration: BoxDecoration(
-            color: buttonColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow:
-                (isHover &&
-                    !isLoading &&
-                    (widget.type == ButtonType.filled ||
-                        widget.type == ButtonType.normal))
-                ? [
-                    BoxShadow(
-                      color: Colors.black.toOpacity(0.1),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
-            border: widget.type == ButtonType.outlined
-                ? Border.all(
-                    color:
-                        widget.color ??
-                        Theme.of(context).colorScheme.outlineVariant,
-                    width: 0.6,
-                  )
-                : null,
-          ),
-          child: AnimatedSize(
+        child: AnimatedScale(
+          scale: isPressed && !isLoading ? 0.97 : 1,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
-            child: SizedBox(
-              width: width,
-              height: height,
-              child: Center(widthFactor: 1, child: child),
+            padding: padding,
+            constraints: const BoxConstraints(minWidth: 76, minHeight: 36),
+            decoration: BoxDecoration(
+              color: buttonColor,
+              borderRadius: BorderRadius.circular(
+                VeneraDesignTokens.of(context).controlRadius,
+              ),
+              boxShadow:
+                  (isHover &&
+                      !isLoading &&
+                      (widget.type == ButtonType.filled ||
+                          widget.type == ButtonType.normal))
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.toOpacity(0.08),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                  : null,
+              border: widget.type == ButtonType.outlined
+                  ? Border.all(
+                      color:
+                          widget.color ??
+                          Theme.of(context).colorScheme.outlineVariant,
+                      width: 0.6,
+                    )
+                  : null,
+            ),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 160),
+              child: SizedBox(
+                width: width,
+                height: height,
+                child: Center(widthFactor: 1, child: child),
+              ),
             ),
           ),
         ),

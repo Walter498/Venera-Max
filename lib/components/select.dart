@@ -19,21 +19,23 @@ class Select extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: context.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(4),
+        color: tokens.controlSurface,
+        border: Border.all(
+          color: tokens.borderSubtle,
+          width: VeneraDesignTokens.hairline,
+        ),
+        borderRadius: BorderRadius.circular(tokens.controlRadius),
       ),
       child: InkWell(
+        borderRadius: BorderRadius.circular(tokens.controlRadius),
         onTap: () {
           var renderBox = context.findRenderObject() as RenderBox;
           var offset = renderBox.localToGlobal(Offset.zero);
           var size = renderBox.size;
           showMenu(
-            elevation: 3,
-            color: context.brightness == Brightness.light
-                ? const Color(0xFFF6F6F6)
-                : const Color(0xFF1E1E1E),
             context: context,
             useRootNavigator: true,
             constraints: BoxConstraints(
@@ -42,7 +44,7 @@ class Select extends StatelessWidget {
             ),
             position: RelativeRect.fromLTRB(
               offset.dx,
-              offset.dy + size.height + 2,
+              offset.dy + size.height + 4,
               offset.dx + size.height + 2,
               offset.dy,
             ),
@@ -69,9 +71,10 @@ class Select extends StatelessWidget {
               child: Text(current ?? ' ', style: ts.s14),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.arrow_drop_down, color: context.colorScheme.primary),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                size: 20, color: tokens.mutedText),
           ],
-        ).padding(const EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+        ).padding(const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
       ),
     );
   }
@@ -267,25 +270,32 @@ class OptionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
+    final scheme = context.colorScheme;
     return AnimatedContainer(
       duration: _fastAnimationDuration,
       decoration: BoxDecoration(
-        color: isSelected
-            ? context.colorScheme.secondaryContainer
-            : context.colorScheme.surface,
-        border: isSelected
-            ? Border.all(color: context.colorScheme.secondaryContainer)
-            : Border.all(color: context.colorScheme.outline),
-        borderRadius: BorderRadius.circular(8),
+        color: isSelected ? scheme.primary : tokens.controlSurface,
+        border: Border.all(
+          color: isSelected ? scheme.primary : tokens.borderSubtle,
+          width: VeneraDesignTokens.hairline,
+        ),
+        borderRadius: BorderRadius.circular(tokens.pillRadius),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(tokens.pillRadius),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Text(text),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+            child: Text(
+              text,
+              style: TextStyle(
+                color: isSelected ? scheme.onPrimary : scheme.onSurface,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
           ),
         ),
       ),
