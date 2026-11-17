@@ -278,14 +278,6 @@ class NaviPaneState extends State<NaviPane>
         padding: const EdgeInsets.symmetric(horizontal: 16),
         height: _kTopBarHeight,
         width: double.infinity,
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: tokens.separator,
-              width: VeneraDesignTokens.hairline,
-            ),
-          ),
-        ),
         child: Row(
           children: [
             Expanded(
@@ -865,10 +857,15 @@ class _NaviMainViewState extends State<_NaviMainView> {
             // without an explicit width constraint a page whose content has a
             // natural max width can leave a large unused area on wide desktop
             // windows (the home feed is the most visible example).
-            child: SizedBox.expand(
-              child: AnimatedSwitcher(
-                duration: _fastAnimationDuration,
-                child: state.buildMainViewContent(),
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: App.isIOS && shouldShowAppBar ? 88 : 0,
+              ),
+              child: SizedBox.expand(
+                child: AnimatedSwitcher(
+                  duration: _fastAnimationDuration,
+                  child: state.buildMainViewContent(),
+                ),
               ),
             ),
           ),
@@ -884,6 +881,30 @@ class _NaviMainViewState extends State<_NaviMainView> {
         fit: StackFit.expand,
         children: [
           topAndContent,
+          if (App.isIOS)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 128,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Theme.of(context)
+                            .colorScheme
+                            .scrim
+                            .withValues(alpha: .34),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             left: 0,
             right: 0,
