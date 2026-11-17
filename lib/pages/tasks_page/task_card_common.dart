@@ -70,7 +70,9 @@ mixin _TaskCardCommon on State<TasksPage> {
               timeText,
               maxLines: constraints.maxWidth < 300 ? 2 : 1,
               overflow: TextOverflow.ellipsis,
-              style: ts.s12.withColor(context.colorScheme.onSurfaceVariant),
+              style: const TextStyle(fontSize: 13).copyWith(
+                color: VeneraDesignTokens.of(context).mutedText,
+              ),
             );
           },
         ),
@@ -167,11 +169,11 @@ mixin _TaskCardCommon on State<TasksPage> {
   }) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.fromLTRB(VeneraDesignTokens.space16, VeneraDesignTokens.space8, VeneraDesignTokens.space16, VeneraDesignTokens.space16),
+      padding: const EdgeInsets.all(VeneraDesignTokens.space16),
       decoration: BoxDecoration(
-        color: context.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
+        color: VeneraDesignTokens.of(context).contentSurface,
+        borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
