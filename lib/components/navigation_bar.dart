@@ -884,3 +884,5 @@ class _NaviMainViewState extends State<_NaviMainView> {
               : state.buildBottom().paddingBottom(context.padding.bottom),
       ],
     );
+  }
+}
