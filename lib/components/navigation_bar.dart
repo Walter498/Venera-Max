@@ -881,30 +881,6 @@ class _NaviMainViewState extends State<_NaviMainView> {
         fit: StackFit.expand,
         children: [
           topAndContent,
-          if (App.isIOS)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 128,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Theme.of(context)
-                            .colorScheme
-                            .scrim
-                            .withValues(alpha: .34),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
           Positioned(
             left: 0,
             right: 0,
