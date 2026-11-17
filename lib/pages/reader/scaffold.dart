@@ -304,10 +304,12 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
               ),
             ),
           ),
-        if (context.reader.effectiveSetting('showPageNumberInReader') == true &&
+        // The resting HUD is not a second footer behind the open glass card.
+        if (!_isOpen &&
+            context.reader.effectiveSetting('showPageNumberInReader') == true &&
             !isOnChapterCommentsPage)
           buildPageInfoText(),
-        if (!isOnChapterCommentsPage) buildStatusInfo(),
+        if (!_isOpen && !isOnChapterCommentsPage) buildStatusInfo(),
         if (_chapterTranslationTask != null)
           Positioned(
             right: VeneraDesignTokens.space16,
@@ -338,10 +340,11 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           // scrim. Keeping the inset outside the card also prevents the
           // backdrop blur from turning into a solid black block at the notch.
           height: topBarHeight,
-          child: AnimatedSlide(
+          child: ReaderChromeVisibility(
+            key: const ValueKey('reader-top-chrome'),
+            visible: _isOpen,
+            fromTop: true,
             duration: _readerChromeAnimationDuration,
-            curve: Curves.easeOutCubic,
-            offset: _isOpen ? Offset.zero : const Offset(0, -1),
             child: RepaintBoundary(child: buildTop()),
           ),
         ),
@@ -349,10 +352,11 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
           bottom: context.padding.bottom + VeneraDesignTokens.space12,
           left: context.padding.left + VeneraDesignTokens.space12,
           right: context.padding.right + VeneraDesignTokens.space12,
-          child: AnimatedSlide(
+          child: ReaderChromeVisibility(
+            key: const ValueKey('reader-bottom-chrome'),
+            visible: _isOpen,
+            fromTop: false,
             duration: _readerChromeAnimationDuration,
-            curve: Curves.easeOutCubic,
-            offset: _isOpen ? Offset.zero : const Offset(0, 1),
             child: RepaintBoundary(child: buildBottom()),
           ),
         ),
@@ -1095,26 +1099,14 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       );
     }
 
-    return VeneraGlass(
-      // A translucent regular glass layer keeps the page visible through the
-      // controls. The inset gradient adds depth without the old black scrim.
-      strong: false,
+    return ReaderBottomGlass(
       borderRadius: BorderRadius.circular(tokens.sectionRadius),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              tokens.glassSurface.withValues(alpha: 0.22),
-              tokens.glassStrongSurface.withValues(alpha: 0.08),
-            ],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: VeneraDesignTokens.space12),
-          child: child,
-        ),
+      surfaceColor: tokens.glassSurface,
+      borderColor: tokens.borderSubtle,
+      blurSigma: tokens.blurSigma,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: VeneraDesignTokens.space12),
+        child: child,
       ),
     );
   }
@@ -1256,21 +1248,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     return Positioned(
       bottom: 13,
       left: 25,
-      child: Stack(
-        children: [
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              foreground: Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 1.4
-                ..color = context.colorScheme.onInverseSurface,
-            ),
-          ),
-          Text(text),
-        ],
-      ),
+      child: Text(text, style: const TextStyle(fontSize: 14)),
     );
   }
 
@@ -1862,38 +1840,8 @@ class _BatteryWidgetState extends State<_BatteryWidget> {
 
     return Row(
       children: [
-        Icon(
-          batteryIcon,
-          size: 16,
-          color: batteryColor,
-          // Stroke
-          shadows: List.generate(9, (index) {
-            if (index == 4) {
-              return null;
-            }
-            double offsetX = (index % 3 - 1) * 0.8;
-            double offsetY = ((index / 3).floor() - 1) * 0.8;
-            return Shadow(
-              color: context.colorScheme.onInverseSurface,
-              offset: Offset(offsetX, offsetY),
-            );
-          }).whereType<Shadow>().toList(),
-        ),
-        Stack(
-          children: [
-            Text(
-              '$batteryLevel%',
-              style: TextStyle(
-                fontSize: 14,
-                foreground: Paint()
-                  ..style = PaintingStyle.stroke
-                  ..strokeWidth = 1.4
-                  ..color = context.colorScheme.onInverseSurface,
-              ),
-            ),
-            Text('$batteryLevel%'),
-          ],
-        ),
+        Icon(batteryIcon, size: 16, color: batteryColor),
+        Text('$batteryLevel%', style: const TextStyle(fontSize: 14)),
       ],
     );
   }
@@ -1936,21 +1884,7 @@ class _ClockWidgetState extends State<_ClockWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Text(
-          _currentTime,
-          style: TextStyle(
-            fontSize: 14,
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 1.4
-              ..color = context.colorScheme.onInverseSurface,
-          ),
-        ),
-        Text(_currentTime),
-      ],
-    );
+    return Text(_currentTime, style: const TextStyle(fontSize: 14));
   }
 }
 
