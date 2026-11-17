@@ -311,7 +311,13 @@ class _CategoriesPageState extends State<CategoriesPage> {
             ),
           const SliverToBoxAdapter(child: Divider(height: 24)),
           if (_comics.isNotEmpty)
-            SliverGridComics(comics: _comics, forceBriefMode: true),
+            SliverGridComics(
+              comics: _comics,
+              forceBriefMode: true,
+              // Categories favors scan density: four covers per row by
+              // default, independent from the library card preference.
+              forceColumns: 4,
+            ),
           SliverToBoxAdapter(child: _buildFooter()),
         ],
       ),
@@ -320,35 +326,41 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   /// 源切換列：橫向 chips，切換後下方篩選 chips 跟著換
   Widget _buildSourceTabs() {
+    final tokens = VeneraDesignTokens.of(context);
     return SizedBox(
-      height: 48,
+      height: 54,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
         itemCount: _availableSources.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final selected = i == _sourceIndex;
           return InkWell(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(tokens.controlRadius),
             onTap: () => _switchSource(i),
             child: Container(
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: selected
-                    ? context.colorScheme.primaryContainer
-                    : context.colorScheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(18),
+                    ? context.colorScheme.primary.withValues(alpha: .14)
+                    : tokens.controlSurface,
+                borderRadius: BorderRadius.circular(tokens.controlRadius),
+                border: Border.all(
+                  color: selected
+                      ? context.colorScheme.primary.withValues(alpha: .34)
+                      : tokens.borderSubtle,
+                  width: .7,
+                ),
               ),
               child: Text(
                 _availableSources[i].name,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected
                       ? context.colorScheme.primary
-                      : context.colorScheme.onSurface,
+                      : tokens.mutedText,
                 ),
               ),
             ),
@@ -421,26 +433,28 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   Widget _expandChip(String label,
       {required bool expanded, required VoidCallback onTap}) {
+    final tokens = VeneraDesignTokens.of(context);
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Container(
-        width: 66,
+        width: 72,
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 7),
         decoration: BoxDecoration(
-          color: context.colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(16),
+          color: tokens.controlSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: tokens.borderSubtle, width: .7),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(label, style: TextStyle(color: context.colorScheme.onSurfaceVariant)),
+            Text(label, style: TextStyle(color: tokens.mutedText)),
             const SizedBox(width: 3),
             Icon(
               expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
               size: 15,
-              color: context.colorScheme.onSurfaceVariant,
+              color: tokens.mutedText,
             ),
           ],
         ),
@@ -450,29 +464,32 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   Widget _chip(String label,
       {required bool selected, required VoidCallback onTap}) {
+    final tokens = VeneraDesignTokens.of(context);
+    final scheme = context.colorScheme;
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Container(
         width: 66,
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 7),
         decoration: BoxDecoration(
           color: selected
-              ? context.colorScheme.primaryContainer
+              ? scheme.primary.withValues(alpha: .14)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? scheme.primary.withValues(alpha: .34) : tokens.borderSubtle,
+            width: .7,
+          ),
         ),
         child: Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 13,
-            color: selected
-                ? context.colorScheme.primary
-                : context.colorScheme.onSurface,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: selected ? scheme.primary : tokens.mutedText,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),

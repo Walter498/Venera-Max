@@ -36,11 +36,33 @@ class _CommunityPageState extends State<CommunityPage>
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
     return Scaffold(
       body: Column(children: [
-        TabBar(
-          controller: _tabs,
-          tabs: [for (final s in _kSections) Tab(text: s[1] as String)],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: tokens.controlSurface,
+              borderRadius: BorderRadius.circular(tokens.controlRadius),
+              border: Border.all(color: tokens.borderSubtle, width: .7),
+            ),
+            child: TabBar(
+              controller: _tabs,
+              indicator: BoxDecoration(
+                color: context.colorScheme.primary.withValues(alpha: .16),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelColor: context.colorScheme.primary,
+              unselectedLabelColor: tokens.mutedText,
+              labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              tabs: [for (final s in _kSections) Tab(text: s[1] as String)],
+            ),
+          ),
         ),
         Expanded(
           child: TabBarView(
@@ -262,6 +284,14 @@ class _PostListViewState extends State<PostListView> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreatePost,
+        elevation: 0,
+        backgroundColor: context.colorScheme.primary,
+        foregroundColor: context.colorScheme.onPrimary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            VeneraDesignTokens.of(context).controlRadius,
+          ),
+        ),
         child: const Icon(Icons.add),
       ),
       body: RefreshIndicator(
@@ -303,10 +333,18 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 5),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+    final tokens = VeneraDesignTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Material(
+        color: tokens.contentSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.sectionRadius),
+          side: BorderSide(color: tokens.borderSubtle, width: .7),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(tokens.sectionRadius),
         onTap: () => context.to(
             () => PostDetailPage(postId: post.id, initial: post)),
         child: Padding(
@@ -414,7 +452,8 @@ class PostCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

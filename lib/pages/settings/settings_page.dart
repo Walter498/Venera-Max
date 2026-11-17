@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -231,33 +232,38 @@ class _SettingsPageState extends State<SettingsPage> {
     ),
   );
 
-  Widget buildSearchField() => Padding(
-    padding: EdgeInsets.fromLTRB(
-      enableTwoViews ? 12 : 20,
-      4,
-      enableTwoViews ? 12 : 20,
-      0,
-    ),
-    child: TextField(
+  Widget buildSearchField() {
+    final tokens = VeneraDesignTokens.of(context);
+    final radius = BorderRadius.circular(tokens.controlRadius);
+    final field = TextField(
       controller: _searchController,
       focusNode: _searchFocus,
-      style: const TextStyle(fontSize: 14),
+      style: Theme.of(context).textTheme.bodyMedium,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
         hintText: 'Search settings'.tl,
         prefixIcon: const Icon(Icons.search, size: 20),
         filled: true,
-        fillColor: colors.surfaceContainerHighest,
+        fillColor: App.isIOS ? tokens.glassSurface : tokens.controlSurface,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: enableTwoViews
-              ? BorderSide(color: colors.outlineVariant)
-              : BorderSide.none,
+          borderRadius: radius,
+          borderSide: BorderSide(color: tokens.borderSubtle, width: .7),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: tokens.borderSubtle, width: .7),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(
+            color: context.colorScheme.primary.withValues(alpha: .55),
+            width: 1.2,
+          ),
         ),
         suffixIcon: _searchQuery.isEmpty
             ? null
@@ -271,8 +277,26 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
       ),
       onChanged: (value) => setState(() => _searchQuery = value),
-    ),
-  );
+    );
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        enableTwoViews ? 12 : 20,
+        4,
+        enableTwoViews ? 12 : 20,
+        0,
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: App.isIOS
+            ? BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: tokens.blurSigma, sigmaY: tokens.blurSigma),
+                child: field,
+              )
+            : field,
+      ),
+    );
+  }
+
 
   Widget buildLeft() => Material(
     color: colors.surfaceContainerLow,
