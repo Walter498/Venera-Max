@@ -124,7 +124,7 @@ void main() {
     }
   });
 
-  testWidgets('bottom glass stays rounded, inset and transparent at the top', (
+  testWidgets('bottom glass stays rounded, clear at top and dark below', (
     tester,
   ) async {
     const radius = BorderRadius.all(Radius.circular(18));
@@ -155,19 +155,30 @@ void main() {
     }
     expect(find.byType(BackdropFilter), findsNWidgets(12));
     expect(find.byType(BackdropGroup), findsOneWidget);
-    final decorations = tester.widgetList<DecoratedBox>(
-      find.descendant(
-        of: find.byType(ReaderBottomGlass),
-        matching: find.byType(DecoratedBox),
-      ),
-    );
-    for (final widget in decorations) {
-      final box = widget.decoration as BoxDecoration;
-      expect(box.color, isNull); // no opaque base material
-      final gradient = box.gradient! as LinearGradient;
-      expect(gradient.colors.first.a, 0);
-      expect(gradient.colors.last.a, lessThanOrEqualTo(0.31));
-    }
+    final decorations = tester
+        .widgetList<DecoratedBox>(
+          find.descendant(
+            of: find.byType(ReaderBottomGlass),
+            matching: find.byType(DecoratedBox),
+          ),
+        )
+        .toList();
+    expect(decorations, hasLength(2));
+
+    final surfaceGradient = decorations[0].decoration as BoxDecoration;
+    expect(surfaceGradient.color, isNull); // no opaque base material
+    final surface = surfaceGradient.gradient! as LinearGradient;
+    expect(surface.colors.first.a, 0);
+    expect(surface.colors.last.a, greaterThanOrEqualTo(0.33));
+
+    final shadeGradient = decorations[1].decoration as BoxDecoration;
+    expect(shadeGradient.color, isNull); // tint is a controlled gradient
+    final shade = shadeGradient.gradient! as LinearGradient;
+    expect(shade.colors.first.a, 0);
+    // The lower ramp is deliberately substantially darker than the old 10%.
+    expect(shade.colors[2].a, greaterThanOrEqualTo(0.17));
+    expect(shade.colors[3].a, greaterThanOrEqualTo(0.4));
+    expect(shade.colors.last.a, greaterThanOrEqualTo(0.65));
     expect(tester.takeException(), isNull);
   });
 

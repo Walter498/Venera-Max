@@ -91,9 +91,9 @@ class _ReaderChromeVisibilityState extends State<ReaderChromeVisibility>
   }
 }
 
-/// Clear at the top, progressively frosted through the middle, then stronger
-/// blur and a restrained dark tint at the bottom. Everything stays inside the
-/// floating card: no full-width scrim, opaque material or doubled page image.
+/// Clear at the top, progressively frosted through the middle, then a broad
+/// dark ramp behind the controls. Everything stays inside the floating card:
+/// no full-width scrim, opaque material or doubled page image.
 class ReaderBottomGlass extends StatelessWidget {
   const ReaderBottomGlass({
     required this.borderRadius,
@@ -162,12 +162,15 @@ class ReaderBottomGlass extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                stops: const [0, 0.25, 0.65, 1],
+                // Keep the upper edge readable against the artwork while
+                // giving the controls a denser material to sit on.
+                stops: const [0, 0.2, 0.5, 0.72, 1],
                 colors: [
                   surfaceColor.withValues(alpha: 0),
-                  surfaceColor.withValues(alpha: 0.04),
+                  surfaceColor.withValues(alpha: 0.06),
                   surfaceColor.withValues(alpha: 0.14),
-                  surfaceColor.withValues(alpha: 0.30),
+                  surfaceColor.withValues(alpha: 0.24),
+                  surfaceColor.withValues(alpha: 0.34),
                 ],
               ),
             ),
@@ -178,12 +181,15 @@ class ReaderBottomGlass extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  stops: [0, 0.4, 0.75, 1],
+                  // The dark ramp is intentionally broad: the bottom
+                  // controls should remain legible over bright comic art.
+                  stops: [0, 0.34, 0.58, 0.78, 1],
                   colors: [
                     Color(0x00000000),
                     Color(0x00000000),
-                    Color(0x06000000),
-                    Color(0x1A000000),
+                    Color(0x2E000000),
+                    Color(0x6B000000),
+                    Color(0xAD000000),
                   ],
                 ),
               ),
