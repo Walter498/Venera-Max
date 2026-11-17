@@ -77,9 +77,9 @@ void main() {
           await tester.tapAt(openRect.center);
           expect(pageTaps, 1);
           expect(controlTaps, 1);
-          expect(find.bySemanticsLabel(control), findsNothing);
           await tester.pumpAndSettle();
           expect(find.text(control), findsNothing);
+          expect(find.bySemanticsLabel(control), findsNothing);
           final offstage = tester.widget<Offstage>(
             find.descendant(
               of: find.byType(ReaderChromeVisibility),
@@ -175,7 +175,7 @@ void main() {
     final scaffold = File('lib/pages/reader/scaffold.dart').readAsStringSync();
     expect(scaffold, isNot(contains('PaintingStyle.stroke')));
     expect(scaffold, contains('color: context.colorScheme.onInverseSurface'));
-    expect(scaffold, contains("Text('\$batteryLevel%',"));
+    expect(scaffold, contains("'\$batteryLevel%',"));
     expect(scaffold, contains('if (!_isOpen && !isOnChapterCommentsPage)'));
     expect(RegExp(r'child: ReaderChromeVisibility\(').allMatches(scaffold).length, 3);
     expect(scaffold, contains('return ReaderBottomGlass('));

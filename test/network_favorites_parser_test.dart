@@ -16,6 +16,7 @@ class FavoritesBoundaryFixture extends ComicSource {
   name = "Favorites boundary fixture";
   key = "$key";
   version = "1.0.0";
+  comic = {};
   minAppVersion = null;
   favorites = {
     multiFolder: true,
