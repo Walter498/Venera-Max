@@ -1,6 +1,15 @@
 part of 'comic_page.dart';
 
 abstract mixin class _ComicPageActions {
+  // Concrete page state supplies these members; declaring them here keeps the
+  // low-frequency actions in the shared mixin while preserving the compact UI.
+  ComicPage get widget;
+  bool get isDownloaded;
+  bool get _detailsRefreshing;
+  Future<void> _refreshComicDetails();
+  Future<void> clearComicCache();
+  void _toggleCollectionDetailMode();
+
   void update();
 
   /// Re-runs the detail fetch. Needed after an edit that changes what the
