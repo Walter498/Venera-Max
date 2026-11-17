@@ -332,6 +332,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: tokens.controlSurface,
+          foregroundColor: themedColors.onSurface,
+          side: BorderSide(color: tokens.borderStrong, width: 1),
           minimumSize: const Size(0, 44),
           elevation: 0,
           padding: const EdgeInsets.symmetric(

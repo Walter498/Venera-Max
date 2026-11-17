@@ -857,15 +857,12 @@ class _NaviMainViewState extends State<_NaviMainView> {
             // without an explicit width constraint a page whose content has a
             // natural max width can leave a large unused area on wide desktop
             // windows (the home feed is the most visible example).
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: App.isIOS && shouldShowAppBar ? 88 : 0,
-              ),
-              child: SizedBox.expand(
-                child: AnimatedSwitcher(
-                  duration: _fastAnimationDuration,
-                  child: state.buildMainViewContent(),
-                ),
+            // Keep content under the translucent navigation material. Reserving
+            // 88px here made the native blur sample an empty, solid rectangle.
+            child: SizedBox.expand(
+              child: AnimatedSwitcher(
+                duration: _fastAnimationDuration,
+                child: state.buildMainViewContent(),
               ),
             ),
           ),

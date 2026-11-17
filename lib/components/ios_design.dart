@@ -83,10 +83,11 @@ class VeneraDesignTokens extends ThemeExtension<VeneraDesignTokens> {
         scheme.surfaceContainerLow.withValues(alpha: isDark ? .72 : .86),
         surface,
       ),
-      controlSurface: Color.alphaBlend(
-        scheme.surfaceContainerHigh.withValues(alpha: isDark ? .78 : .9),
-        surface,
-      ),
+      // Neutral controls stay distinct from both grouped pages and cards.
+      // Seed surface tones can collapse onto a custom dark background.
+      controlSurface: isDark
+          ? const Color(0xFF323236)
+          : const Color(0xFFFFFFFF),
       controlSurfacePressed: Color.alphaBlend(
         scheme.surfaceContainerHighest.withValues(alpha: isDark ? .9 : 1),
         surface,
@@ -95,7 +96,7 @@ class VeneraDesignTokens extends ThemeExtension<VeneraDesignTokens> {
       glassStrongSurface: surface.withValues(alpha: isDark ? .86 : .8),
       selectedSurface: scheme.primary.withValues(alpha: isDark ? .22 : .14),
       borderSubtle: scheme.outlineVariant.withValues(alpha: isDark ? .3 : .22),
-      borderStrong: scheme.outline.withValues(alpha: isDark ? .46 : .34),
+      borderStrong: scheme.outline.withValues(alpha: isDark ? .85 : .75),
       separator: scheme.outlineVariant.withValues(alpha: isDark ? .28 : .2),
       mutedText: scheme.onSurfaceVariant,
       accent: scheme.primary,

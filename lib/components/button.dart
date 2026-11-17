@@ -154,6 +154,12 @@ class _ButtonState extends State<Button> {
   bool isLoading = false;
 
   @override
+  void initState() {
+    isLoading = widget.isLoading;
+    super.initState();
+  }
+
+  @override
   void didUpdateWidget(covariant Button oldWidget) {
     if (oldWidget.isLoading != widget.isLoading) {
       setState(() => isLoading = widget.isLoading);
@@ -178,9 +184,7 @@ class _ButtonState extends State<Button> {
         style: TextStyle(color: textColor, fontSize: 14),
         child: isLoading
             ? CircularProgressIndicator(
-                color: widget.type == ButtonType.filled
-                    ? context.colorScheme.inversePrimary
-                    : context.colorScheme.primary,
+                color: textColor,
                 strokeWidth: 1.8,
               ).fixWidth(16).fixHeight(16)
             : widget.child,
@@ -219,7 +223,7 @@ class _ButtonState extends State<Button> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
             padding: padding,
-            constraints: const BoxConstraints(minWidth: 76, minHeight: 36),
+            constraints: const BoxConstraints(minWidth: 76, minHeight: 44),
             decoration: BoxDecoration(
               color: buttonColor,
               borderRadius: BorderRadius.circular(
@@ -238,12 +242,12 @@ class _ButtonState extends State<Button> {
                       ),
                     ]
                   : null,
-              border: widget.type == ButtonType.outlined
+              border: widget.type == ButtonType.outlined ||
+                      widget.type == ButtonType.normal
                   ? Border.all(
-                      color:
-                          widget.color ??
-                          Theme.of(context).colorScheme.outlineVariant,
-                      width: 0.6,
+                      color: widget.color ??
+                          VeneraDesignTokens.of(context).borderStrong,
+                      width: 1,
                     )
                   : null,
             ),
@@ -271,7 +275,7 @@ class _ButtonState extends State<Button> {
       }
     }
     if (widget.type == ButtonType.normal) {
-      var color = widget.color ?? context.colorScheme.surfaceContainer;
+      var color = widget.color ?? VeneraDesignTokens.of(context).controlSurface;
       if (isHover) {
         return color.toOpacity(0.9);
       } else {
@@ -284,12 +288,25 @@ class _ButtonState extends State<Button> {
     return Colors.transparent;
   }
 
+  // A custom fill is not necessarily the theme primary (e.g. a pale
+  // destructive/container colour). Choose its actual readable foreground.
+  Color get fillForeground {
+    final fill = widget.color ?? context.colorScheme.primary;
+    final luminance = fill.computeLuminance();
+    final blackContrast = (luminance + .05) / .05;
+    final whiteContrast = 1.05 / (luminance + .05);
+    return blackContrast >= whiteContrast ? Colors.black : Colors.white;
+  }
+
   Color get textColor {
     if (widget.type == ButtonType.outlined) {
       return widget.color ?? context.colorScheme.primary;
     }
+    if (widget.type == ButtonType.normal && widget.color != null) {
+      return fillForeground;
+    }
     return widget.type == ButtonType.filled
-        ? context.colorScheme.onPrimary
+        ? fillForeground
         : (widget.type == ButtonType.text
               ? widget.color ?? context.colorScheme.primary
               : context.colorScheme.onSurface);

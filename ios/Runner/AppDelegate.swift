@@ -189,47 +189,6 @@ final class NativeTabBarFactory: NSObject, FlutterPlatformViewFactory {
   }
 }
 
-private final class NativeBottomMaterialView: UIVisualEffectView {
-  private let tintLayer = CAGradientLayer()
-
-  override init(effect: UIVisualEffect?) {
-    super.init(effect: effect)
-    layer.addSublayer(tintLayer)
-  }
-
-  required init?(coder: NSCoder) {
-    super.init(coder: coder)
-    layer.addSublayer(tintLayer)
-  }
-
-  override func layoutSubviews() {
-    super.layoutSubviews()
-    let mask = (layer.mask as? CAGradientLayer) ?? CAGradientLayer()
-    mask.frame = bounds
-    mask.colors = [
-      UIColor.clear.cgColor,
-      UIColor.black.withAlphaComponent(0.38).cgColor,
-      UIColor.black.cgColor,
-    ]
-    mask.locations = [0.0, 0.52, 1.0]
-    mask.startPoint = CGPoint(x: 0.5, y: 0.0)
-    mask.endPoint = CGPoint(x: 0.5, y: 1.0)
-    layer.mask = mask
-
-    // The material supplies the blur. This very light tint supplies the
-    // requested gradual fade-to-dark at the bottom without a black block.
-    tintLayer.frame = bounds
-    tintLayer.colors = [
-      UIColor.clear.cgColor,
-      UIColor.black.withAlphaComponent(0.035).cgColor,
-      UIColor.black.withAlphaComponent(0.12).cgColor,
-    ]
-    tintLayer.locations = [0.0, 0.58, 1.0]
-    tintLayer.startPoint = CGPoint(x: 0.5, y: 0.0)
-    tintLayer.endPoint = CGPoint(x: 0.5, y: 1.0)
-  }
-}
-
 final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
   private static let symbols = [
     // Use SF Symbols with distinct silhouettes. In particular, avoid the
@@ -243,7 +202,6 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
   private let container: UIView
   private let tabBar: UITabBar
   private let channel: FlutterMethodChannel
-  private var bottomMaterial: NativeBottomMaterialView?
 
   init(
     frame: CGRect,
@@ -280,33 +238,25 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
     })
     container.addSubview(tabBar)
 
-    // iOS 26+ owns the Liquid Glass treatment for system tab bars. On
-    // iOS 17–25, use a native masked material: the upper edge is transparent,
-    // the material increases gradually toward the home-indicator edge, and no
-    // opaque black rectangle is painted behind the page content.
-    if #available(iOS 26.0, *) {
-      tabBar.backgroundColor = nil
-    } else {
-      let material = NativeBottomMaterialView(
-        effect: UIBlurEffect(style: .systemMaterial)
-      )
-      material.frame = container.bounds
-      material.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-      material.isUserInteractionEnabled = false
-      material.isOpaque = false
-      bottomMaterial = material
-      container.insertSubview(material, belowSubview: tabBar)
-
-      let appearance = UITabBarAppearance()
-      appearance.configureWithTransparentBackground()
-      appearance.backgroundEffect = nil
-      appearance.backgroundColor = .clear
-      appearance.shadowColor = .clear
-      tabBar.standardAppearance = appearance
-      if #available(iOS 15.0, *) {
-        tabBar.scrollEdgeAppearance = appearance
-      }
-    }
+    // Apply an explicit transparent appearance on BOTH paths. A standalone
+    // UITabBar is not hosted by UITabBarController, so iOS 26 does not promise
+    // to supply its floating Liquid Glass shell. Its default appearance can
+    // instead paint an opaque rectangular background over Flutter.
+    // The shared Flutter backdrop samples the actual page texture below us.
+    let appearance = UITabBarAppearance()
+    appearance.configureWithTransparentBackground()
+    appearance.backgroundEffect = nil
+    appearance.backgroundColor = .clear
+    appearance.shadowColor = .clear
+    tabBar.standardAppearance = appearance
+    tabBar.scrollEdgeAppearance = appearance
+    tabBar.backgroundColor = .clear
+    tabBar.layer.cornerRadius = 28
+    tabBar.layer.cornerCurve = .continuous
+    tabBar.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+    tabBar.clipsToBounds = true
+    tabBar.tintColor = .systemBlue
+    tabBar.unselectedItemTintColor = .secondaryLabel
 
     channel.setMethodCallHandler { [weak self] call, result in
       guard let self else {

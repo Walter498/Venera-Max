@@ -1,8 +1,8 @@
 part of 'components.dart';
 
-/// The iOS home shell uses a real UIKit UITabBar. Flutter only supplies the
-/// page labels and receives selection callbacks; it does not paint a second
-/// bar or a background over the page.
+/// The iOS home shell uses a real UIKit UITabBar for items and interaction.
+/// The shared backdrop is painted below it in Flutter so the blur can sample
+/// the page texture; the platform view itself has no opaque background.
 class _NativeIosTabBar extends StatefulWidget {
   const _NativeIosTabBar({
     required this.items,
@@ -60,15 +60,57 @@ class _NativeIosTabBarState extends State<_NativeIosTabBar> {
     final labels = widget.items.map((item) => item.label).toList(growable: false);
     return SizedBox(
       height: NaviPaneState._kBottomBarHeight + bottomInset,
-      child: UiKitView(
-        key: ValueKey(labels.join('\u0000')),
-        viewType: _viewType,
-        creationParams: <String, Object>{
-          'labels': labels,
-          'selectedIndex': widget.selectedIndex,
-        },
-        creationParamsCodec: const StandardMessageCodec(),
-        onPlatformViewCreated: _onPlatformViewCreated,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // UIKit effects cannot reliably sample Flutter's composited
+            // texture. Paint the backdrop in Flutter, below the real UITabBar.
+            // Masking the material (not the content) keeps the upper edge clear.
+            IgnorePointer(
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (bounds) => const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0x66000000), Colors.black],
+                  stops: [0, .48, 1],
+                ).createShader(bounds),
+                child: BackdropFilter(
+                  // ShaderMask creates a saveLayer; src prevents the filtered
+                  // backdrop from being blended twice into that layer.
+                  blendMode: BlendMode.src,
+                  filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Theme.of(context).colorScheme.surface.withValues(alpha: 0),
+                          Theme.of(context).colorScheme.surface.withValues(alpha: .35),
+                          Colors.black.withValues(alpha: .12),
+                        ],
+                        stops: const [0, .62, 1],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            UiKitView(
+              key: ValueKey(labels.join('\u0000')),
+              viewType: _viewType,
+              creationParams: <String, Object>{
+                'labels': labels,
+                'selectedIndex': widget.selectedIndex,
+              },
+              creationParamsCodec: const StandardMessageCodec(),
+              onPlatformViewCreated: _onPlatformViewCreated,
+            ),
+          ],
+        ),
       ),
     );
   }
