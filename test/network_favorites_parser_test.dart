@@ -17,6 +17,7 @@ class FavoritesBoundaryFixture extends ComicSource {
   key = "$key";
   version = "1.0.0";
   comic = {};
+  search = {};
   minAppVersion = null;
   favorites = {
     multiFolder: true,
