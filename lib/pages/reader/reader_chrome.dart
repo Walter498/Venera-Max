@@ -157,55 +157,55 @@ class ReaderBottomGlass extends StatelessWidget {
               ),
             ),
           ),
-              // A subtle constant base keeps the auto-turn row readable even
-              // at the clear edge of the transition. The gradient below still
-              // carries the clear-to-dark hierarchy over that base.
-              Positioned.fill(
-                child: ColoredBox(color: Color(0x24000000)),
+          // A subtle constant base keeps the auto-turn row readable even
+          // at the clear edge of the transition. The gradient below still
+          // carries the clear-to-dark hierarchy over that base.
+          Positioned.fill(
+            child: ColoredBox(color: Color(0x24000000)),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                // More, smaller steps keep the transition broad and slow
+                // instead of dropping the controls onto a hard black edge.
+                stops: const [0, 0.14, 0.30, 0.48, 0.66, 0.84, 1],
+                colors: [
+                  surfaceColor.withValues(alpha: 0),
+                  surfaceColor.withValues(alpha: 0.05),
+                  surfaceColor.withValues(alpha: 0.10),
+                  surfaceColor.withValues(alpha: 0.17),
+                  surfaceColor.withValues(alpha: 0.25),
+                  surfaceColor.withValues(alpha: 0.33),
+                  surfaceColor.withValues(alpha: 0.40),
+                ],
               ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    // More, smaller steps keep the transition broad and slow
-                    // instead of dropping the controls onto a hard black edge.
-                    stops: const [0, 0.14, 0.30, 0.48, 0.66, 0.84, 1],
-                    colors: [
-                      surfaceColor.withValues(alpha: 0),
-                      surfaceColor.withValues(alpha: 0.05),
-                      surfaceColor.withValues(alpha: 0.10),
-                      surfaceColor.withValues(alpha: 0.17),
-                      surfaceColor.withValues(alpha: 0.25),
-                      surfaceColor.withValues(alpha: 0.33),
-                      surfaceColor.withValues(alpha: 0.40),
-                    ],
-                  ),
-                ),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: borderRadius,
-                    border: Border.all(color: borderColor, width: 0.5),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      // The dark ramp starts earlier and has more intermediate
-                      // stops so the speed row and progress remain legible.
-                      stops: [0, 0.16, 0.38, 0.58, 0.76, 0.9, 1],
-                      colors: [
-                        Color(0x00000000),
-                        Color(0x08000000),
-                        Color(0x2E000000),
-                        Color(0x66000000),
-                        Color(0x85000000),
-                        Color(0x9E000000),
-                        Color(0xB8000000),
-                      ],
-                    ),
-                  ),
-                  child: child,
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: borderRadius,
+                border: Border.all(color: borderColor, width: 0.5),
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  // The dark ramp starts earlier and has more intermediate
+                  // stops so the speed row and progress remain legible.
+                  stops: [0, 0.16, 0.38, 0.58, 0.76, 0.9, 1],
+                  colors: [
+                    Color(0x00000000),
+                    Color(0x08000000),
+                    Color(0x2E000000),
+                    Color(0x66000000),
+                    Color(0x85000000),
+                    Color(0x9E000000),
+                    Color(0xB8000000),
+                  ],
                 ),
               ),
+              child: child,
+            ),
+          ),
         ],
       ),
     );
