@@ -189,14 +189,18 @@ class _DesktopMenuState extends State<_DesktopMenu> {
   @override
   Widget build(BuildContext context) {
     final width = math.min(360.0, MediaQuery.sizeOf(context).width - 24);
+    final tokens = VeneraDesignTokens.of(context);
     final style = MenuStyle(
       backgroundColor: WidgetStatePropertyAll(
-        context.colorScheme.surfaceContainer,
+        tokens.controlSurfacePressed,
       ),
       minimumSize: WidgetStatePropertyAll(Size(math.min(272, width), 0)),
       maximumSize: WidgetStatePropertyAll(Size(width, double.infinity)),
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          side: BorderSide(color: tokens.borderSubtle, width: VeneraDesignTokens.hairline),
+        ),
       ),
     );
     return MenuTheme(

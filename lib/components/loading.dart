@@ -522,14 +522,6 @@ class _FiveDotLoadingAnimationState extends State<FiveDotLoadingAnimation>
     super.dispose();
   }
 
-  static const _colors = [
-    Colors.red,
-    Colors.green,
-    Colors.blue,
-    Colors.yellow,
-    Colors.purple,
-  ];
-
   static const _padding = 12.0;
 
   static const _dotSize = 12.0;
@@ -551,6 +543,15 @@ class _FiveDotLoadingAnimationState extends State<FiveDotLoadingAnimation>
   }
 
   Widget buildDot(int index) {
+    final tokens = VeneraDesignTokens.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final colors = [
+      scheme.primary,
+      tokens.success,
+      scheme.secondary,
+      tokens.warning,
+      scheme.tertiary,
+    ];
     var value = _controller.value;
     var startValue = index * 0.8;
     return Positioned(
@@ -562,7 +563,7 @@ class _FiveDotLoadingAnimationState extends State<FiveDotLoadingAnimation>
         width: _dotSize,
         height: _dotSize,
         decoration: BoxDecoration(
-          color: _colors[index],
+          color: colors[index],
           shape: BoxShape.circle,
         ),
       ),
