@@ -336,33 +336,12 @@ class _CategoriesPageState extends State<CategoriesPage> {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final selected = i == _sourceIndex;
-          return InkWell(
-            borderRadius: BorderRadius.circular(tokens.controlRadius),
-            onTap: () => _switchSource(i),
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: selected
-                    ? context.colorScheme.primary.withValues(alpha: .14)
-                    : tokens.controlSurface,
-                borderRadius: BorderRadius.circular(tokens.controlRadius),
-                border: Border.all(
-                  color: selected
-                      ? context.colorScheme.primary.withValues(alpha: .34)
-                      : tokens.borderSubtle,
-                  width: .7,
-                ),
-              ),
-              child: Text(
-                _availableSources[i].name,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected
-                      ? context.colorScheme.primary
-                      : tokens.mutedText,
-                ),
-              ),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 1),
+            child: VeneraChip(
+              label: _availableSources[i].name,
+              selected: selected,
+              onTap: () => _switchSource(i),
             ),
           );
         },
@@ -434,31 +413,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
   Widget _expandChip(String label,
       {required bool expanded, required VoidCallback onTap}) {
     final tokens = VeneraDesignTokens.of(context);
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
+    return VeneraChip(
+      label: label,
+      selected: expanded,
       onTap: onTap,
-      child: Container(
-        width: 72,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 7),
-        decoration: BoxDecoration(
-          color: tokens.controlSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: tokens.borderSubtle, width: .7),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(label, style: TextStyle(color: tokens.mutedText)),
-            const SizedBox(width: 3),
-            Icon(
-              expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-              size: 15,
-              color: tokens.mutedText,
-            ),
-          ],
-        ),
-      ),
+      leading: Icon(expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
     );
   }
 
@@ -466,34 +425,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       {required bool selected, required VoidCallback onTap}) {
     final tokens = VeneraDesignTokens.of(context);
     final scheme = context.colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        width: 66,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 7),
-        decoration: BoxDecoration(
-          color: selected
-              ? scheme.primary.withValues(alpha: .14)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? scheme.primary.withValues(alpha: .34) : tokens.borderSubtle,
-            width: .7,
-          ),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: selected ? scheme.primary : tokens.mutedText,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
+    return VeneraChip(label: label, selected: selected, onTap: onTap);
   }
 
   Widget _buildFooter() {

@@ -452,10 +452,12 @@ class ComicListState extends State<ComicList> {
         Expanded(
           child: Center(
             child: Material(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
+              color: VeneraDesignTokens.of(context).controlSurface,
+              borderRadius: BorderRadius.circular(
+                VeneraDesignTokens.of(context).controlRadius,
+              ),
               child: InkWell(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).controlRadius),
                 onTap: () {
                   String value = '';
                   showDialog(

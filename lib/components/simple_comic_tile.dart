@@ -74,7 +74,7 @@ class SimpleComicTile extends StatelessWidget {
                     Container(
                       height: 24,
                       width: 24,
-                      color: scheme.primary,
+                      color: scheme.primary.withValues(alpha: .92),
                       child: Icon(
                         Icons.bookmark_rounded,
                         size: 16,
@@ -85,7 +85,7 @@ class SimpleComicTile extends StatelessWidget {
                     Container(
                       height: 24,
                       width: 24,
-                      color: scheme.tertiary,
+                      color: scheme.tertiary.withValues(alpha: .92),
                       child: Icon(
                         Icons.watch_later_rounded,
                         size: 15,
@@ -114,7 +114,7 @@ class SimpleComicTile extends StatelessWidget {
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 color: tokens.glassStrongSurface,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(tokens.cardRadius),
                 border: Border.all(color: tokens.borderSubtle, width: .6),
               ),
               child: Icon(

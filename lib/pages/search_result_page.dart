@@ -614,7 +614,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
         if (!_authorMode || (_searchData?.searchOptions?.isNotEmpty ?? false)) Tooltip(
           message: "Settings".tl,
           child: IconButton(
-            icon: const Icon(Icons.filter_alt_outlined),
+            icon: const Icon(Icons.tune_outlined),
             onPressed: () async {
               if (suggestionOverlay != null) {
                 suggestionsController.remove();

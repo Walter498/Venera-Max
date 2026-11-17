@@ -410,40 +410,59 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
               const SizedBox(width: 16),
               // 資料夾選擇（保留原收藏夾功能）——
               // PopupMenu 在這個頁面層級點不動，改用底部彈層
-              InkWell(
-                onTap: () => _pickFolder(folders),
-                child: Row(
-                  children: [
-                    Text(_folder ?? '全部漫畫',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
-                    const Icon(Icons.arrow_drop_down, size: 20),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              // 排序（原版功能）：有非預設排序時高亮
-              InkWell(
-                onTap: showSortDialog,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Icon(
-                    Icons.sort,
-                    size: 22,
-                    color: _sortType != LocalSortType.defaultSort
-                        ? context.colorScheme.primary
-                        : context.colorScheme.onSurfaceVariant,
+              SizedBox(
+                height: 44,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => _pickFolder(folders),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        Text(_folder ?? '全部漫畫', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        const Icon(Icons.keyboard_arrow_down, size: 20),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              InkWell(
-                onTap: () => setState(() {
-                  _editMode = !_editMode;
-                  _selected.clear();
-                }),
-                child: Text(_editMode ? '完成' : '編輯',
-                    style: TextStyle(
-                        fontSize: 13, color: context.colorScheme.primary)),
+              const Spacer(),
+              Tooltip(
+                message: '排序',
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: showSortDialog,
+                    child: Center(
+                      child: Icon(
+                        Icons.sort,
+                        size: 22,
+                        color: _sortType != LocalSortType.defaultSort
+                            ? context.colorScheme.primary
+                            : context.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => setState(() {
+                    _editMode = !_editMode;
+                    _selected.clear();
+                  }),
+                  child: Center(
+                    child: Text(
+                      _editMode ? '完成' : '編輯',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.colorScheme.primary),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
             ],

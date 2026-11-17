@@ -259,7 +259,9 @@ class _SliverGridComics extends StatelessWidget {
                       context,
                     ).colorScheme.secondaryContainer.toOpacity(0.72)
                   : null,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(
+                VeneraDesignTokens.of(context).cardRadius,
+              ),
             ),
             margin: const EdgeInsets.all(4),
             child: comic,
