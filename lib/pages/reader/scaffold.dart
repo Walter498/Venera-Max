@@ -320,14 +320,13 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         Positioned(
           right: VeneraDesignTokens.space16,
           bottom: context.padding.bottom + bottomBarHeight + VeneraDesignTokens.space12,
-          child: IgnorePointer(
-            ignoring: showFloatingButtonValue == 0,
-            child: AnimatedSlide(
-              duration: _readerChromeAnimationDuration,
-              curve: Curves.easeOutCubic,
-              offset: showFloatingButtonValue == 0
-                  ? const Offset(0, 2)
-                  : Offset.zero,
+          child: ReaderChromeVisibility(
+            key: const ValueKey('reader-chapter-change-chrome'),
+            visible: _isOpen && showFloatingButtonValue != 0,
+            fromTop: false,
+            duration: _readerChromeAnimationDuration,
+            child: IgnorePointer(
+              ignoring: showFloatingButtonValue == 0,
               child: buildEpChangeButton(),
             ),
           ),
@@ -1248,7 +1247,13 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     return Positioned(
       bottom: 13,
       left: 25,
-      child: Text(text, style: const TextStyle(fontSize: 14)),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: context.colorScheme.onInverseSurface,
+          fontSize: 14,
+        ),
+      ),
     );
   }
 
@@ -1841,7 +1846,13 @@ class _BatteryWidgetState extends State<_BatteryWidget> {
     return Row(
       children: [
         Icon(batteryIcon, size: 16, color: batteryColor),
-        Text('$batteryLevel%', style: const TextStyle(fontSize: 14)),
+        Text(
+          '$batteryLevel%',
+          style: TextStyle(
+            color: context.colorScheme.onInverseSurface,
+            fontSize: 14,
+          ),
+        ),
       ],
     );
   }
@@ -1884,7 +1895,13 @@ class _ClockWidgetState extends State<_ClockWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Text(_currentTime, style: const TextStyle(fontSize: 14));
+    return Text(
+      _currentTime,
+      style: TextStyle(
+        color: context.colorScheme.onInverseSurface,
+        fontSize: 14,
+      ),
+    );
   }
 }
 

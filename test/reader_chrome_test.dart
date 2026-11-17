@@ -174,12 +174,10 @@ void main() {
   test('reader uses only one glyph layer for chapter, clock and battery', () {
     final scaffold = File('lib/pages/reader/scaffold.dart').readAsStringSync();
     expect(scaffold, isNot(contains('PaintingStyle.stroke')));
-    expect(scaffold, isNot(contains('onInverseSurface')));
-    expect(scaffold, contains('Text(text, style: const TextStyle(fontSize: 14))'));
-    expect(scaffold, contains('Text(_currentTime, style:'));
-    expect(scaffold, contains("Text('\$batteryLevel%', style:"));
+    expect(scaffold, contains('color: context.colorScheme.onInverseSurface'));
+    expect(scaffold, contains("Text('\$batteryLevel%',"));
     expect(scaffold, contains('if (!_isOpen && !isOnChapterCommentsPage)'));
-    expect(RegExp(r'child: ReaderChromeVisibility\(').allMatches(scaffold).length, 2);
+    expect(RegExp(r'child: ReaderChromeVisibility\(').allMatches(scaffold).length, 3);
     expect(scaffold, contains('return ReaderBottomGlass('));
   });
 }
