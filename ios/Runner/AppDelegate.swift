@@ -220,10 +220,12 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
     )
     super.init()
 
-    container.backgroundColor = .systemBackground
+    container.backgroundColor = .clear
+    container.isOpaque = false
     tabBar.delegate = self
-    tabBar.isTranslucent = false
-    tabBar.backgroundColor = .systemBackground
+    tabBar.isTranslucent = true
+    tabBar.backgroundColor = .clear
+    tabBar.isOpaque = false
     tabBar.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
     tabBar.items = Self.items(from: args)
     tabBar.selectedItem = tabBar.items?.first(where: {
@@ -233,8 +235,10 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
 
     if #available(iOS 13.0, *) {
       let appearance = UITabBarAppearance()
-      appearance.configureWithOpaqueBackground()
-      appearance.backgroundColor = .systemBackground
+      appearance.configureWithTransparentBackground()
+      appearance.backgroundColor = .clear
+      appearance.backgroundEffect = nil
+      appearance.shadowColor = .clear
       tabBar.standardAppearance = appearance
       if #available(iOS 15.0, *) {
         tabBar.scrollEdgeAppearance = appearance
@@ -259,6 +263,10 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
         }
       }
     }
+  }
+
+  deinit {
+    channel.setMethodCallHandler(nil)
   }
 
   static func items(from args: Any?) -> [UITabBarItem] {

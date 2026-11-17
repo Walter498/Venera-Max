@@ -834,7 +834,7 @@ class _NaviMainViewState extends State<_NaviMainView> {
   @override
   Widget build(BuildContext context) {
     var shouldShowAppBar = state.controller.value < 2;
-    return Column(
+    final topAndContent = Column(
       children: [
         if (shouldShowAppBar) state.buildTop().paddingTop(context.padding.top),
         Expanded(
@@ -854,13 +854,33 @@ class _NaviMainViewState extends State<_NaviMainView> {
             ),
           ),
         ),
+      ],
+    );
+
+    // UIKit's tab bar is a transparent overlay on iOS. Do not reserve an
+    // opaque bottom rectangle in the page column: the page must continue
+    // behind the native items, while the native items remain interactive.
+    if (App.isIOS && shouldShowAppBar) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          topAndContent,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: state.buildBottom(),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        Expanded(child: topAndContent),
         if (shouldShowAppBar)
-          App.isIOS
-              ? state.buildBottom()
-              : appdata.settings['ui_style'] == 'glass'
+          appdata.settings['ui_style'] == 'glass'
               ? state.buildBottom()
               : state.buildBottom().paddingBottom(context.padding.bottom),
       ],
     );
-  }
-}
