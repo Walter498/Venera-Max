@@ -189,6 +189,23 @@ final class NativeTabBarFactory: NSObject, FlutterPlatformViewFactory {
   }
 }
 
+private final class NativeBottomMaterialView: UIVisualEffectView {
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    let mask = (layer.mask as? CAGradientLayer) ?? CAGradientLayer()
+    mask.frame = bounds
+    mask.colors = [
+      UIColor.clear.cgColor,
+      UIColor.black.withAlphaComponent(0.38).cgColor,
+      UIColor.black.cgColor,
+    ]
+    mask.locations = [0.0, 0.52, 1.0]
+    mask.startPoint = CGPoint(x: 0.5, y: 0.0)
+    mask.endPoint = CGPoint(x: 0.5, y: 1.0)
+    layer.mask = mask
+  }
+}
+
 final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
   private static let symbols = [
     // Use SF Symbols with distinct silhouettes. In particular, avoid the
@@ -202,6 +219,7 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
   private let container: UIView
   private let tabBar: UITabBar
   private let channel: FlutterMethodChannel
+  private var bottomMaterial: NativeBottomMaterialView?
 
   init(
     frame: CGRect,
@@ -238,18 +256,28 @@ final class NativeTabBarView: NSObject, FlutterPlatformView, UITabBarDelegate {
     })
     container.addSubview(tabBar)
 
-    // iOS 26+ owns the Liquid Glass treatment for system tab bars. Do not
-    // replace it with a hand-painted clear/black background. On iOS 17–25,
-    // use the equivalent system material fallback so content remains visible
-    // while tab labels stay readable.
+    // iOS 26+ owns the Liquid Glass treatment for system tab bars. On
+    // iOS 17–25, use a native masked material: the upper edge is transparent,
+    // the material increases gradually toward the home-indicator edge, and no
+    // opaque black rectangle is painted behind the page content.
     if #available(iOS 26.0, *) {
       tabBar.backgroundColor = nil
     } else {
+      let material = NativeBottomMaterialView(
+        effect: UIBlurEffect(style: .systemMaterial)
+      )
+      material.frame = container.bounds
+      material.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      material.isUserInteractionEnabled = false
+      material.isOpaque = false
+      bottomMaterial = material
+      container.insertSubview(material, belowSubview: tabBar)
+
       let appearance = UITabBarAppearance()
-      appearance.configureWithDefaultBackground()
-      appearance.backgroundEffect = UIBlurEffect(style: .systemMaterial)
-      appearance.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.78)
-      appearance.shadowColor = UIColor.separator.withAlphaComponent(0.28)
+      appearance.configureWithTransparentBackground()
+      appearance.backgroundEffect = nil
+      appearance.backgroundColor = .clear
+      appearance.shadowColor = .clear
       tabBar.standardAppearance = appearance
       if #available(iOS 15.0, *) {
         tabBar.scrollEdgeAppearance = appearance
