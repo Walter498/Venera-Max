@@ -15,6 +15,7 @@ class ComicList extends StatefulWidget {
     this.selectionHandlerCallback,
     this.onSelectionStateChanged,
     this.enablePageStorage = false,
+    this.pageStorageIdentifier,
     this.enableSelection = false,
     this.scrollbar = true,
     this.scrollbarTopPadding = 0,
@@ -55,6 +56,10 @@ class ComicList extends StatefulWidget {
 
   final bool enablePageStorage;
 
+  /// Separates list data from ScrollPosition's double-valued storage slot.
+  /// Hosts sharing a bucket must include source/folder identity in this key.
+  final Object? pageStorageIdentifier;
+
   /// When true, comics can be multi-selected (via the long-press menu or the
   /// host's [selectionHandlerCallback] button) to batch-favorite them; on
   /// mobile, a left-swipe quick-favorites a single comic to the configured
@@ -94,6 +99,7 @@ class ComicListState extends State<ComicList> {
   String? _nextUrl;
 
   late bool enablePageStorage = widget.enablePageStorage;
+  bool _restoredPageStorage = false;
 
   // ---- Multi-select (only active when widget.enableSelection) ----
   bool _selecting = false;
@@ -378,15 +384,30 @@ class ComicListState extends State<ComicList> {
 
   Map<String, dynamic> get state => {
     'maxPage': _maxPage,
-    'data': _data,
+    'data': {
+      for (final entry in _data.entries)
+        entry.key: List<Comic>.of(entry.value),
+    },
     'page': _page,
     'error': _error,
     'loading': _loading,
     'nextUrl': _nextUrl,
   };
 
-  void restoreState(Map<String, dynamic>? state) {
-    if (state == null || !enablePageStorage) {
+  void restoreState(Object? value) {
+    // PageStorage is untyped: the default slot can contain a ScrollPosition
+    // offset, including one left by an earlier version of the favorites page.
+    // Check before the cast, not in a Map-typed parameter (which throws first).
+    if (!enablePageStorage || value is! Map<String, dynamic>) {
+      return;
+    }
+    final state = value;
+    if (state['data'] is! Map<int, List<Comic>> ||
+        state['page'] is! int ||
+        (state['page'] as int) < 1 ||
+        (state['maxPage'] != null && state['maxPage'] is! int) ||
+        (state['error'] != null && state['error'] is! String) ||
+        (state['nextUrl'] != null && state['nextUrl'] is! String)) {
       return;
     }
     _maxPage = state['maxPage'];
@@ -394,14 +415,16 @@ class ComicListState extends State<ComicList> {
     _data.addAll(state['data']);
     _page = state['page'];
     _error = state['error'];
+    // Requests belong to the old mounted State, not to its cached pages.
     _loading.clear();
-    _loading.addAll(state['loading']);
     _nextUrl = state['nextUrl'];
   }
 
   void storeState() {
     if (enablePageStorage) {
-      PageStorage.of(context).writeState(context, state);
+      PageStorage.of(context).writeState(
+        context, state, identifier: widget.pageStorageIdentifier,
+      );
     }
   }
 
@@ -419,7 +442,12 @@ class ComicListState extends State<ComicList> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    restoreState(PageStorage.of(context).readState(context));
+    if (enablePageStorage && !_restoredPageStorage) {
+      _restoredPageStorage = true;
+      restoreState(PageStorage.of(context).readState(
+        context, identifier: widget.pageStorageIdentifier,
+      ));
+    }
     widget.refreshHandlerCallback?.call(refresh);
     widget.selectionHandlerCallback?.call(_enterSelectMode);
   }

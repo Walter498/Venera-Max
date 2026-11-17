@@ -172,6 +172,7 @@ class _NormalFavoritePageState extends State<_NormalFavoritePage> {
         ];
       },
       enablePageStorage: true,
+      pageStorageIdentifier: ('network-favorites-data', widget.data.key, null),
     );
   }
 }
@@ -538,6 +539,7 @@ class _FavoriteFolder extends StatelessWidget {
     return ComicList(
       key: comicListKey,
       enablePageStorage: true,
+      pageStorageIdentifier: ('network-favorites-data', data.key, folderID),
       scrollbarTopPadding: context.padding.top + 56,
       leadingSliver: SliverAppbar(
         title: Text(title),

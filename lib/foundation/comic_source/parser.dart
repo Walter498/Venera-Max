@@ -1170,14 +1170,10 @@ class ComicSourceParser {
     };
   }
 
-  /// Converts a source favorite response at the JS boundary.
-  ///
-  /// Source scripts are untyped and a malformed response used to flow into
-  /// `Comic.fromJson` directly. When one item was a number (most commonly a
-  /// pagination/count value accidentally returned in `comics`), Dart raised
-  /// `double is not a subtype of Map<String, dynamic>` and the whole favorites
-  /// page became unusable. Validate the envelope and each item here so the
-  /// error is reported by the network page instead of escaping as a cast.
+  /// Validates the source response envelope and comic items before decoding.
+  /// Both numbered and cursor-based favorites use this boundary. This is
+  /// independent of ComicList's PageStorage restoration: a double in that
+  /// storage slot is a scroll offset, not a malformed JS comic response.
   List<Comic> _parseFavoriteComics(dynamic response) {
     if (response is! Map) {
       throw FormatException(
