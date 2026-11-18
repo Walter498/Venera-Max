@@ -111,12 +111,16 @@ void main() {
     }
   }
 
-  test('blur starts clear and increases smoothly without overshoot', () {
+  test('uses one continuous light backdrop blur without overshoot', () {
+    expect(ReaderBottomGlass.backdropSigma(0), 0);
+    expect(ReaderBottomGlass.backdropSigma(-1), 0);
+    expect(ReaderBottomGlass.backdropSigma(24), closeTo(6.72, 0.001));
+    expect(ReaderBottomGlass.backdropSigma(100), 8);
+    expect(ReaderTopGlass.backdropSigma(15), closeTo(4.2, 0.001));
+    // The legacy curve remains monotonic, but must not be used to create
+    // separately clipped horizontal backdrop bands.
     expect(ReaderBottomGlass.sigmaAt(0, 24), 0);
-    expect(ReaderBottomGlass.sigmaAt(0.2, 24), 0);
     expect(ReaderBottomGlass.sigmaAt(1, 24), 24);
-    expect(ReaderBottomGlass.sigmaAt(-1, 24), 0);
-    expect(ReaderBottomGlass.sigmaAt(2, 24), 24);
     var previous = 0.0;
     for (var i = 0; i <= 100; i++) {
       final sigma = ReaderBottomGlass.sigmaAt(i / 100, 24);
@@ -150,12 +154,12 @@ void main() {
     expect(tester.getSize(find.byType(ReaderBottomGlass)), const Size(340, 160));
     expect(tester.widget<ClipRRect>(find.byType(ClipRRect)).borderRadius, radius);
     expect(find.text('controls'), findsOneWidget);
-    // The top quarter has no backdrop filter at all, not merely a clear tint.
-    for (var i = 0; i < 4; i++) {
-      expect(find.byKey(ValueKey('reader-bottom-blur-band-$i')), findsNothing);
-    }
-    expect(find.byType(BackdropFilter), findsNWidgets(12));
-    expect(find.byType(BackdropGroup), findsOneWidget);
+    // A single full-card filter has no horizontal clip boundaries, while the
+    // gradient layers below keep the lower controls readable.
+    expect(find.byKey(ValueKey('reader-bottom-blur-band-0')), findsNothing);
+    expect(find.byKey(ValueKey('reader-bottom-blur-band-15')), findsNothing);
+    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.byType(BackdropGroup), findsNothing);
     final decorations = tester
         .widgetList<DecoratedBox>(
           find.descendant(

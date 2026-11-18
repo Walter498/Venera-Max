@@ -110,8 +110,18 @@ class ReaderBottomGlass extends StatelessWidget {
   final double blurSigma;
   final Widget child;
 
-  static const blurBands = 16;
+  /// One continuous backdrop keeps the whole card in the same filter pass.
+  /// Keep it deliberately lighter than the caller's maximum so the clear edge
+  /// remains readable while still carrying a trace of the page blur.
+  @visibleForTesting
+  static double backdropSigma(double maxSigma) {
+    if (maxSigma <= 0) return 0;
+    return (maxSigma * 0.28).clamp(1.5, 8.0).toDouble();
+  }
 
+  /// Retained as the smooth curve used by older reader tests and callers.
+  /// The glass no longer samples this curve per band: doing so creates visible
+  /// horizontal seams. `backdropSigma` is applied once to the full card.
   @visibleForTesting
   static double sigmaAt(double progress, double maxSigma) {
     final t = ((progress - 0.2) / 0.8).clamp(0.0, 1.0);
@@ -126,34 +136,13 @@ class ReaderBottomGlass extends StatelessWidget {
         fit: StackFit.passthrough,
         children: [
           Positioned.fill(
-            child: BackdropGroup(
-              child: IgnorePointer(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => Stack(
-                    children: [
-                      // Shared input and disjoint clips avoid compounding
-                      // full-card filters or washing out the clear top edge.
-                      for (var i = 0; i < blurBands; i++)
-                        if (sigmaAt(i / (blurBands - 1), blurSigma) > 0)
-                          Positioned(
-                            top: constraints.maxHeight * i / blurBands,
-                            height: constraints.maxHeight / blurBands,
-                            left: 0,
-                            right: 0,
-                            child: ClipRect(
-                              key: ValueKey('reader-bottom-blur-band-$i'),
-                              child: BackdropFilter.grouped(
-                                filter: ui.ImageFilter.blur(
-                                  sigmaX: sigmaAt(i / (blurBands - 1), blurSigma),
-                                  sigmaY: sigmaAt(i / (blurBands - 1), blurSigma),
-                                ),
-                                child: const SizedBox.expand(),
-                              ),
-                            ),
-                          ),
-                    ],
-                  ),
+            child: IgnorePointer(
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(
+                  sigmaX: backdropSigma(blurSigma),
+                  sigmaY: backdropSigma(blurSigma),
                 ),
+                child: const SizedBox.expand(),
               ),
             ),
           ),
@@ -229,8 +218,17 @@ class ReaderTopGlass extends StatelessWidget {
   final double blurSigma;
   final Widget child;
 
-  static const blurBands = 16;
+  /// One continuous, low-strength pass avoids a horizontal band boundary and
+  /// leaves the top edge lightly frosted instead of perfectly sharp.
+  @visibleForTesting
+  static double backdropSigma(double maxSigma) {
+    if (maxSigma <= 0) return 0;
+    return (maxSigma * 0.28).clamp(1.5, 8.0).toDouble();
+  }
 
+  /// Retained as the smooth curve used by older reader tests and callers.
+  /// The glass no longer samples this curve per band: doing so creates visible
+  /// horizontal seams. `backdropSigma` is applied once to the full card.
   @visibleForTesting
   static double sigmaAt(double progress, double maxSigma) {
     final t = ((progress - 0.08) / 0.92).clamp(0.0, 1.0);
@@ -245,38 +243,13 @@ class ReaderTopGlass extends StatelessWidget {
         fit: StackFit.passthrough,
         children: [
           Positioned.fill(
-            child: BackdropGroup(
-              child: IgnorePointer(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => Stack(
-                    children: [
-                      for (var i = 0; i < blurBands; i++)
-                        if (sigmaAt(i / (blurBands - 1), blurSigma) > 0)
-                          Positioned(
-                            top: constraints.maxHeight * i / blurBands,
-                            height: constraints.maxHeight / blurBands,
-                            left: 0,
-                            right: 0,
-                            child: ClipRect(
-                              key: ValueKey('reader-top-blur-band-$i'),
-                              child: BackdropFilter.grouped(
-                                filter: ui.ImageFilter.blur(
-                                  sigmaX: sigmaAt(
-                                    i / (blurBands - 1),
-                                    blurSigma,
-                                  ),
-                                  sigmaY: sigmaAt(
-                                    i / (blurBands - 1),
-                                    blurSigma,
-                                  ),
-                                ),
-                                child: const SizedBox.expand(),
-                              ),
-                            ),
-                          ),
-                    ],
-                  ),
+            child: IgnorePointer(
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(
+                  sigmaX: backdropSigma(blurSigma),
+                  sigmaY: backdropSigma(blurSigma),
                 ),
+                child: const SizedBox.expand(),
               ),
             ),
           ),
