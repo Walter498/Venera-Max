@@ -92,13 +92,18 @@ class _HomeSectionSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = VeneraDesignTokens.of(context);
-    final radius = BorderRadius.circular(tokens.sectionRadius);
+    const radius = BorderRadius.all(Radius.circular(8));
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Material(
-        color: tokens.contentSurface,
-        shape: RoundedRectangleBorder(borderRadius: radius),
+        color: context.colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+            color: context.colorScheme.outlineVariant.toOpacity(0.35),
+            width: 0.6,
+          ),
+        ),
         clipBehavior: Clip.antiAlias,
         child: child,
       ),
@@ -119,12 +124,13 @@ class _HomeCountBadge extends StatelessWidget {
         height: 22,
         padding: const EdgeInsets.symmetric(horizontal: 7),
         alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: context.colorScheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(11),
+        ),
         child: Text(
           count.toString(),
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: VeneraDesignTokens.of(context).mutedText,
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(context).textTheme.labelSmall,
         ),
       ),
     );

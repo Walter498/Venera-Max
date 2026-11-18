@@ -25,13 +25,16 @@ class HomeSectionMeta {
 /// missing from a stored/synced config to the end, visible by default.
 const List<HomeSectionMeta> kHomeSections = [
   HomeSectionMeta('sourceHome', 'Source Home', Icons.home_outlined),
+  // Keep the original compact home order: the source feed is followed by
+  // lightweight task/library entries. Reading shelves remain available from
+  // their dedicated pages and can still be enabled from Edit Home.
+  HomeSectionMeta('comicSource', 'Comic Source', Icons.source_outlined),
+  HomeSectionMeta('followUpdates', 'Follow Updates', Icons.dynamic_feed),
+  HomeSectionMeta('imageFavorites', 'Image Favorites', Icons.image_outlined),
   HomeSectionMeta('history', 'History', Icons.history),
   HomeSectionMeta('readLater', 'Read Later', Icons.watch_later_outlined),
   HomeSectionMeta('translatedComics', 'Translation Library', Icons.translate),
   HomeSectionMeta('local', 'Local', Icons.local_library_outlined),
-  HomeSectionMeta('followUpdates', 'Follow Updates', Icons.dynamic_feed),
-  HomeSectionMeta('comicSource', 'Comic Source', Icons.source_outlined),
-  HomeSectionMeta('imageFavorites', 'Image Favorites', Icons.image_outlined),
   HomeSectionMeta('webdavLibrary', 'WebDAV Library', Icons.cloud_outlined),
   HomeSectionMeta('collections', 'Collections', Icons.library_books_outlined),
 ];
@@ -57,17 +60,29 @@ class HomeSectionConfig {
       HomeSectionConfig(id, visible ?? this.visible);
 }
 
-/// The default layout: every known section, in [kHomeSections] order, visible.
-List<HomeSectionConfig> defaultHomeLayout() =>
-    kHomeSections.map((s) => HomeSectionConfig(s.id, true)).toList();
+/// The default layout restores the compact source-first home. The reading
+/// shelves stay available in Edit Home but do not displace the unified source
+/// grid on a fresh install or after Reset to Default.
+List<HomeSectionConfig> defaultHomeLayout() {
+  const visibleByDefault = {
+    'sourceHome',
+    'comicSource',
+    'followUpdates',
+    'imageFavorites',
+  };
+  return [
+    for (final s in kHomeSections)
+      HomeSectionConfig(s.id, visibleByDefault.contains(s.id)),
+  ];
+}
 
 /// Reads the raw `homeSections` setting and normalizes it for rendering:
 ///
 /// * entries with unknown ids (e.g. a section removed in a newer build, or
 ///   corrupt data) are dropped;
-/// * any known section missing from the stored config is appended at the end,
-///   visible by default — this is the forward-migration path when a new build
-///   adds a section to [kHomeSections].
+/// * any known section missing from the stored config is appended at the end
+///   and kept visible for backward-compatible settings migration; a new
+///   install with no stored config uses [defaultHomeLayout].
 ///
 /// The result always contains exactly the ids in [kHomeSections], each once.
 List<HomeSectionConfig> normalizeHomeLayout() {
@@ -84,13 +99,29 @@ List<HomeSectionConfig> normalizeHomeLayout() {
       seen.add(id);
     }
   }
+  if (raw is! List) {
+    return defaultHomeLayout();
+  }
+
+  // Builds before the source feed was restored persisted every shelf as
+  // visible, or placed sourceHome after the shelf. Treat that exact legacy
+  // shape as the old compact default instead of reintroducing a mixed home
+  // page after upgrade. Explicitly edited layouts are left untouched.
+  final hasSourceHome = result.any((entry) => entry.id == 'sourceHome');
+  final isLegacyDefault =
+      result.length == kHomeSections.length &&
+      result.every((entry) => entry.visible) &&
+      (!hasSourceHome || result.first.id != 'sourceHome');
+  if (isLegacyDefault) {
+    return defaultHomeLayout();
+  }
+
   for (var s in kHomeSections) {
     if (!seen.contains(s.id)) {
-      if (s.id == 'sourceHome') {
-        result.insert(0, HomeSectionConfig(s.id, true));
-      } else {
-        result.add(HomeSectionConfig(s.id, true));
-      }
+      // An existing saved layout is an explicit user/config migration case;
+      // preserve the historical append-visible behavior for newly introduced
+      // sections. Fresh installs use [defaultHomeLayout] above.
+      result.add(HomeSectionConfig(s.id, true));
     }
   }
   return result;

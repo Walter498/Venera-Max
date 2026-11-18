@@ -187,13 +187,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('reader uses only one glyph layer for chapter, clock and battery', () {
+  test('reader HUD keeps the legacy outlined chapter and status style', () {
     final scaffold = File('lib/pages/reader/scaffold.dart').readAsStringSync();
-    expect(scaffold, isNot(contains('PaintingStyle.stroke')));
+    expect(scaffold, contains('PaintingStyle.stroke'));
     expect(scaffold, contains('color: context.colorScheme.onInverseSurface'));
     expect(scaffold, isNot(contains('_readerHudShadows')));
-    expect(scaffold, contains('style: _readerHudTextStyle(context)'));
-    expect(scaffold, contains("'\$batteryLevel%',"));
+    expect(scaffold, contains('ReaderHudPill('));
     expect(scaffold, contains('buildPageInfoText()'));
     expect(scaffold, contains('buildStatusInfo()'));
     expect(RegExp(r'child: ReaderChromeVisibility\(').allMatches(scaffold).length, 3);

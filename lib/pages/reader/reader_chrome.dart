@@ -71,15 +71,12 @@ class _ReaderChromeVisibilityState extends State<ReaderChromeVisibility>
               child: ExcludeSemantics(
                 excluding: !widget.visible,
                 child: ClipRect(
-                  child: FadeTransition(
-                    opacity: _curve,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: Offset(0, widget.fromTop ? -1 : 1),
-                        end: Offset.zero,
-                      ).animate(_curve),
-                      child: child,
-                    ),
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: Offset(0, widget.fromTop ? -1 : 1),
+                      end: Offset.zero,
+                    ).animate(_curve),
+                    child: child,
                   ),
                 ),
               ),
@@ -150,7 +147,7 @@ class ReaderBottomGlass extends StatelessWidget {
           // at the clear edge of the transition. The gradient below still
           // carries the clear-to-dark hierarchy over that base.
           Positioned.fill(
-            child: ColoredBox(color: Color(0x24000000)),
+            child: ColoredBox(color: Color(0x18000000)),
           ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -162,12 +159,12 @@ class ReaderBottomGlass extends StatelessWidget {
                 stops: const [0, 0.14, 0.30, 0.48, 0.66, 0.84, 1],
                 colors: [
                   surfaceColor.withValues(alpha: 0),
-                  surfaceColor.withValues(alpha: 0.05),
-                  surfaceColor.withValues(alpha: 0.10),
-                  surfaceColor.withValues(alpha: 0.17),
-                  surfaceColor.withValues(alpha: 0.25),
-                  surfaceColor.withValues(alpha: 0.33),
-                  surfaceColor.withValues(alpha: 0.40),
+                  surfaceColor.withValues(alpha: 0.04),
+                  surfaceColor.withValues(alpha: 0.08),
+                  surfaceColor.withValues(alpha: 0.14),
+                  surfaceColor.withValues(alpha: 0.21),
+                  surfaceColor.withValues(alpha: 0.28),
+                  surfaceColor.withValues(alpha: 0.34),
                 ],
               ),
             ),
@@ -183,12 +180,12 @@ class ReaderBottomGlass extends StatelessWidget {
                   stops: [0, 0.16, 0.38, 0.58, 0.76, 0.9, 1],
                   colors: [
                     Color(0x00000000),
-                    Color(0x08000000),
-                    Color(0x2E000000),
+                    Color(0x06000000),
+                    Color(0x20000000),
                     Color(0x66000000),
-                    Color(0x85000000),
-                    Color(0x9E000000),
-                    Color(0xB8000000),
+                    Color(0x7A000000),
+                    Color(0x92000000),
+                    Color(0xA8000000),
                   ],
                 ),
               ),
@@ -196,6 +193,50 @@ class ReaderBottomGlass extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Compact HUD pill used for transient reader hints. It shares the same
+/// backdrop material as the reader bars without becoming a second full-width
+/// footer or blocking the page gesture.
+class ReaderHudPill extends StatelessWidget {
+  const ReaderHudPill({
+    required this.borderRadius,
+    required this.surfaceColor,
+    required this.borderColor,
+    required this.blurSigma,
+    required this.child,
+    super.key,
+  });
+
+  final BorderRadius borderRadius;
+  final Color surfaceColor;
+  final Color borderColor;
+  final double blurSigma;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(
+          sigmaX: ReaderBottomGlass.backdropSigma(blurSigma),
+          sigmaY: ReaderBottomGlass.backdropSigma(blurSigma),
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: surfaceColor.withValues(alpha: .54),
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor, width: .5),
+          ),
+          child: DefaultTextStyle.merge(
+            style: const TextStyle(color: Colors.white),
+            child: child,
+          ),
+        ),
       ),
     );
   }
@@ -264,13 +305,13 @@ class ReaderTopGlass extends StatelessWidget {
                 // the title and every action remain readable across the card.
                 stops: [0, 0.12, 0.28, 0.46, 0.64, 0.82, 1],
                 colors: [
-                  Color(0x26000000),
-                  Color(0x32000000),
-                  Color(0x45000000),
-                  Color(0x5E000000),
-                  Color(0x78000000),
-                  Color(0x92000000),
-                  Color(0xAD000000),
+                  Color(0x1C000000),
+                  Color(0x28000000),
+                  Color(0x3A000000),
+                  Color(0x50000000),
+                  Color(0x66000000),
+                  Color(0x80000000),
+                  Color(0x9A000000),
                 ],
               ),
             ),

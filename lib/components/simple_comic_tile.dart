@@ -113,14 +113,13 @@ class SimpleComicTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: tokens.glassStrongSurface,
-                borderRadius: BorderRadius.circular(tokens.cardRadius),
-                border: Border.all(color: tokens.borderSubtle, width: .6),
+                color: Colors.black.toOpacity(0.55),
+                borderRadius: BorderRadius.circular(6),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.library_books_outlined,
                 size: 12,
-                color: scheme.onSurface,
+                color: Colors.white,
               ),
             ),
           ),
@@ -148,7 +147,7 @@ class SimpleComicTile extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(tokens.cardRadius),
+        borderRadius: BorderRadius.circular(8),
         color: Theme.of(context).colorScheme.secondaryContainer,
       ),
       clipBehavior: Clip.antiAlias,
@@ -160,7 +159,7 @@ class SimpleComicTile extends StatelessWidget {
     }
 
     child = AnimatedTapRegion(
-      borderRadius: tokens.cardRadius,
+      borderRadius: 8,
       onTap:
           onTap ??
           () {

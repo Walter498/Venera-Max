@@ -1257,27 +1257,52 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     return Positioned(
       bottom: 13,
       left: 25,
-      child: Text(
-        text,
-        style: _readerHudTextStyle(context),
+      child: Stack(
+        children: [
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              foreground: Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 1.4
+                ..color = context.colorScheme.onInverseSurface,
+            ),
+          ),
+          Text(text),
+        ],
       ),
     );
   }
 
   Widget buildAutoScrollHint() {
+    final tokens = VeneraDesignTokens.of(context);
+    final radius = BorderRadius.circular(18);
     return Positioned(
       left: 24,
       right: 24,
-      bottom: 42,
-      child: Center(
-        child: Text(
-          "Double-tap to pause auto scrolling".tl,
-          style: _readerHudTextStyle(context).copyWith(fontSize: 11),
-          textAlign: TextAlign.center,
+      bottom: context.padding.bottom + 68,
+      child: IgnorePointer(
+        child: Center(
+          child: ReaderHudPill(
+            borderRadius: radius,
+            surfaceColor: tokens.glassSurface,
+            borderColor: tokens.borderSubtle,
+            blurSigma: tokens.blurSigma,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: Text(
+                "Double-tap to pause auto scrolling".tl,
+                style: const TextStyle(fontSize: 12, color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
+
   Widget buildStatusInfo() {
     if (appdata.settings['enableClockAndBatteryInfoInReader']) {
       return Positioned(
