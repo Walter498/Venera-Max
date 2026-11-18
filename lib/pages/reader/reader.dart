@@ -1574,6 +1574,15 @@ abstract mixin class _AutoPageTurner {
   /// Whether the continuous view should be scrolling right now.
   bool get autoScrollRunning => _autoTurnActive && _autoTurnScrolls;
 
+  bool get autoScrollIgnoresGestures =>
+      autoScrollRunning &&
+      appdata.settings.getReaderSetting(
+            cid,
+            type.sourceKey,
+            'autoScrollIgnoreGestures',
+          ) ==
+          true;
+
   /// A popup over the reader (context menu, drawer, dialog). Those never
   /// reach the route observer, so turning is skipped while one is up rather
   /// than paused, and carries on once it closes.

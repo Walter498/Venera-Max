@@ -805,11 +805,24 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                       : null,
                   useDeviceSettings: useDeviceSpecificSettings,
                 ),
-              // In scroll mode the interval gives way to a speed.
               if (autoTurnScrolls(
                 (_effectiveSetting('readerMode') as String?) ?? '',
                 _effectiveSetting('autoPageTurningMode'),
               ))
+                _SwitchSetting(
+                  title: "Ignore gestures during auto scrolling".tl,
+                  subtitle:
+                      "Ignore taps and swipes while scrolling; double-tap to stop".tl,
+                  settingKey: "autoScrollIgnoreGestures",
+                  onChanged: () {
+                    widget.onChanged?.call("autoScrollIgnoreGestures");
+                  },
+                  comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                  comicSource: isEnabledSpecificSettings
+                      ? widget.comicSource
+                      : null,
+                  useDeviceSettings: useDeviceSpecificSettings,
+                ),
                 _SliderSetting(
                   title: "Auto scroll speed".tl,
                   settingsIndex: "autoScrollSpeed",

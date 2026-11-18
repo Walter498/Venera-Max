@@ -60,8 +60,8 @@ class _SettingsSearchEntry {
     'Spacing between pages' ||
     'Mouse scroll speed' ||
     'Auto page turning mode' => 'Reading mode',
-    // Only one of the two shows at a time, by auto turning mode.
-    'Auto scroll speed' => 'Auto page turning interval',
+    'Auto scroll speed' ||
+    'Ignore gestures during auto scrolling' => 'Auto page turning interval',
     'Auto page turning interval' => 'Auto scroll speed',
     'Refresh color' ||
     'Refresh every N pages' ||
@@ -95,6 +95,7 @@ class _SettingsSearchEntry {
         'Auto page turning interval',
         'Auto scroll speed',
         'Mouse scroll speed',
+        'Ignore gestures during auto scrolling',
         'Number of images preloaded',
       ].contains(title)) {
         return 'Auto turning & preload';
@@ -372,6 +373,11 @@ final _settingsSearchIndex = <_SettingsSearchEntry>[
   ),
   _SettingsSearchEntry("Auto page turning interval", 1, keywords: ["auto"]),
   _SettingsSearchEntry("Auto scroll speed", 1, keywords: ["auto", "scroll"]),
+  _SettingsSearchEntry(
+    "Ignore gestures during auto scrolling",
+    1,
+    keywords: ["auto", "scroll", "tap", "swipe", "double-tap"],
+  ),
   _SettingsSearchEntry("Mouse scroll speed", 1, keywords: ["scroll"]),
   _SettingsSearchEntry("Number of images preloaded", 1, keywords: ["preload"]),
   _SettingsSearchEntry("Double tap to zoom", 1, keywords: ["gesture", "zoom"]),

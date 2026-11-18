@@ -95,6 +95,10 @@ class _ReaderGestureDetectorState
             return;
           }
           final moveDistance = _lastTapMoveDistance;
+          if (reader.autoScrollIgnoresGestures) {
+            _previousEvent = null;
+            return;
+          }
           if (moveDistance != null) {
             if (moveDistance.distanceSquared < 20.0 * 20.0) {
               onLongPressedDown(event.position);
@@ -111,6 +115,10 @@ class _ReaderGestureDetectorState
         });
       },
       onPointerMove: (event) {
+        if (reader.autoScrollIgnoresGestures) {
+          _previousEvent = null;
+          return;
+        }
         if (event.pointer == _lastTapPointer && _lastTapMoveDistance != null) {
           _lastTapMoveDistance = event.delta + _lastTapMoveDistance!;
           // 移动越过阈值即立即判定为拖动, 无需等长按计时器 250ms, 使快速滑动
@@ -290,6 +298,10 @@ class _ReaderGestureDetectorState
   }
 
   void onTap(Offset location) {
+    if (reader.autoScrollIgnoresGestures &&
+        !context.readerScaffold.isOpen) {
+      return;
+    }
     if (reader._imageViewController!.handleOnTap(location)) {
       return;
     } else if (context.readerScaffold.isOpen) {

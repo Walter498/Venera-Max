@@ -1356,6 +1356,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       behavior: HitTestBehavior.translucent,
       onPointerDown: (event) {
         _increaseFingers();
+        if (reader.autoScrollIgnoresGestures) return;
         if (fingers > 1 && !disableScroll) {
           setState(() {
             disableScroll = true;
@@ -1373,6 +1374,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       },
       onPointerUp: (event) {
         _decreaseFingers();
+        if (reader.autoScrollIgnoresGestures) return;
         if (fingers <= 1 && disableScroll) {
           setState(() {
             disableScroll = false;
@@ -1393,6 +1395,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
       },
       onPointerCancel: (event) {
         _decreaseFingers();
+        if (reader.autoScrollIgnoresGestures) return;
         if (fingers <= 1 && disableScroll) {
           setState(() {
             disableScroll = false;
@@ -1404,12 +1407,14 @@ class _ContinuousModeState extends State<_ContinuousMode>
         _clearChapterSwipeState();
       },
       onPointerPanZoomUpdate: (event) {
+        if (reader.autoScrollIgnoresGestures) return;
         if (event.scale == 1.0) {
           _cancelProgrammaticPageTurn();
           smoothTo(0 - event.panDelta.dy);
         }
       },
       onPointerMove: (event) {
+        if (reader.autoScrollIgnoresGestures) return;
         Offset value = event.delta;
         if (photoViewController.scale == 1 || fingers != 1) {
           return;
@@ -1452,6 +1457,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
         if (notification is ScrollStartNotification) {
           // A tap during auto scroll should open the menu, not just stop a
           // fling the way it does after a swipe.
+          if (reader.autoScrollIgnoresGestures) return false;
           if (_autoScrollActivity == null) delayedSetIsScrolling(true);
           if (notification.dragDetails != null) {
             _cancelProgrammaticPageTurn();

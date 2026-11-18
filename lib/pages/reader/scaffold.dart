@@ -320,11 +320,14 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
             ),
           ),
         // The resting HUD is not a second footer behind the open glass card.
-        if (!_isOpen &&
-            context.reader.effectiveSetting('showPageNumberInReader') == true &&
+        if (context.reader.effectiveSetting('showPageNumberInReader') == true &&
             !isOnChapterCommentsPage)
           buildPageInfoText(),
-        if (!_isOpen && !isOnChapterCommentsPage) buildStatusInfo(),
+        if (!isOnChapterCommentsPage) buildStatusInfo(),
+        if (context.reader.autoScrollIgnoresGestures &&
+            !isOnChapterCommentsPage &&
+            !_isOpen)
+          buildAutoScrollHint(),
         if (_chapterTranslationTask != null)
           Positioned(
             right: VeneraDesignTokens.space16,
@@ -1269,6 +1272,16 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
     );
   }
 
+  Widget buildAutoScrollHint() {
+    return Positioned(
+      bottom: 13,
+      left: 105,
+      child: Text(
+        "Double-tap to pause auto scrolling".tl,
+        style: _readerHudTextStyle(context).copyWith(fontSize: 11),
+      ),
+    );
+  }
   Widget buildStatusInfo() {
     if (appdata.settings['enableClockAndBatteryInfoInReader']) {
       return Positioned(
