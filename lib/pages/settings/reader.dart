@@ -838,6 +838,10 @@ class _ReaderSettingsState extends State<ReaderSettings> {
                       : null,
                   useDeviceSettings: useDeviceSpecificSettings,
                 ),
+              if (autoTurnScrolls(
+                (_effectiveSetting('readerMode') as String?) ?? '',
+                _effectiveSetting('autoPageTurningMode'),
+              ))
                 _SliderSetting(
                   title: "Auto scroll speed".tl,
                   settingsIndex: "autoScrollSpeed",
