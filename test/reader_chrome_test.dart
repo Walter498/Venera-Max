@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:venera/pages/reader/reader.dart';
 import 'package:venera/pages/reader/reader_chrome.dart';
 
 const _duration = Duration(milliseconds: 200);
@@ -186,9 +187,39 @@ void main() {
     final scaffold = File('lib/pages/reader/scaffold.dart').readAsStringSync();
     expect(scaffold, isNot(contains('PaintingStyle.stroke')));
     expect(scaffold, contains('color: context.colorScheme.onInverseSurface'));
+    expect(scaffold, contains('_readerHudShadows'));
+    expect(scaffold, contains('style: _readerHudTextStyle(context)'));
     expect(scaffold, contains("'\$batteryLevel%',"));
     expect(scaffold, contains('if (!_isOpen && !isOnChapterCommentsPage)'));
     expect(RegExp(r'child: ReaderChromeVisibility\(').allMatches(scaffold).length, 3);
     expect(scaffold, contains('return ReaderBottomGlass('));
+  });
+
+  test('first tap is allowed and swipe settling blocks only 600ms', () {
+    final settledAt = DateTime(2025, 1, 1, 12, 0, 0);
+    expect(readerTapSuppressionActive(null, settledAt), isFalse);
+    expect(
+      readerTapSuppressionActive(
+        settledAt,
+        settledAt.add(const Duration(milliseconds: 599)),
+      ),
+      isTrue,
+    );
+    expect(
+      readerTapSuppressionActive(
+        settledAt,
+        settledAt.add(const Duration(milliseconds: 600)),
+      ),
+      isFalse,
+    );
+    // A clock adjustment before the end timestamp must not block the initial
+    // tap or turn the settling window into an unbounded one.
+    expect(
+      readerTapSuppressionActive(
+        settledAt,
+        settledAt.subtract(const Duration(milliseconds: 1)),
+      ),
+      isFalse,
+    );
   });
 }

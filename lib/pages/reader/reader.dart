@@ -152,6 +152,14 @@ extension _ReaderContext on BuildContext {
       findAncestorStateOfType<_ReaderScaffoldState>()!;
 }
 
+@visibleForTesting
+bool readerTapSuppressionActive(DateTime? endedAt, DateTime now) {
+  if (endedAt == null) return false;
+  final elapsed = now.difference(endedAt);
+  return elapsed >= Duration.zero &&
+      elapsed < const Duration(milliseconds: 600);
+}
+
 class Reader extends StatefulWidget {
   const Reader({
     super.key,
@@ -1515,6 +1523,22 @@ abstract mixin class _AutoPageTurner {
   bool autoPageTurning = false;
 
   bool _readerMenuOpen = false;
+
+  /// A swipe ending is followed by a short settling window. Taps during that
+  /// window belong to the completed gesture rather than being a request to
+  /// reveal the reader chrome. The timestamp lives on the reader so all
+  /// reading modes share the same menu state machine.
+  DateTime? _lastReaderSwipeEndedAt;
+
+  @visibleForTesting
+  bool get readerTapBlockedAfterSwipe => readerTapSuppressionActive(
+    _lastReaderSwipeEndedAt,
+    DateTime.now(),
+  );
+
+  void _onReaderSwipeEnded() {
+    _lastReaderSwipeEndedAt = DateTime.now();
+  }
 
   bool _appVisible = true;
 

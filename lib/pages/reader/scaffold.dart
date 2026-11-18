@@ -1,5 +1,20 @@
 part of 'reader.dart';
 
+const _readerHudShadows = <Shadow>[
+  Shadow(color: Color(0xD9000000), offset: Offset(-1, -1), blurRadius: 1),
+  Shadow(color: Color(0xD9000000), offset: Offset(1, -1), blurRadius: 1),
+  Shadow(color: Color(0xD9000000), offset: Offset(-1, 1), blurRadius: 1),
+  Shadow(color: Color(0xD9000000), offset: Offset(1, 1), blurRadius: 1),
+];
+
+TextStyle _readerHudTextStyle(BuildContext context, {double fontSize = 14}) {
+  return TextStyle(
+    color: context.colorScheme.onInverseSurface,
+    fontSize: fontSize,
+    shadows: _readerHudShadows,
+  );
+}
+
 const _readerChromeAnimationDuration = VeneraDesignTokens.motionBase;
 
 // Native sliders can return values just below an integer page.
@@ -1249,10 +1264,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
       left: 25,
       child: Text(
         text,
-        style: TextStyle(
-          color: context.colorScheme.onInverseSurface,
-          fontSize: 14,
-        ),
+        style: _readerHudTextStyle(context),
       ),
     );
   }
@@ -1845,13 +1857,15 @@ class _BatteryWidgetState extends State<_BatteryWidget> {
 
     return Row(
       children: [
-        Icon(batteryIcon, size: 16, color: batteryColor),
+        Icon(
+          batteryIcon,
+          size: 16,
+          color: batteryColor,
+          shadows: _readerHudShadows,
+        ),
         Text(
           '$batteryLevel%',
-          style: TextStyle(
-            color: context.colorScheme.onInverseSurface,
-            fontSize: 14,
-          ),
+          style: _readerHudTextStyle(context),
         ),
       ],
     );
@@ -1895,13 +1909,7 @@ class _ClockWidgetState extends State<_ClockWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      _currentTime,
-      style: TextStyle(
-        color: context.colorScheme.onInverseSurface,
-        fontSize: 14,
-      ),
-    );
+    return Text(_currentTime, style: _readerHudTextStyle(context));
   }
 }
 

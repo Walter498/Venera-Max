@@ -100,6 +100,7 @@ class _ReaderGestureDetectorState
               onLongPressedDown(event.position);
               _longPressInProgress = true;
             } else {
+              _previousEvent = null;
               _dragInProgress = true;
               for (var dragListener in _dragListeners) {
                 dragListener.onStart?.call(event.position);
@@ -119,6 +120,7 @@ class _ReaderGestureDetectorState
               fingers == 1 &&
               _lastTapMoveDistance!.distanceSquared >
                   _kDragStartThresholdSquared) {
+            _previousEvent = null;
             _dragInProgress = true;
             for (var dragListener in _dragListeners) {
               dragListener.onStart?.call(event.position);
@@ -178,6 +180,12 @@ class _ReaderGestureDetectorState
       for (var dragListener in _dragListeners) {
         dragListener.onEnd?.call();
       }
+      // Keep a mode-independent settling window. Without this, the tap
+      // recognizer can interpret the release of a manga swipe as a request to
+      // open the chrome. The reader owns the timestamp so gallery and
+      // continuous modes use identical behavior.
+      reader._onReaderSwipeEnded();
+      _dragEndedAt = DateTime.now();
       _dragInProgress = false;
     }
     _lastTapPointer = null;
@@ -219,6 +227,11 @@ class _ReaderGestureDetectorState
 
   bool _dragInProgress = false;
 
+  // Listener.onPointerUp and TapGestureRecognizer.onTapUp are separate
+  // callbacks. The timestamp closes that ordering gap for the release event;
+  // the reader timestamp covers subsequent taps during the 600ms window.
+  DateTime? _dragEndedAt;
+
   bool get _enableDoubleTapToZoom => appdata.settings.getReaderSetting(
     reader.cid,
     reader.type.sourceKey,
@@ -229,6 +242,20 @@ class _ReaderGestureDetectorState
     if (event.globalPosition == Offset.zero &&
         event.localPosition == Offset.zero) {
       _previousEvent = null;
+      return;
+    }
+    final dragSettling = _dragEndedAt != null &&
+        readerTapSuppressionActive(_dragEndedAt, DateTime.now());
+    if (!dragSettling && _dragEndedAt != null) {
+      // Do not let a completed swipe leave a stale one-shot flag behind.
+      _dragEndedAt = null;
+    }
+    if (dragSettling || reader.readerTapBlockedAfterSwipe) {
+      // A release immediately following a swipe is not a menu request. Clear
+      // any pending double-tap candidate as well, otherwise its delayed
+      // callback could reopen the chrome after the settling window.
+      _previousEvent = null;
+      _suppressNextTapUp = false;
       return;
     }
     if (_suppressNextTapUp || _longPressInProgress) {
