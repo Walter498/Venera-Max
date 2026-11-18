@@ -194,7 +194,8 @@ void main() {
     expect(scaffold, isNot(contains('_readerHudShadows')));
     expect(scaffold, contains('style: _readerHudTextStyle(context)'));
     expect(scaffold, contains("'\$batteryLevel%',"));
-    expect(scaffold, contains('if (!_isOpen && !isOnChapterCommentsPage)'));
+    expect(scaffold, contains('buildPageInfoText()'));
+    expect(scaffold, contains('buildStatusInfo()'));
     expect(RegExp(r'child: ReaderChromeVisibility\(').allMatches(scaffold).length, 3);
     expect(scaffold, contains('return ReaderBottomGlass('));
   });
