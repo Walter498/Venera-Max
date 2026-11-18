@@ -710,6 +710,7 @@ class _ContinuousModeState extends State<_ContinuousMode>
   }
 
   void onPointerSignal(PointerSignalEvent event) {
+    if (reader.autoScrollIgnoresGestures) return;
     if (event is PointerScrollEvent) {
       if (!_isMouseScrolling) {
         setState(() {

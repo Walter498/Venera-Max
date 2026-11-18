@@ -252,13 +252,14 @@ class _ReaderGestureDetectorState
       _previousEvent = null;
       return;
     }
+    final chromeClosed = !context.readerScaffold.isOpen;
     final dragSettling = _dragEndedAt != null &&
         readerTapSuppressionActive(_dragEndedAt, DateTime.now());
     if (!dragSettling && _dragEndedAt != null) {
       // Do not let a completed swipe leave a stale one-shot flag behind.
       _dragEndedAt = null;
     }
-    if (dragSettling || reader.readerTapBlockedAfterSwipe) {
+    if (chromeClosed && (dragSettling || reader.readerTapBlockedAfterSwipe)) {
       // A release immediately following a swipe is not a menu request. Clear
       // any pending double-tap candidate as well, otherwise its delayed
       // callback could reopen the chrome after the settling window.

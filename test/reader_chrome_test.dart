@@ -191,7 +191,7 @@ void main() {
     final scaffold = File('lib/pages/reader/scaffold.dart').readAsStringSync();
     expect(scaffold, isNot(contains('PaintingStyle.stroke')));
     expect(scaffold, contains('color: context.colorScheme.onInverseSurface'));
-    expect(scaffold, contains('_readerHudShadows'));
+    expect(scaffold, isNot(contains('_readerHudShadows')));
     expect(scaffold, contains('style: _readerHudTextStyle(context)'));
     expect(scaffold, contains("'\$batteryLevel%',"));
     expect(scaffold, contains('if (!_isOpen && !isOnChapterCommentsPage)'));
@@ -221,9 +221,18 @@ void main() {
     expect(
       readerTapSuppressionActive(
         settledAt,
-        settledAt.subtract(const Duration(milliseconds: 1)),
+        settledAt.add(const Duration(milliseconds: 300)),
+        delayMs: 300,
       ),
       isFalse,
+    );
+    expect(
+      readerTapSuppressionActive(
+        settledAt,
+        settledAt.add(const Duration(milliseconds: 999)),
+        delayMs: 1000,
+      ),
+      isTrue,
     );
   });
 }

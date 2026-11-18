@@ -61,6 +61,7 @@ class _SettingsSearchEntry {
     'Mouse scroll speed' ||
     'Auto page turning mode' => 'Reading mode',
     'Auto scroll speed' ||
+    'Swipe-to-open toolbar delay' ||
     'Ignore gestures during auto scrolling' => 'Auto page turning interval',
     'Auto page turning interval' => 'Auto scroll speed',
     'Refresh color' ||
@@ -94,6 +95,7 @@ class _SettingsSearchEntry {
         'Auto page turning mode',
         'Auto page turning interval',
         'Auto scroll speed',
+        'Swipe-to-open toolbar delay',
         'Mouse scroll speed',
         'Ignore gestures during auto scrolling',
         'Number of images preloaded',
@@ -373,6 +375,11 @@ final _settingsSearchIndex = <_SettingsSearchEntry>[
   ),
   _SettingsSearchEntry("Auto page turning interval", 1, keywords: ["auto"]),
   _SettingsSearchEntry("Auto scroll speed", 1, keywords: ["auto", "scroll"]),
+  _SettingsSearchEntry(
+    "Swipe-to-open toolbar delay",
+    1,
+    keywords: ["auto", "scroll", "toolbar", "delay"],
+  ),
   _SettingsSearchEntry(
     "Ignore gestures during auto scrolling",
     1,

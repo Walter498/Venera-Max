@@ -784,6 +784,21 @@ class _ReaderSettingsState extends State<ReaderSettings> {
             subtitle: 'Automatic page turning, scrolling and image preloading',
             children: [
               readingMode,
+              _SliderSetting(
+                title: "Swipe-to-open toolbar delay".tl,
+                settingsIndex: "readerChromeSwipeDelayMs",
+                interval: 100.0,
+                min: 300.0,
+                max: 1000.0,
+                onChanged: () {
+                  widget.onChanged?.call("readerChromeSwipeDelayMs");
+                },
+                comicId: isEnabledSpecificSettings ? widget.comicId : null,
+                comicSource: isEnabledSpecificSettings
+                    ? widget.comicSource
+                    : null,
+                useDeviceSettings: useDeviceSpecificSettings,
+              ),
               if ((_effectiveSetting('readerMode') as String?)?.startsWith(
                     'continuous',
                   ) ??

@@ -153,11 +153,15 @@ extension _ReaderContext on BuildContext {
 }
 
 @visibleForTesting
-bool readerTapSuppressionActive(DateTime? endedAt, DateTime now) {
+bool readerTapSuppressionActive(
+  DateTime? endedAt,
+  DateTime now, {
+  int delayMs = 600,
+}) {
   if (endedAt == null) return false;
   final elapsed = now.difference(endedAt);
-  return elapsed >= Duration.zero &&
-      elapsed < const Duration(milliseconds: 600);
+  final delay = delayMs.clamp(300, 1000).toInt();
+  return elapsed >= Duration.zero && elapsed < Duration(milliseconds: delay);
 }
 
 class Reader extends StatefulWidget {
@@ -1530,10 +1534,22 @@ abstract mixin class _AutoPageTurner {
   /// reading modes share the same menu state machine.
   DateTime? _lastReaderSwipeEndedAt;
 
+  int get readerChromeSwipeDelayMs {
+    final value = appdata.settings.getReaderSetting(
+      cid,
+      type.sourceKey,
+      'readerChromeSwipeDelayMs',
+    );
+    return (value is num ? value.round() : 600)
+        .clamp(300, 1000)
+        .toInt();
+  }
+
   @visibleForTesting
   bool get readerTapBlockedAfterSwipe => readerTapSuppressionActive(
     _lastReaderSwipeEndedAt,
     DateTime.now(),
+    delayMs: readerChromeSwipeDelayMs,
   );
 
   void _onReaderSwipeEnded() {

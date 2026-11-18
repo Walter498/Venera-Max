@@ -1,17 +1,9 @@
 part of 'reader.dart';
 
-const _readerHudShadows = <Shadow>[
-  Shadow(color: Color(0xD9000000), offset: Offset(-1, -1), blurRadius: 1),
-  Shadow(color: Color(0xD9000000), offset: Offset(1, -1), blurRadius: 1),
-  Shadow(color: Color(0xD9000000), offset: Offset(-1, 1), blurRadius: 1),
-  Shadow(color: Color(0xD9000000), offset: Offset(1, 1), blurRadius: 1),
-];
-
 TextStyle _readerHudTextStyle(BuildContext context, {double fontSize = 14}) {
   return TextStyle(
     color: context.colorScheme.onInverseSurface,
     fontSize: fontSize,
-    shadows: _readerHudShadows,
   );
 }
 
@@ -1274,11 +1266,15 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
   Widget buildAutoScrollHint() {
     return Positioned(
-      bottom: 13,
-      left: 105,
-      child: Text(
-        "Double-tap to pause auto scrolling".tl,
-        style: _readerHudTextStyle(context).copyWith(fontSize: 11),
+      left: 24,
+      right: 24,
+      bottom: 42,
+      child: Center(
+        child: Text(
+          "Double-tap to pause auto scrolling".tl,
+          style: _readerHudTextStyle(context).copyWith(fontSize: 11),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
@@ -1874,7 +1870,6 @@ class _BatteryWidgetState extends State<_BatteryWidget> {
           batteryIcon,
           size: 16,
           color: batteryColor,
-          shadows: _readerHudShadows,
         ),
         Text(
           '$batteryLevel%',

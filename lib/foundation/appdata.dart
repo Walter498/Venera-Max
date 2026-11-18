@@ -425,6 +425,8 @@ class Settings with ChangeNotifier {
     // scrolling at autoScrollSpeed. See foundation/auto_page_turning.dart.
     'autoPageTurningMode': 'page', // page, scroll
     'autoScrollSpeed': 15, // 1 - 30, higher is faster
+    // Delay after a swipe before the reader chrome can be opened.
+    'readerChromeSwipeDelayMs': 600,
     // While automatic scrolling, ignore ordinary taps/swipes; double-tap still stops it.
     'autoScrollIgnoreGestures': false,
     'readerMode': 'galleryLeftToRight', // values of [ReaderMode]
