@@ -180,9 +180,10 @@ void main() {
     expect(shadeGradient.color, isNull); // tint is a controlled gradient
     final shade = shadeGradient.gradient! as LinearGradient;
     expect(shade.colors.first.a, 0);
-    // The lower ramp is deliberately substantially darker than the old 10%.
-    expect(shade.colors[2].a, greaterThanOrEqualTo(0.17));
-    expect(shade.colors[3].a, greaterThanOrEqualTo(0.4));
+    // The ramp stays visible without returning to the previous near-black
+    // footer: its middle remains a readable translucent shade.
+    expect(shade.colors[2].a, greaterThanOrEqualTo(0.12));
+    expect(shade.colors[3].a, greaterThanOrEqualTo(0.38));
     expect(shade.colors.last.a, greaterThanOrEqualTo(0.65));
     expect(tester.takeException(), isNull);
   });
