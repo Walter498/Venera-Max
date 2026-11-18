@@ -93,11 +93,14 @@ class _HomeSectionSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = VeneraDesignTokens.of(context);
+    final radius = BorderRadius.circular(tokens.sectionRadius);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Material(
         color: tokens.contentSurface,
-      child: child,
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        clipBehavior: Clip.antiAlias,
+        child: child,
       ),
     );
   }
