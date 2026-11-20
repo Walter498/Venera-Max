@@ -163,7 +163,7 @@ void main() {
         expect(s.foreground!.style, PaintingStyle.stroke);
         expect(f.foreground!.style, PaintingStyle.fill);
         expect(s.foreground!.color, isNot(f.foreground!.color));
-        expect(s.foreground!.strokeWidth, 1.4);
+        expect(s.foreground!.strokeWidth, closeTo(1.4, 1e-6));
         expect(tester.takeException(), isNull);
       });
     }

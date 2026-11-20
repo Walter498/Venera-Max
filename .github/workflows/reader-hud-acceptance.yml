@@ -30,6 +30,7 @@ jobs:
           mkdir -p build/reader-hud-evidence
           flutter test test/reader_hud_render_test.dart --reporter expanded 2>&1 | tee build/reader-hud-evidence/pixel-tests.log
       - name: Real Reader integration acceptance
+        if: ${{ !cancelled() }}
         run: |
           set -o pipefail
           flutter test test/reader_hud_integration_test.dart --reporter expanded 2>&1 | tee build/reader-hud-evidence/integration-tests.log

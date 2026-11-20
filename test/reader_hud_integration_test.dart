@@ -70,7 +70,7 @@ void _expectTwoAlignedPasses(WidgetTester tester, Finder hud) {
       PaintingStyle.fill), hasLength(1));
   final stroke = styles.singleWhere(
       (s) => s.foreground?.style == PaintingStyle.stroke).foreground!;
-  expect(stroke.strokeWidth, 1.4);
+  expect(stroke.strokeWidth, closeTo(1.4, 1e-6));
   final scheme = Theme.of(tester.element(hud)).colorScheme;
   expect(stroke.color, scheme.onInverseSurface);
   final fill = styles.singleWhere(
