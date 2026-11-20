@@ -73,10 +73,10 @@ void _expectTwoAlignedPasses(WidgetTester tester, Finder hud) {
       (s) => s.foreground?.style == PaintingStyle.stroke).foreground!;
   expect(stroke.strokeWidth, closeTo(1.4, 1e-6));
   final scheme = Theme.of(tester.element(hud)).colorScheme;
-  expect(stroke.color, scheme.onInverseSurface);
+  expect(stroke.color.toARGB32(), scheme.onInverseSurface.toARGB32());
   final fill = styles.singleWhere(
       (s) => (s.foreground?.style ?? PaintingStyle.fill) == PaintingStyle.fill);
-  expect(fill.foreground?.color ?? fill.color, scheme.onSurface);
+  expect((fill.foreground?.color ?? fill.color)!.toARGB32(), scheme.onSurface.toARGB32());
   for (final style in styles) {
     expect(style.fontSize, 14);
     expect(style.shadows ?? const <Shadow>[], isEmpty,
