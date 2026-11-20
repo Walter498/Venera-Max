@@ -139,8 +139,16 @@ void main() {
         final fill = paragraph('reader-hud-fill');
         expect(stroke.size, fill.size);
         expect(stroke.localToGlobal(Offset.zero), fill.localToGlobal(Offset.zero));
-        expect(stroke.getDistanceToBaseline(TextBaseline.alphabetic),
-          fill.getDistanceToBaseline(TextBaseline.alphabetic));
+        List<double> baselines(RenderParagraph paragraph) {
+          final painter = TextPainter(text: paragraph.text,
+            textDirection: paragraph.textDirection,
+            textScaler: paragraph.textScaler, maxLines: 1, ellipsis: '\u2026')
+            ..layout(maxWidth: paragraph.size.width);
+          try {
+            return painter.computeLineMetrics().map((line) => line.baseline).toList();
+          } finally { painter.dispose(); }
+        }
+        expect(baselines(stroke), baselines(fill));
         const selection = TextSelection(baseOffset: 0, extentOffset: 16);
         final a = stroke.getBoxesForSelection(selection);
         final b = fill.getBoxesForSelection(selection);
@@ -163,7 +171,7 @@ void main() {
 
   testWidgets('page updates replace both glyph layers and semantics only once', (tester) async {
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
+    try {
     late StateSetter change;
     var value = '174 差距 : 75/80';
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: StatefulBuilder(
@@ -180,6 +188,7 @@ void main() {
     expect(find.text(value), findsNWidgets(2));
     expect(find.bySemanticsLabel(value), findsOneWidget);
     expect(tester.takeException(), isNull);
+    } finally { semantics.dispose(); }
   });
 
   testWidgets('battery has legacy eight-direction crisp outline', (tester) async {
