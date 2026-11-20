@@ -1,12 +1,5 @@
 part of 'reader.dart';
 
-TextStyle _readerHudTextStyle(BuildContext context, {double fontSize = 14}) {
-  return TextStyle(
-    color: context.colorScheme.onInverseSurface,
-    fontSize: fontSize,
-  );
-}
-
 const _readerChromeAnimationDuration = VeneraDesignTokens.motionBase;
 
 // Native sliders can return values just below an integer page.
@@ -311,11 +304,29 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
               ),
             ),
           ),
-        // The resting HUD is not a second footer behind the open glass card.
-        if (context.reader.effectiveSetting('showPageNumberInReader') == true &&
-            !isOnChapterCommentsPage)
-          buildPageInfoText(),
-        if (!isOnChapterCommentsPage) buildStatusInfo(),
+        // One resting HUD row retains the 2.x bottom/side insets. The left
+        // label receives the remaining width, so enlarged text cannot overlap
+        // the clock and battery. It never consumes reader gestures.
+        if (!isOnChapterCommentsPage)
+          Positioned(
+            key: const ValueKey('reader-info-bar'),
+            bottom: 13,
+            left: 25,
+            right: 25,
+            child: IgnorePointer(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: context.reader.effectiveSetting('showPageNumberInReader') == true
+                        ? buildPageInfoText()
+                        : const SizedBox.shrink(),
+                  ),
+                  const SizedBox(width: 10),
+                  buildStatusInfo(),
+                ],
+              ),
+            ),
+          ),
         if (context.reader.autoScrollIgnoresGestures &&
             !isOnChapterCommentsPage &&
             !_isOpen)
@@ -1254,25 +1265,7 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
         ? "$epName : $pageText"
         : pageText;
 
-    return Positioned(
-      bottom: 13,
-      left: 25,
-      child: Stack(
-        children: [
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              foreground: Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 1.4
-                ..color = context.colorScheme.onInverseSurface,
-            ),
-          ),
-          Text(text),
-        ],
-      ),
-    );
+    return ReaderHudText(text, key: const ValueKey('reader-page-info'));
   }
 
   Widget buildAutoScrollHint() {
@@ -1305,16 +1298,14 @@ class _ReaderScaffoldState extends State<_ReaderScaffold> {
 
   Widget buildStatusInfo() {
     if (appdata.settings['enableClockAndBatteryInfoInReader']) {
-      return Positioned(
-        bottom: 13,
-        right: 25,
-        child: Row(
-          children: [
-            _ClockWidget(),
-            const SizedBox(width: 10),
-            _BatteryWidget(),
-          ],
-        ),
+      return Row(
+        key: const ValueKey('reader-status-info'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ClockWidget(),
+          const SizedBox(width: 10),
+          _BatteryWidget(),
+        ],
       );
     } else {
       return const SizedBox.shrink();
@@ -1886,21 +1877,13 @@ class _BatteryWidgetState extends State<_BatteryWidget> {
       batteryIcon = Icons.battery_0_bar_sharp;
     } else {
       batteryIcon = Icons.battery_alert_sharp;
-      batteryColor = VeneraDesignTokens.of(context).destructive;
+      batteryColor = Colors.red;
     }
 
-    return Row(
-      children: [
-        Icon(
-          batteryIcon,
-          size: 16,
-          color: batteryColor,
-        ),
-        Text(
-          '$batteryLevel%',
-          style: _readerHudTextStyle(context),
-        ),
-      ],
+    return ReaderHudBattery(
+      icon: batteryIcon,
+      level: batteryLevel,
+      color: batteryColor,
     );
   }
 }
@@ -1942,7 +1925,7 @@ class _ClockWidgetState extends State<_ClockWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Text(_currentTime, style: _readerHudTextStyle(context));
+    return ReaderHudText(_currentTime, key: const ValueKey('reader-clock'));
   }
 }
 

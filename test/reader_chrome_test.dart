@@ -190,9 +190,12 @@ void main() {
 
   test('reader HUD keeps the legacy outlined chapter and status style', () {
     final scaffold = File('lib/pages/reader/scaffold.dart').readAsStringSync();
-    expect(scaffold, contains('PaintingStyle.stroke'));
-    expect(scaffold, contains('color: context.colorScheme.onInverseSurface'));
-    expect(scaffold, isNot(contains('_readerHudShadows')));
+    final hud = File('lib/pages/reader/reader_hud.dart').readAsStringSync();
+    expect(hud, contains('PaintingStyle.stroke'));
+    expect(hud, contains('..strokeWidth = 1.4'));
+    expect(scaffold, contains('return ReaderHudText(text'));
+    expect(scaffold, contains('return ReaderHudText(_currentTime'));
+    expect(scaffold, contains('return ReaderHudBattery('));
     expect(scaffold, contains('ReaderHudPill('));
     expect(scaffold, contains('buildPageInfoText()'));
     expect(scaffold, contains('buildStatusInfo()'));

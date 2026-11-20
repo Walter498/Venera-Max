@@ -59,6 +59,7 @@ import 'package:venera/pages/reader/download_chapter_select.dart';
 import 'package:venera/pages/reader/continuous_page_turn_coordinator.dart';
 import 'package:venera/pages/reader/night_mode_button.dart';
 import 'package:venera/pages/reader/reader_chrome.dart';
+import 'package:venera/pages/reader/reader_hud.dart';
 import 'package:venera/pages/reader/shader_image.dart';
 import 'package:venera/pages/settings/settings_page.dart';
 import 'package:venera/utils/clipboard_image.dart';
