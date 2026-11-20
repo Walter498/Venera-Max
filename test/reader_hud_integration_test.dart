@@ -327,6 +327,7 @@ void main() {
                 await tester.pumpWidget(MaterialApp(
                   navigatorKey: App.rootNavigatorKey,
                   theme: fontTheme,
+                  builder: (context, child) => Material(child: child!),
                   debugShowCheckedModeBanner: false,
                   home: RepaintBoundary(key: _captureKey, child: Reader(
                     type: ComicType.local, cid: _comicId, name: comic.title,
