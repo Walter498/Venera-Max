@@ -294,6 +294,8 @@ void main() {
           debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
           tester.view.physicalSize = size;
           tester.view.devicePixelRatio = 1;
+          tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+          tester.view.viewPadding = const FakeViewPadding(top: 59, bottom: 34);
           batteryLevel = level;
           batteryState = level == 35 ? 'charging' : 'full';
           batteryCalls.clear();
@@ -381,6 +383,10 @@ void main() {
                 expect(tester.widgetList<ReaderChromeVisibility>(
                     find.byType(ReaderChromeVisibility)).any((w) => w.visible), isTrue);
                 expectConnected(tester, '第十二话雨后 : 2/3', level);
+                final chromeRect = tester.getRect(find.byKey(const ValueKey('reader-bottom-chrome')));
+                final infoRect = tester.getRect(find.byKey(const ValueKey('reader-info-bar')));
+                expect(infoRect.top, greaterThan(chromeRect.bottom),
+                  reason: 'The actual painted footer must stay outside the open glass card');
                 await capture(tester, '$label-chrome-open');
                 await tester.tapAt(Offset(size.width / 2, size.height / 2));
                 await frames(tester, 30);
@@ -401,7 +407,8 @@ void main() {
                     (false, false), (true, true)]) {
                   appdata.settings['showPageNumberInReader'] = flags.$1;
                   appdata.settings['enableClockAndBatteryInfoInReader'] = flags.$2;
-                  // The actual settings panel invokes this same mounted update.
+                  // Verify the HUD's setting-dependent rendering. This is
+                  // not a simulation of opening/toggling the settings panel.
                   scaffold(tester).update();
                   await frames(tester, 15);
                   final values = _hud().evaluate().map((e) =>
@@ -431,6 +438,8 @@ void main() {
             debugDefaultTargetPlatformOverride = previousPlatform;
             tester.view.resetPhysicalSize();
             tester.view.resetDevicePixelRatio();
+            tester.view.resetPadding();
+            tester.view.resetViewPadding();
           }
         });
       }
