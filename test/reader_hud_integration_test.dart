@@ -22,6 +22,7 @@ import 'package:venera/pages/reader/reader_hud.dart';
 
 import 'package:venera/main.dart';
 import 'package:venera/utils/translations.dart';
+import 'package:venera/utils/io.dart' show overrideIO;
 import 'helpers/hud_font_fixture.dart' show loadHudTestFonts;
 
 // Mount the production Reader, LocalManager, image decoder and reader scaffold.
@@ -106,7 +107,12 @@ void main() {
   final batteryCalls = <String>[];
   final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
+  final oldIO = IOOverrides.current;
+  final oldPlatform = debugDefaultTargetPlatformOverride;
   setUpAll(() async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    // main() installs this exact production adapter for file:// paths.
+    IOOverrides.global = overrideIO(() => IOOverrides.current);
     await AppTranslation.init();
     await loadHudTestFonts(); // real CJK, Latin and MaterialIcons fonts
     oldDataPath = App.dataPath;
@@ -168,6 +174,7 @@ void main() {
       }
     }
     await LocalManager().add(comic);
+    debugDefaultTargetPlatformOverride = oldPlatform;
   });
 
   tearDownAll(() async {
@@ -185,6 +192,8 @@ void main() {
       App.dataPath = oldDataPath;
       App.cachePath = oldCachePath;
       temporary.deleteSync(recursive: true);
+      IOOverrides.global = oldIO;
+      debugDefaultTargetPlatformOverride = oldPlatform;
     }
   });
 
