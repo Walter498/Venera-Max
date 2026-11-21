@@ -24,6 +24,8 @@ jobs:
           cache: true
       - run: sudo xcode-select --switch /Applications/Xcode_16.4.app
       - run: flutter pub get
+      - name: Parse changed Dart sources before running suites
+        run: dart format --output=none lib/components/{button,ios_design,loading,message,flyout,pop_up_widget,side_bar}.dart lib/pages/{home_page,home_source_feed}.dart lib/pages/favorites/{shelf_page,folder_widgets,favorites_page}.dart lib/pages/comic_details_page/comic_page.dart test/vibe*_test.dart
       - run: bash tool/prepare_native_tests.sh
       - run: command -v rg || brew install ripgrep
       - run: python3 tool/prepare_hud_fonts.py

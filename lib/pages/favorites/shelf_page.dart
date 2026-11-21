@@ -470,6 +470,7 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
               ),
             ],
           ),
+        ),
         // 直列詳情卡（一列一個）：用 SliverGridComics 的詳細模式，
         // 它自帶正確高度（ListView 裡 ComicTile 會因無限高度而不可見）
         Expanded(

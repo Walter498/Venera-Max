@@ -115,11 +115,11 @@ class FlyoutState extends State<Flyout> {
           final availableBottom = media.size.height - bottomInset - 8;
           final left = rect.left.clamp(
             8.0, math.max(8.0, media.size.width - minFlyoutWidth - 8),
-          );
+          ).toDouble();
           final top = rect.bottom.clamp(
             media.padding.top + 8,
             math.max(media.padding.top + 8, availableBottom - minFlyoutHeight),
-          );
+          ).toDouble();
 
           Widget transition(BuildContext context, Animation<double> animation,
               Animation<double> secondaryAnimation, Widget flyout) {
