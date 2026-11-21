@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/main.dart';
+import 'package:venera/utils/translations.dart';
 
 import 'helpers/hud_font_fixture.dart';
 
@@ -51,6 +52,7 @@ Finder buttonSurface() => find.descendant(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
+    await AppTranslation.init();
     if (Platform.environment['VIBE_EVIDENCE'] == '1') {
       for (final variable in ['HUD_LATIN_FONT', 'HUD_CJK_FONT']) {
         final path = Platform.environment[variable];

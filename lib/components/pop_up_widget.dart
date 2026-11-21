@@ -79,8 +79,18 @@ class PopUpWidget<T> extends PopupRoute<T> {
     return body;
   }
 
+  // Navigator attaches this route before creating its animation controller, so
+  // read the host MediaQuery here rather than only skipping the visual tween.
+  // This also makes modal-barrier entry/exit immediate for accessibility users.
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 220);
+  Duration get transitionDuration {
+    final context = navigator?.context;
+    const duration = Duration(milliseconds: 220);
+    return context == null ? duration : VeneraMotion.duration(context, duration);
+  }
+
+  @override
+  Duration get reverseTransitionDuration => transitionDuration;
 
   @override
   Widget buildTransitions(

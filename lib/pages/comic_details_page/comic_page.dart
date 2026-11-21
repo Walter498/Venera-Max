@@ -3308,12 +3308,21 @@ class _ComicPageLoadingPlaceHolder extends StatelessWidget {
                   children: [
                     ExcludeSemantics(child: placeholders),
                     const SizedBox(height: 24),
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.4,
-                        semanticsLabel: 'Loading'.tl,
+                    Semantics(
+                      key: const ValueKey('comic-details-loading-status'),
+                      label: 'Loading'.tl,
+                      child: ExcludeSemantics(
+                        // A static arc represents an indeterminate wait, not
+                        // measured progress. Suppress the determinate widget's
+                        // default percentage semantics in reduced-motion mode.
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            value: VeneraMotion.reduce(context) ? .72 : null,
+                            strokeWidth: 2.4,
+                          ),
+                        ),
                       ),
                     ),
                   ],

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:venera/components/components.dart';
+import 'package:venera/utils/translations.dart';
 
 void main() {
+  setUpAll(AppTranslation.init);
+
   for (final brightness in Brightness.values) {
     for (final fill in [Colors.white, Colors.black, Colors.yellow, Colors.blue]) {
       testWidgets('filled button contrast: $brightness / $fill', (tester) async {

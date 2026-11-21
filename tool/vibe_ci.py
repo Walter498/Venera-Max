@@ -24,7 +24,7 @@ results = {}
 for group, tests in groups.items():
     print(f'\n=== {group} ({len(tests)} files) ===', flush=True)
     started = time.monotonic()
-    command = ['flutter', 'test', '--reporter', 'expanded', '--concurrency=2', *tests]
+    command = ['flutter', 'test', '--reporter', 'expanded', '--concurrency=2', '--timeout=2m', *tests]
     with (EVIDENCE / f'{group}.log').open('w') as log:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
         for line in process.stdout:

@@ -154,8 +154,17 @@ class SideBarRoute<T> extends PopupRoute<T> {
     return Align(alignment: Alignment.centerRight, child: body);
   }
 
+  // Route installation sets navigator before the animation controller reads
+  // these durations; the host MediaQuery includes accessibleNavigation too.
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 220);
+  Duration get transitionDuration {
+    final context = navigator?.context;
+    const duration = Duration(milliseconds: 220);
+    return context == null ? duration : VeneraMotion.duration(context, duration);
+  }
+
+  @override
+  Duration get reverseTransitionDuration => transitionDuration;
 
   @override
   Widget buildTransitions(

@@ -295,9 +295,21 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
     return SliverMainAxisGroup(slivers: slivers);
   }
 
+  /// Horizontal chip rows must reserve both the control's minimum hit area
+  /// and their list padding. Measure one scaled label line plus chip insets;
+  /// long source names can then scroll horizontally without vertical clipping.
+  double _chipExtent(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelLarge;
+    final lineHeight = MediaQuery.textScalerOf(context).scale(
+      style?.fontSize ?? 14,
+    ) * (style?.height ?? 1.43);
+    return max(44.0, lineHeight + 14).ceilToDouble();
+  }
+
   Widget _buildTabs(List<ComicSource> sources) {
+    final chipExtent = _chipExtent(context);
     return SizedBox(
-      height: 52 + (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(0, 28).toDouble(),
+      height: chipExtent + 16,
       child: Row(
         children: [
           Expanded(
@@ -309,15 +321,15 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
               itemBuilder: (context, i) {
                 final selected = i == _selected;
                 return SizedBox(
-                height: 44,
-                child: Center(
-                  child: VeneraChip(
-                    label: sources[i].name,
-                    selected: selected,
-                    onTap: () => _select(i),
+                  height: chipExtent,
+                  child: Center(
+                    child: VeneraChip(
+                      label: sources[i].name,
+                      selected: selected,
+                      onTap: () => _select(i),
+                    ),
                   ),
-                ),
-              );
+                );
               },
             ),
           ),
@@ -368,8 +380,9 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
 
   /// 周期更新的星期分頁。
   Widget _buildWeekdayChips(List<(int, ExplorePagePart)> weeks) {
+    final chipExtent = _chipExtent(context);
     return SizedBox(
-      height: 46 + (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(0, 28).toDouble(),
+      height: chipExtent + 12,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -379,7 +392,7 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
           final entry = weeks[i];
           final selected = entry.$1 == _weekday;
           return SizedBox(
-            height: 44,
+            height: chipExtent,
             child: Center(
               child: VeneraChip(
                 label: _weekdayNames[entry.$1],
