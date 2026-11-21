@@ -5,7 +5,7 @@ SliverGridDelegate _folderGridDelegate(BuildContext context) {
   final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
   return SliverGridDelegateWithMaxCrossAxisExtent(
     maxCrossAxisExtent: 320,
-    mainAxisExtent: 64 + 20 * scale,
+    mainAxisExtent: 64 + 28 * scale,
     crossAxisSpacing: 8,
     mainAxisSpacing: 8,
   );
@@ -66,7 +66,13 @@ class _FolderCard extends StatelessWidget {
         : buildCover(context);
     return Material(
       color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: VeneraDesignTokens.of(context).borderSubtle,
+          width: .5,
+        ),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -78,8 +84,9 @@ class _FolderCard extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           child: Row(
             children: [
-              AspectRatio(
-                aspectRatio: 0.72,
+              SizedBox(
+                width: 48,
+                height: 64,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: thumbnail,
@@ -121,19 +128,29 @@ class _FolderStats extends StatelessWidget {
   Widget build(BuildContext context) {
     var color = context.colorScheme.onSurfaceVariant;
     var style = ts.s12.copyWith(color: color);
-    return Row(
+    return Wrap(
+      spacing: 12,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (comics != null) ...[
-          Icon(Icons.collections_bookmark_outlined, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(comics.toString(), style: style),
-        ],
-        if (subfolders > 0) ...[
-          if (comics != null) const SizedBox(width: 12),
-          Icon(Icons.folder_outlined, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(subfolders.toString(), style: style),
-        ],
+        if (comics != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.collections_bookmark_outlined, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(comics.toString(), style: style),
+            ],
+          ),
+        if (subfolders > 0)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.folder_outlined, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(subfolders.toString(), style: style),
+            ],
+          ),
       ],
     );
   }

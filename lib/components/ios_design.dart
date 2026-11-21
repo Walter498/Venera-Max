@@ -202,6 +202,60 @@ class VeneraDesignTokens extends ThemeExtension<VeneraDesignTokens> {
   }
 }
 
+/// Shared motion policy. Accessibility always takes precedence over decoration.
+abstract final class VeneraMotion {
+  static bool reduce(BuildContext context) {
+    final media = MediaQuery.maybeOf(context);
+    return (media?.disableAnimations ?? false) ||
+        (media?.accessibleNavigation ?? false);
+  }
+
+  static Duration duration(BuildContext context, Duration value) =>
+      reduce(context) ? Duration.zero : value;
+
+  static const Curve enter = Curves.easeOutCubic;
+  static const Curve exit = Curves.easeInCubic;
+  static const Curve move = Curves.easeInOutCubic;
+}
+
+/// Edge-only lighting: never lifts the fill behind a contrast-tested label.
+class _VeneraControlEdgePainter extends CustomPainter {
+  const _VeneraControlEdgePainter(this.radius, this.dark, this.pressed);
+
+  final double radius;
+  final bool dark;
+  final bool pressed;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final edge = RRect.fromRectAndRadius(
+      rect.deflate(.75),
+      Radius.circular(math.max(0, radius - .75)),
+    );
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = .7;
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height / 2));
+    paint.color = Colors.white.withValues(
+      alpha: pressed ? .035 : (dark ? .16 : .38),
+    );
+    canvas.drawRRect(edge, paint);
+    canvas.restore();
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, size.height / 2, size.width, size.height / 2));
+    paint.color = Colors.black.withValues(alpha: pressed ? .05 : .13);
+    canvas.drawRRect(edge, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _VeneraControlEdgePainter oldDelegate) =>
+      radius != oldDelegate.radius || dark != oldDelegate.dark ||
+      pressed != oldDelegate.pressed;
+}
+
 class VeneraSegmentedControl extends StatelessWidget {
   const VeneraSegmentedControl({
     required this.labels,
@@ -216,9 +270,12 @@ class VeneraSegmentedControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (labels.isEmpty) return const SizedBox.shrink();
     final tokens = VeneraDesignTokens.of(context);
     final scheme = Theme.of(context).colorScheme;
     final selected = selectedIndex.clamp(0, labels.length - 1);
+    const inset = 3.0;
+    final radius = BorderRadius.circular(tokens.controlRadius - inset);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: tokens.controlSurface,
@@ -226,55 +283,75 @@ class VeneraSegmentedControl extends StatelessWidget {
         border: Border.all(color: tokens.borderSubtle, width: .7),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Row(
+        padding: const EdgeInsets.all(inset),
+        child: Stack(
           children: [
-            for (var i = 0; i < labels.length; i++)
-              Expanded(
-                child: Semantics(
-                  button: true,
-                  selected: i == selected,
-                  label: labels[i],
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(13),
-                    onTap: () => onChanged(i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      curve: Curves.easeOutCubic,
-                      height: 34,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: i == selected
-                            ? scheme.surface
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(13),
-                        boxShadow: i == selected
-                            ? [
-                                BoxShadow(
-                                  color: scheme.shadow.withValues(alpha: .12),
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Text(
-                        labels[i],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: i == selected
-                              ? scheme.primary
-                              : tokens.mutedText,
-                          fontWeight: i == selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+            Positioned.fill(
+              child: AnimatedAlign(
+                alignment: AlignmentDirectional(
+                  labels.length == 1 ? 0 : -1 + 2 * selected / (labels.length - 1),
+                  0,
+                ),
+                duration: VeneraMotion.duration(context, VeneraDesignTokens.motionBase),
+                curve: VeneraMotion.move,
+                child: FractionallySizedBox(
+                  widthFactor: 1 / labels.length,
+                  heightFactor: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: radius,
+                      boxShadow: [
+                        BoxShadow(
+                          color: scheme.shadow.withValues(alpha: .10),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
               ),
+            ),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < labels.length; i++)
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        selected: i == selected,
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: InkWell(
+                            borderRadius: radius,
+                            onTap: () => onChanged(i),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 44),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                child: Center(
+                                  child: Text(
+                                    labels[i],
+                                    textAlign: TextAlign.center,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      color: i == selected ? scheme.primary : tokens.mutedText,
+                                      fontWeight: i == selected ? FontWeight.w700 : FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -282,7 +359,7 @@ class VeneraSegmentedControl extends StatelessWidget {
   }
 }
 
-class VeneraIconButton extends StatelessWidget {
+class VeneraIconButton extends StatefulWidget {
   const VeneraIconButton({
     required this.icon,
     required this.onPressed,
@@ -297,27 +374,71 @@ class VeneraIconButton extends StatelessWidget {
   final double size;
 
   @override
+  State<VeneraIconButton> createState() => _VeneraIconButtonState();
+}
+
+class _VeneraIconButtonState extends State<VeneraIconButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final tokens = VeneraDesignTokens.of(context);
-    return Tooltip(
-      message: tooltip ?? '',
-      child: Material(
-        color: tokens.controlSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(tokens.controlRadius),
-          side: BorderSide(color: tokens.borderSubtle, width: .7),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox.square(
-          dimension: size,
-          child: IconButton(
-            onPressed: onPressed,
-            icon: icon,
-            padding: EdgeInsets.zero,
-            tooltip: tooltip,
-            style: IconButton.styleFrom(
-              minimumSize: Size.square(size),
-              foregroundColor: tokens.mutedText,
+    final enabled = widget.onPressed != null;
+    final radius = BorderRadius.circular(tokens.controlRadius);
+    final dimension = math.max(VeneraDesignTokens.minTouchTarget, widget.size);
+    final duration = VeneraMotion.duration(context, VeneraDesignTokens.motionFast);
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: Tooltip(
+        message: widget.tooltip ?? '',
+        child: AnimatedContainer(
+          duration: duration,
+          curve: VeneraMotion.enter,
+          transform: Matrix4.translationValues(
+            0, _pressed && !VeneraMotion.reduce(context) ? 1 : 0, 0,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            boxShadow: enabled && !_pressed ? [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .10),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ] : const [],
+          ),
+          child: Material(
+            color: tokens.controlSurface,
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(color: tokens.borderSubtle, width: .7),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: widget.onPressed,
+              onHighlightChanged: (value) {
+                if (_pressed != value) setState(() => _pressed = value);
+              },
+              borderRadius: radius,
+              child: CustomPaint(
+                foregroundPainter: _VeneraControlEdgePainter(
+                  tokens.controlRadius,
+                  Theme.of(context).brightness == Brightness.dark,
+                  _pressed || !enabled,
+                ),
+                child: SizedBox.square(
+                  dimension: dimension,
+                  child: Center(
+                    child: IconTheme.merge(
+                      data: IconThemeData(
+                        color: enabled ? tokens.mutedText : Theme.of(context).disabledColor,
+                      ),
+                      child: widget.icon,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -326,15 +447,14 @@ class VeneraIconButton extends StatelessWidget {
   }
 }
 
-/// A press-feedback wrapper that applies a subtle iOS-style scale + opacity dip
-/// while held. Use it to wrap custom tappable surfaces that aren't buttons so
-/// they feel responsive without a Material ripple.
+/// Press feedback for surfaces that own their tap/long-press gesture. Do not
+/// wrap another interactive control; Material buttons already own feedback.
 class VeneraPressable extends StatefulWidget {
   const VeneraPressable({
     required this.child,
     required this.onTap,
     this.onLongPress,
-    this.scale = .97,
+    this.scale = 1,
     this.behavior = HitTestBehavior.opaque,
     this.borderRadius,
     super.key,
@@ -353,6 +473,7 @@ class VeneraPressable extends StatefulWidget {
 
 class _VeneraPressableState extends State<VeneraPressable> {
   bool _down = false;
+  bool _focused = false;
 
   void _set(bool v) {
     if (_down != v) setState(() => _down = v);
@@ -361,29 +482,58 @@ class _VeneraPressableState extends State<VeneraPressable> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.onTap != null || widget.onLongPress != null;
-    Widget child = AnimatedScale(
-      scale: _down && enabled ? widget.scale : 1,
-      duration: VeneraDesignTokens.motionFast,
-      curve: VeneraDesignTokens.motionCurve,
-      child: AnimatedOpacity(
-        opacity: _down && enabled ? .72 : 1,
-        duration: VeneraDesignTokens.motionFast,
+    final reduce = VeneraMotion.reduce(context);
+    Widget child = AnimatedContainer(
+      duration: VeneraMotion.duration(context, VeneraDesignTokens.motionFast),
+      curve: VeneraMotion.enter,
+      transform: Matrix4.translationValues(0, _down && enabled && !reduce ? 1 : 0, 0),
+      child: AnimatedScale(
+        // Keep the explicit scale API for callers, but never scale by default.
+        scale: _down && enabled && !reduce ? widget.scale : 1,
+        duration: VeneraMotion.duration(context, VeneraDesignTokens.motionFast),
+        curve: VeneraMotion.enter,
         child: widget.child,
       ),
     );
     if (widget.borderRadius != null) {
       child = ClipRRect(borderRadius: widget.borderRadius!, child: child);
     }
-    return GestureDetector(
-      behavior: widget.behavior,
-      onTap: widget.onTap,
-      onLongPress: widget.onLongPress,
-      onTapDown: enabled ? (_) => _set(true) : null,
-      onTapUp: enabled ? (_) => _set(false) : null,
-      onTapCancel: enabled ? () => _set(false) : null,
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-        child: child,
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: FocusableActionDetector(
+        enabled: enabled,
+        onShowFocusHighlight: (value) => setState(() => _focused = value),
+        shortcuts: const {
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        },
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              widget.onTap?.call();
+              return null;
+            },
+          ),
+        },
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: widget.borderRadius,
+            border: _focused ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
+          ),
+          child: GestureDetector(
+            behavior: widget.behavior,
+            onTap: widget.onTap,
+            onLongPress: widget.onLongPress,
+            onTapDown: enabled ? (_) => _set(true) : null,
+            onTapUp: enabled ? (_) => _set(false) : null,
+            onTapCancel: enabled ? () => _set(false) : null,
+            child: MouseRegion(
+              cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+              child: child,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -511,14 +661,13 @@ class VeneraChip extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: label,
       child: VeneraPressable(
         onTap: onTap,
         borderRadius: BorderRadius.circular(tokens.pillRadius),
         child: AnimatedContainer(
-          duration: VeneraDesignTokens.motionFast,
-          curve: VeneraDesignTokens.motionCurve,
-          constraints: const BoxConstraints(minHeight: 34),
+          duration: VeneraMotion.duration(context, VeneraDesignTokens.motionFast),
+          curve: VeneraMotion.enter,
+          constraints: const BoxConstraints(minHeight: 44),
           padding: const EdgeInsets.symmetric(
             horizontal: VeneraDesignTokens.space16,
             vertical: VeneraDesignTokens.space6,
@@ -544,11 +693,15 @@ class VeneraChip extends StatelessWidget {
                 ),
                 const SizedBox(width: VeneraDesignTokens.space6),
               ],
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: selected ? scheme.onPrimary : tokens.mutedText,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: selected ? scheme.onPrimary : tokens.mutedText,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  ),
                 ),
               ),
             ],

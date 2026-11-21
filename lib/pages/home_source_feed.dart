@@ -297,7 +297,7 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
 
   Widget _buildTabs(List<ComicSource> sources) {
     return SizedBox(
-      height: 52,
+      height: 52 + (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(0, 28).toDouble(),
       child: Row(
         children: [
           Expanded(
@@ -353,7 +353,10 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
           Expanded(
             child: Text(
               part.title.isEmpty ? "Recommended".tl : part.title,
-              style: ts.s20.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.colorScheme.onSurface,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -366,7 +369,7 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
   /// 周期更新的星期分頁。
   Widget _buildWeekdayChips(List<(int, ExplorePagePart)> weeks) {
     return SizedBox(
-      height: 46,
+      height: 46 + (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(0, 28).toDouble(),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -404,9 +407,9 @@ class _HomeSourceFeedState extends State<HomeSourceFeed> {
               label: Text("Shuffle".tl),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
-            child: OutlinedButton.icon(
+            child: TextButton.icon(
               // 查看更多：用 App 的漫畫列表樣式直直列出（最多 10 本）
               onPressed: () => context.to(
                 () => HomeSectionListPage(

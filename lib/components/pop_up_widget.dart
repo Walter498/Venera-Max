@@ -28,16 +28,19 @@ class PopUpWidget<T> extends PopupRoute<T> {
       child: Container(
         decoration: showPopUp
             ? BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-                boxShadow: context.brightness == ui.Brightness.dark
-                    ? [
-                        BoxShadow(
-                          color: Colors.white.withAlpha(50),
-                          blurRadius: 10,
-                          offset: Offset(0, 2),
-                        ),
-                      ]
-                    : null,
+                borderRadius: BorderRadius.all(Radius.circular(
+                  VeneraDesignTokens.of(context).sectionRadius,
+                )),
+                border: Border.all(
+                  color: context.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.16),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               )
             : null,
         clipBehavior: showPopUp ? Clip.antiAlias : Clip.none,
@@ -86,12 +89,16 @@ class PopUpWidget<T> extends PopupRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    if (VeneraMotion.reduce(context)) return RepaintBoundary(child: child);
     return FadeTransition(
       opacity: animation.drive(
         Tween(
           begin: 0.0,
           end: 1.0,
-        ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        ).chain(CurveTween(
+          curve: animation.status == AnimationStatus.reverse
+              ? VeneraMotion.exit : VeneraMotion.enter,
+        )),
       ),
       child: RepaintBoundary(child: child),
     );
@@ -155,7 +162,8 @@ class _PopUpWidgetScaffoldState extends State<PopUpWidgetScaffold> {
       child: Column(
         children: [
           Container(
-            height: 56 + context.padding.top,
+            height: math.max(56, MediaQuery.textScalerOf(context).scale(28) + 24) +
+                context.padding.top,
             padding: EdgeInsets.only(top: context.padding.top),
             width: double.infinity,
             decoration: BoxDecoration(
@@ -226,13 +234,11 @@ class _PopUpWidgetScaffoldState extends State<PopUpWidgetScaffold> {
             ),
           ),
           SizedBox(
-            height:
-                MediaQuery.viewInsetsOf(context).bottom -
-                        0.05 * MediaQuery.sizeOf(context).height >
-                    0
-                ? MediaQuery.viewInsetsOf(context).bottom -
-                      0.05 * MediaQuery.sizeOf(context).height
-                : 0,
+            // A centered card already sits 5% above the window bottom;
+            // a full-screen phone does not. Reserve only the remaining inset.
+            height: math.max(0, MediaQuery.viewInsetsOf(context).bottom -
+                (MediaQuery.sizeOf(context).width > 500
+                    ? 0.05 * MediaQuery.sizeOf(context).height : 0)),
           ),
         ],
       ),

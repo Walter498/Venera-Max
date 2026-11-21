@@ -37,11 +37,13 @@ class NetworkError extends StatelessWidget {
         // position would then read that map and crash casting it to double? in
         // ScrollPosition.restoreScrollOffset.
         key: const PageStorageKey('network_error_scroll'),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Center(
+            Semantics(
+              header: true,
+              child: Center(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -57,12 +59,12 @@ class NetworkError extends StatelessWidget {
                   ),
                 ],
               ),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               cfe == null ? message : "Cloudflare verification required".tl,
               textAlign: TextAlign.center,
-              maxLines: 3,
             ),
             // 显示已关联的源
             if (relatedLinks.isNotEmpty) ...[
@@ -196,10 +198,13 @@ class NetworkError extends StatelessWidget {
                   child: Text('Verify'.tl),
                 )
               else
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    if (action != null) action!.paddingRight(8),
+                    if (action != null) action!,
                     FilledButton(
                       onPressed: retry,
                       child: Text(buttonText ?? 'Retry'.tl),
@@ -238,7 +243,7 @@ class ListLoadingIndicator extends StatelessWidget {
     return const SizedBox(
       width: double.infinity,
       height: 80,
-      child: Center(child: FiveDotLoadingAnimation()),
+      child: Center(child: _StateLoadingIndicator()),
     );
   }
 }
@@ -291,11 +296,7 @@ abstract class LoadingState<T extends StatefulWidget, S extends Object>
   Widget? buildFrame(BuildContext context, Widget child) => null;
 
   Widget buildLoading() {
-    return Center(
-      child: const CircularProgressIndicator(
-        strokeWidth: 2,
-      ).fixWidth(32).fixHeight(32),
-    );
+    return const Center(child: _StateLoadingIndicator());
   }
 
   void retry() {
@@ -460,9 +461,7 @@ abstract class MultiPageLoadingState<T extends StatefulWidget, S extends Object>
   }
 
   Widget buildLoading(BuildContext context) {
-    return Center(
-      child: const CircularProgressIndicator().fixWidth(32).fixHeight(32),
-    );
+    return const Center(child: _StateLoadingIndicator());
   }
 
   Widget buildError(BuildContext context, String error) {
@@ -494,6 +493,25 @@ abstract class MultiPageLoadingState<T extends StatefulWidget, S extends Object>
   }
 }
 
+/// Presentation only: reserves the same space without delaying ready content.
+class _StateLoadingIndicator extends StatelessWidget {
+  const _StateLoadingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 32,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        value: VeneraMotion.reduce(context) ? 0.65 : null,
+        semanticsLabel: 'Loading'.tl,
+        // A static reduced-motion arc is not actual measured progress.
+        semanticsValue: VeneraMotion.reduce(context) ? 'Loading'.tl : null,
+      ),
+    );
+  }
+}
+
 class FiveDotLoadingAnimation extends StatefulWidget {
   const FiveDotLoadingAnimation({super.key});
 
@@ -513,7 +531,22 @@ class _FiveDotLoadingAnimationState extends State<FiveDotLoadingAnimation>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
       upperBound: 6,
-    )..repeat(min: 0, max: 5.2, period: const Duration(milliseconds: 1200));
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (VeneraMotion.reduce(context)) {
+      _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(
+        min: 0,
+        max: 5.2,
+        period: const Duration(milliseconds: 1200),
+      );
+    }
   }
 
   @override
@@ -530,15 +563,20 @@ class _FiveDotLoadingAnimationState extends State<FiveDotLoadingAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return SizedBox(
-          width: _dotSize * 5 + _padding * 6,
-          height: _height,
-          child: Stack(children: List.generate(5, (index) => buildDot(index))),
-        );
-      },
+    return Semantics(
+      label: 'Loading'.tl,
+      child: ExcludeSemantics(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return SizedBox(
+              width: _dotSize * 5 + _padding * 6,
+              height: _height,
+              child: Stack(children: List.generate(5, (index) => buildDot(index))),
+            );
+          },
+        ),
+      ),
     );
   }
 

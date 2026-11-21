@@ -231,7 +231,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
         var canDock =
             constraints.maxWidth - _kLeftBarWidth >= _kMinDockedContentWidth;
         var docked = canDock && !sidebarHidden;
-        const duration = Duration(milliseconds: 200);
+        final duration = VeneraMotion.duration(
+          context, const Duration(milliseconds: 220),
+        );
         return _FavoritesLayout(
           docked: docked,
           canDock: canDock,
@@ -245,6 +247,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   bottom: 0,
                   width: _kLeftBarWidth,
                   duration: duration,
+                  curve: VeneraMotion.move,
                   child: _LeftBar(favPage: this),
                 ),
                 AnimatedPositioned(
@@ -253,6 +256,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   right: 0,
                   bottom: 0,
                   duration: duration,
+                  curve: VeneraMotion.move,
                   child: buildBody(),
                 ),
               ],
@@ -267,6 +271,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
     Navigator.of(App.rootContext).push(
       PageRouteBuilder(
         barrierDismissible: true,
+        transitionDuration: VeneraMotion.duration(context, const Duration(milliseconds: 240)),
+        reverseTransitionDuration: VeneraMotion.duration(context, const Duration(milliseconds: 180)),
         fullscreenDialog: true,
         opaque: false,
         barrierColor: Colors.black.toOpacity(0.36),
@@ -294,7 +300,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           );
           return SlideTransition(
             position: offset.animate(
-              CurvedAnimation(parent: animation, curve: Curves.fastOutSlowIn),
+              CurvedAnimation(parent: animation, curve: VeneraMotion.enter, reverseCurve: VeneraMotion.exit),
             ),
             child: child,
           );

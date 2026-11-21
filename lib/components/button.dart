@@ -25,7 +25,7 @@ class _HoverBoxState extends State<HoverBox> {
       onExit: (_) => setState(() => isHover = false),
       cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: VeneraMotion.duration(context, const Duration(milliseconds: 200)),
         decoration: BoxDecoration(
           color: isHover
               ? Theme.of(context).colorScheme.surfaceContainerLow
@@ -152,6 +152,7 @@ class _ButtonState extends State<Button> {
   bool isPressed = false;
 
   bool isLoading = false;
+  bool isFocused = false;
 
   @override
   void initState() {
@@ -162,101 +163,107 @@ class _ButtonState extends State<Button> {
   @override
   void didUpdateWidget(covariant Button oldWidget) {
     if (oldWidget.isLoading != widget.isLoading) {
-      setState(() => isLoading = widget.isLoading);
+      isLoading = widget.isLoading;
+      if (isLoading) isPressed = false;
     }
     super.didUpdateWidget(oldWidget);
   }
 
   @override
   Widget build(BuildContext context) {
-    var padding = widget.padding ?? const EdgeInsets.symmetric(horizontal: 16);
-    var width = widget.width;
-    if (width != null) {
-      width = width - padding.horizontal;
-    }
-    var height = widget.height;
-    if (height != null) {
-      height = height - padding.vertical;
-    }
-    Widget child = IconTheme(
+    final tokens = VeneraDesignTokens.of(context);
+    final radius = BorderRadius.circular(tokens.controlRadius);
+    final raised = widget.type == ButtonType.filled || widget.type == ButtonType.normal;
+    final pressed = isPressed && !isLoading;
+    final duration = VeneraMotion.duration(context, VeneraDesignTokens.motionFast);
+    final content = IconTheme(
       data: IconThemeData(color: textColor),
       child: DefaultTextStyle(
-        style: TextStyle(color: textColor, fontSize: 14),
-        child: isLoading
-            ? CircularProgressIndicator(
-                color: textColor,
-                strokeWidth: 1.8,
-              ).fixWidth(16).fixHeight(16)
-            : widget.child,
+        style: (Theme.of(context).textTheme.labelLarge ?? const TextStyle(fontSize: 14))
+            .copyWith(color: textColor, fontSize: 14),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (isLoading)
+              _ButtonPlaceholder(child: ExcludeFocus(
+                child: TickerMode(enabled: false, child: widget.child),
+              ))
+            else
+              widget.child,
+            if (isLoading)
+              Positioned.fill(
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(
+                      color: textColor, strokeWidth: 1.8,
+                      value: VeneraMotion.reduce(context) ? .72 : null,
+                      semanticsLabel: 'Loading'.tl,
+                      semanticsValue: 'Loading'.tl,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
-    if (width != null || height != null) {
-      child = child.toCenter();
-    }
-    return MouseRegion(
-      onEnter: (_) => setState(() => isHover = true),
-      onExit: (_) => setState(() => isHover = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTapDown: (_) {
-          if (!isLoading) setState(() => isPressed = true);
-        },
-        onTapUp: (_) {
-          if (isPressed) setState(() => isPressed = false);
-        },
-        onTapCancel: () {
-          if (isPressed) setState(() => isPressed = false);
-        },
-        onTap: () {
-          if (isLoading) return;
-          widget.onPressed();
-          if (widget.onPressedAt != null) {
-            var renderBox = context.findRenderObject() as RenderBox;
-            var offset = renderBox.localToGlobal(Offset.zero);
-            widget.onPressedAt!(offset);
-          }
-        },
-        child: AnimatedScale(
-          scale: isPressed && !isLoading ? 0.97 : 1,
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOutCubic,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            padding: padding,
-            constraints: const BoxConstraints(minWidth: 76, minHeight: 44),
-            decoration: BoxDecoration(
-              color: buttonColor,
-              borderRadius: BorderRadius.circular(
-                VeneraDesignTokens.of(context).controlRadius,
-              ),
-              boxShadow:
-                  (isHover &&
-                      !isLoading &&
-                      (widget.type == ButtonType.filled ||
-                          widget.type == ButtonType.normal))
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.toOpacity(0.08),
-                        blurRadius: 3,
-                        offset: const Offset(0, 1),
-                      ),
-                    ]
-                  : null,
-              border: widget.type == ButtonType.outlined ||
-                      widget.type == ButtonType.normal
-                  ? Border.all(
-                      color: widget.color ??
-                          VeneraDesignTokens.of(context).borderStrong,
-                      width: 1,
-                    )
-                  : null,
+    return Semantics(
+      button: true,
+      enabled: !isLoading,
+      // The hidden label still identifies a busy text button to VoiceOver.
+      label: isLoading && widget.child is Text ? (widget.child as Text).data : null,
+      child: AnimatedContainer(
+        duration: duration,
+        curve: VeneraMotion.enter,
+        width: widget.width,
+        constraints: BoxConstraints(
+          minWidth: 76,
+          minHeight: math.max(44, widget.height ?? 44),
+        ),
+        transform: Matrix4.translationValues(
+          0, pressed && !VeneraMotion.reduce(context) ? 1 : 0, 0,
+        ),
+        decoration: BoxDecoration(
+          color: buttonColor,
+          borderRadius: radius,
+          boxShadow: raised && !pressed && !isLoading ? [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isHover ? .16 : .10),
+              blurRadius: isHover ? 3 : 2,
+              offset: const Offset(0, 1),
             ),
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 160),
-              child: SizedBox(
-                width: width,
-                height: height,
-                child: Center(widthFactor: 1, child: child),
+          ] : const [],
+          border: widget.type == ButtonType.outlined || widget.type == ButtonType.normal
+              ? Border.all(color: widget.color ?? tokens.borderStrong, width: 1)
+              : null,
+        ),
+        foregroundDecoration: isFocused ? BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: context.colorScheme.primary, width: 2),
+        ) : null,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: isLoading ? null : _activate,
+            onHover: (value) => setState(() => isHover = value),
+            onFocusChange: (value) => setState(() => isFocused = value),
+            onHighlightChanged: (value) {
+              if (isPressed != value) setState(() => isPressed = value);
+            },
+            borderRadius: radius,
+            // Filled backgrounds remain exact, including hover and focus.
+            overlayColor: raised ? const WidgetStatePropertyAll(Colors.transparent) : null,
+            mouseCursor: isLoading ? SystemMouseCursors.basic : SystemMouseCursors.click,
+            child: CustomPaint(
+              foregroundPainter: raised ? _VeneraControlEdgePainter(
+                tokens.controlRadius,
+                Theme.of(context).brightness == Brightness.dark,
+                pressed || isLoading,
+              ) : null,
+              child: Padding(
+                padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Center(widthFactor: 1, heightFactor: 1, child: content),
               ),
             ),
           ),
@@ -265,25 +272,22 @@ class _ButtonState extends State<Button> {
     );
   }
 
+  void _activate() {
+    if (isLoading) return;
+    // Capture the anchor before a callback can navigate or unmount this button.
+    final box = context.findRenderObject() as RenderBox;
+    final anchor = box.localToGlobal(Offset.zero);
+    final onPressedAt = widget.onPressedAt;
+    widget.onPressed();
+    onPressedAt?.call(anchor);
+  }
+
   Color get buttonColor {
     if (widget.type == ButtonType.filled) {
-      var color = widget.color ?? context.colorScheme.primary;
-      if (isHover) {
-        return color.toOpacity(0.9);
-      } else {
-        return color;
-      }
+      return widget.color ?? context.colorScheme.primary;
     }
     if (widget.type == ButtonType.normal) {
-      var color = widget.color ?? VeneraDesignTokens.of(context).controlSurface;
-      if (isHover) {
-        return color.toOpacity(0.9);
-      } else {
-        return color;
-      }
-    }
-    if (isHover) {
-      return context.colorScheme.outline.toOpacity(0.2);
+      return widget.color ?? VeneraDesignTokens.of(context).controlSurface;
     }
     return Colors.transparent;
   }
@@ -310,6 +314,45 @@ class _ButtonState extends State<Button> {
         : (widget.type == ButtonType.text
               ? widget.color ?? context.colorScheme.primary
               : context.colorScheme.onSurface);
+  }
+}
+
+/// Keep the original label's layout while removing it from paint, hit testing,
+/// semantics and on-stage finders. This also works on the first loading frame;
+/// there is no size cache or post-frame jump.
+class _ButtonPlaceholder extends Offstage {
+  const _ButtonPlaceholder({required Widget child}) : super(offstage: true, child: child);
+
+  @override
+  RenderOffstage createRenderObject(BuildContext context) => _RenderButtonPlaceholder();
+}
+
+class _RenderButtonPlaceholder extends RenderOffstage {
+  _RenderButtonPlaceholder() : super(offstage: true);
+
+  @override
+  bool get sizedByParent => false;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(child?.getDryLayout(constraints) ?? Size.zero);
+
+  @override
+  double computeMinIntrinsicWidth(double height) => child?.getMinIntrinsicWidth(height) ?? 0;
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => child?.getMaxIntrinsicWidth(height) ?? 0;
+
+  @override
+  double computeMinIntrinsicHeight(double width) => child?.getMinIntrinsicHeight(width) ?? 0;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => child?.getMaxIntrinsicHeight(width) ?? 0;
+
+  @override
+  void performLayout() {
+    child?.layout(constraints, parentUsesSize: true);
+    size = constraints.constrain(child?.size ?? Size.zero);
   }
 }
 
@@ -348,51 +391,54 @@ class _IconButtonState extends State<_IconButton> {
 
   @override
   Widget build(BuildContext context) {
-    var iconSize = widget.size ?? 24;
-    Widget icon = IconTheme(
-      data: IconThemeData(
-        size: iconSize,
-        color: widget.color ?? context.colorScheme.primary,
-      ),
-      child: widget.icon,
-    );
-    if (widget.isLoading) {
-      icon = const CircularProgressIndicator(
-        strokeWidth: 1.5,
-      ).paddingAll(2).fixWidth(iconSize).fixHeight(iconSize);
-    }
+    final iconSize = widget.size ?? 24;
+    final foreground = widget.color ?? context.colorScheme.primary;
     return MouseRegion(
       onEnter: (_) => setState(() => isHover = true),
       onExit: (_) => setState(() => isHover = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: widget.behavior,
-        onTap: () {
-          if (widget.isLoading) return;
-          widget.onPressed();
-        },
-        child: Tooltip(
-          message: widget.tooltip ?? "",
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: VeneraDesignTokens.minTouchTarget,
-              minHeight: VeneraDesignTokens.minTouchTarget,
+      child: Tooltip(
+        message: widget.tooltip ?? '',
+        child: VeneraPressable(
+          behavior: widget.behavior,
+          onTap: widget.isLoading ? null : widget.onPressed,
+          borderRadius: BorderRadius.circular((iconSize + 12) / 2),
+          child: AnimatedContainer(
+            duration: VeneraMotion.duration(context, VeneraDesignTokens.motionFast),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            decoration: BoxDecoration(
+              color: isHover && !widget.isLoading
+                  ? Theme.of(context).colorScheme.outlineVariant.withValues(alpha: .24)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular((iconSize + 12) / 2),
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isHover
-                    ? Theme.of(context).colorScheme.outlineVariant.toOpacity(0.4)
-                    : null,
-                borderRadius: BorderRadius.circular((iconSize + 12) / 2),
+            padding: const EdgeInsets.all(6),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: SizedBox.square(
+                dimension: iconSize,
+                child: widget.isLoading
+                    ? Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: CircularProgressIndicator(
+                          color: foreground, strokeWidth: 1.5,
+                          value: VeneraMotion.reduce(context) ? .72 : null,
+                          semanticsLabel: 'Loading'.tl,
+                          semanticsValue: 'Loading'.tl,
+                        ),
+                      )
+                    : IconTheme(
+                        data: IconThemeData(size: iconSize, color: foreground),
+                        child: widget.icon,
+                      ),
               ),
-              padding: const EdgeInsets.all(6),
-              child: icon,
             ),
           ),
         ),
       ),
     );
   }
+
 }
 
 class MenuButton extends StatefulWidget {

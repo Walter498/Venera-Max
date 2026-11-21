@@ -66,47 +66,57 @@ class _ShelfPageState extends State<ShelfPage>
     return Material(
       child: Column(
         children: [
-          SizedBox(
-            height: 48,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TabBar(
-                    controller: _tabs,
-                    tabs: const [
-                      Tab(text: '收藏'),
-                      Tab(text: '網絡收藏'),
-                      Tab(text: '足跡'),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final largeType = MediaQuery.textScalerOf(context).scale(14) > 19;
+              final stackActions = largeType && constraints.maxWidth < 520;
+              final cacheAction = TextButton.icon(
+                onPressed: () => context.to(() => const LocalComicsPage()),
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('緩存中心'),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  foregroundColor: context.colorScheme.onSurfaceVariant,
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TabBar(
+                          controller: _tabs,
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          dividerColor: Colors.transparent,
+                          labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                          unselectedLabelColor: context.colorScheme.onSurfaceVariant,
+                          labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+                          tabs: const [
+                            Tab(text: '收藏'),
+                            Tab(text: '網絡收藏'),
+                            Tab(text: '足跡'),
+                          ],
+                        ),
+                      ),
+                      if (!stackActions) cacheAction,
+                      const SizedBox(width: 8),
                     ],
                   ),
-                ),
-                // 緩存中心 → 下載管理頁
-                InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => context.to(() => const LocalComicsPage()),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: context.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
+                  if (stackActions)
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: cacheAction,
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.download_outlined,
-                            size: 16, color: context.colorScheme.primary),
-                        const SizedBox(width: 4),
-                        Text('緩存中心',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: context.colorScheme.primary)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                  Divider(height: 1, thickness: .5, color: VeneraDesignTokens.of(context).separator),
+                ],
+              );
+            },
           ),
           Expanded(
             child: TabBarView(
@@ -403,79 +413,71 @@ class _ShelfFavTabState extends State<_ShelfFavTab> {
     final items = _comics();
     return Column(
       children: [
-        SizedBox(
-          height: 44,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
           child: Row(
             children: [
-              const SizedBox(width: 16),
-              // 資料夾選擇（保留原收藏夾功能）——
-              // PopupMenu 在這個頁面層級點不動，改用底部彈層
-              SizedBox(
-                height: 44,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () => _pickFolder(folders),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        Text(_folder ?? '全部漫畫', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                        const Icon(Icons.keyboard_arrow_down, size: 20),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Tooltip(
-                message: '排序',
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
+              // Keep long folder names flexible; sorting and editing remain
+              // reachable even at narrow widths and accessibility text sizes.
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: showSortDialog,
-                    child: Center(
-                      child: Icon(
-                        Icons.sort,
-                        size: 22,
-                        color: _sortType != LocalSortType.defaultSort
-                            ? context.colorScheme.primary
-                            : context.colorScheme.onSurfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _pickFolder(folders),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                _folder ?? '全部漫畫',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.keyboard_arrow_down, size: 20, color: context.colorScheme.onSurfaceVariant),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () => setState(() {
-                    _editMode = !_editMode;
-                    _selected.clear();
-                  }),
-                  child: Center(
-                    child: Text(
-                      _editMode ? '完成' : '編輯',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.colorScheme.primary),
-                    ),
-                  ),
+              IconButton(
+                tooltip: '排序',
+                onPressed: showSortDialog,
+                icon: Icon(
+                  Icons.sort,
+                  size: 22,
+                  color: _sortType != LocalSortType.defaultSort
+                      ? context.colorScheme.primary
+                      : context.colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(width: 16),
+              TextButton(
+                onPressed: () => setState(() {
+                  _editMode = !_editMode;
+                  _selected.clear();
+                }),
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                child: Text(_editMode ? '完成' : '編輯'),
+              ),
             ],
           ),
-        ),
         // 直列詳情卡（一列一個）：用 SliverGridComics 的詳細模式，
         // 它自帶正確高度（ListView 裡 ComicTile 會因無限高度而不可見）
         Expanded(
           child: items.isEmpty
-              ? Center(
-                  child: Text('還沒有收藏，去首頁逛逛吧',
-                      style:
-                          TextStyle(color: context.colorScheme.outline)))
+              ? const _ShelfEmptyState(
+                  icon: Icons.bookmarks_outlined,
+                  message: '還沒有收藏，去首頁逛逛吧',
+                )
               : CustomScrollView(
                   slivers: [
                     SliverGridComics(
@@ -809,10 +811,10 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
         ),
         Expanded(
           child: list.isEmpty
-              ? Center(
-                  child: Text('還沒有閱讀足跡',
-                      style:
-                          TextStyle(color: context.colorScheme.outline)))
+              ? const _ShelfEmptyState(
+                  icon: Icons.history_rounded,
+                  message: '還沒有閱讀足跡',
+                )
               : ListView.builder(
                   padding: const EdgeInsets.all(10),
                   itemCount: list.length,
@@ -902,4 +904,36 @@ class _ShelfHistoryTabState extends State<_ShelfHistoryTab> {
         ));
   }
 
+}
+
+/// Stable empty-state geometry shared by the local shelf and reading history.
+class _ShelfEmptyState extends StatelessWidget {
+  const _ShelfEmptyState({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 32, color: context.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

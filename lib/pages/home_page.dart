@@ -53,7 +53,11 @@ Size _homeComicTileSize(BuildContext context) {
 TextStyle _homeSectionTitleStyle(BuildContext context) {
   return Theme.of(
     context,
-  ).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w600);
+  ).textTheme.titleMedium!.copyWith(
+    fontWeight: FontWeight.w600,
+    color: context.colorScheme.onSurface,
+    height: 1.25,
+  );
 }
 
 Widget _homeSectionIcon(BuildContext context, IconData icon) {
@@ -119,9 +123,9 @@ class _HomeCountBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 22),
+      constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
       child: Container(
-        height: 22,
+        height: 22 + (MediaQuery.textScalerOf(context).scale(11) - 11).clamp(0, 22).toDouble() * 1.4,
         padding: const EdgeInsets.symmetric(horizontal: 7),
         alignment: Alignment.center,
         decoration: BoxDecoration(
@@ -130,7 +134,10 @@ class _HomeCountBadge extends StatelessWidget {
         ),
         child: Text(
           count.toString(),
-          style: Theme.of(context).textTheme.labelSmall,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: context.colorScheme.onSecondaryContainer,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -151,6 +158,7 @@ class _HomeSectionTitle extends StatelessWidget {
           Flexible(
             child: Text(
               title,
+              semanticsLabel: title,
               style: _homeSectionTitleStyle(context),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -770,7 +778,7 @@ class _HistoryState extends State<_History> {
               ),
               onTap: () => context.to(() => const ReadingStatisticsPage()),
               child: SizedBox(
-                height: 48,
+                height: 48 + (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(0, 28).toDouble() * 2.8,
                 child: Row(
                   children: [
                     Icon(

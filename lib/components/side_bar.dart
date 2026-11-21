@@ -101,7 +101,10 @@ class SideBarRoute<T> extends PopupRoute<T> {
         borderRadius: showSideBar
             ? BorderRadius.horizontal(left: Radius.circular(tokens.sectionRadius))
             : null,
-        color: App.isIOS ? tokens.glassStrongSurface : tokens.controlSurfacePressed,
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        border: showSideBar ? Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ) : null,
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).colorScheme.shadow.withValues(alpha: .14),
@@ -115,6 +118,7 @@ class SideBarRoute<T> extends PopupRoute<T> {
       height: MediaQuery.sizeOf(context).height,
       child: GestureDetector(
         child: Material(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
           child: ClipRect(
             clipBehavior: Clip.antiAlias,
             child: Container(
@@ -160,13 +164,17 @@ class SideBarRoute<T> extends PopupRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    if (VeneraMotion.reduce(context)) return RepaintBoundary(child: child);
     var offset = Tween<Offset>(
       begin: const Offset(1, 0),
       end: const Offset(0, 0),
     );
     return SlideTransition(
       position: offset.animate(
-        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+        animation.drive(CurveTween(
+          curve: animation.status == AnimationStatus.reverse
+              ? VeneraMotion.exit : VeneraMotion.enter,
+        )),
       ),
       child: RepaintBoundary(child: child),
     );

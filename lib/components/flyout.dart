@@ -107,34 +107,47 @@ class FlyoutState extends State<Flyout> {
         fullscreenDialog: true,
         barrierDismissible: true,
         opaque: false,
-        transitionDuration: _fastAnimationDuration,
-        reverseTransitionDuration: _fastAnimationDuration,
+        transitionDuration: VeneraMotion.duration(context, _fastAnimationDuration),
+        reverseTransitionDuration: VeneraMotion.duration(context, _fastAnimationDuration),
         pageBuilder: (context, animation, secondaryAnimation) {
-          var left = rect.left;
-          var top = rect.bottom;
-
-          if (left + minFlyoutWidth > MediaQuery.sizeOf(context).width) {
-            left = MediaQuery.sizeOf(context).width - minFlyoutWidth;
-          }
-          if (top + minFlyoutHeight > MediaQuery.sizeOf(context).height) {
-            top = MediaQuery.sizeOf(context).height - minFlyoutHeight;
-          }
+          final media = MediaQuery.of(context);
+          final bottomInset = math.max(media.viewInsets.bottom, media.padding.bottom);
+          final availableBottom = media.size.height - bottomInset - 8;
+          final left = rect.left.clamp(
+            8.0, math.max(8.0, media.size.width - minFlyoutWidth - 8),
+          );
+          final top = rect.bottom.clamp(
+            media.padding.top + 8,
+            math.max(media.padding.top + 8, availableBottom - minFlyoutHeight),
+          );
 
           Widget transition(BuildContext context, Animation<double> animation,
               Animation<double> secondaryAnimation, Widget flyout) {
-            return SlideTransition(
+            if (VeneraMotion.reduce(context)) return flyout;
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: VeneraMotion.enter,
+              reverseCurve: VeneraMotion.exit,
+            );
+            return FadeTransition(
+              opacity: curved,
+              child: SlideTransition(
               position: Tween<Offset>(
-                begin: const Offset(0, -0.05),
-                end: const Offset(0, 0),
-              ).animate(animation),
+                begin: const Offset(0, -0.025),
+                end: Offset.zero,
+              ).animate(curved),
               child: flyout,
+              ),
             );
           }
 
           return Stack(
             children: [
               Positioned.fill(
-                child: GestureDetector(
+                child: Semantics(
+                  label: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+                  button: true,
+                  child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: navigator.pop,
                   child: AnimatedBuilder(
@@ -146,12 +159,13 @@ class FlyoutState extends State<Flyout> {
                     },
                   ),
                 ),
+                ),
               ),
               Positioned(
                 left: left,
-                right: 0,
+                right: 8,
                 top: top,
-                bottom: 0,
+                bottom: bottomInset + 8,
                 child: transition(
                     context,
                     animation,
@@ -179,44 +193,55 @@ class FlyoutContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = VeneraDesignTokens.of(context);
+    final scheme = Theme.of(context).colorScheme;
     return IntrinsicWidth(
-      child: BlurEffect(
-        borderRadius: BorderRadius.circular(8),
-        child: Material(
-          borderRadius: BorderRadius.circular(8),
-          type: MaterialType.card,
-          color: context.colorScheme.surface.toOpacity(0.82),
-          child: Container(
-            constraints: const BoxConstraints(
-              minWidth: minFlyoutWidth,
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: context.brightness == ui.Brightness.dark
-                  ? Border.all(color: context.colorScheme.outlineVariant)
-                  : null,
+      child: Material(
+        elevation: 4,
+        shadowColor: scheme.shadow.withValues(alpha: 0.18),
+        surfaceTintColor: Colors.transparent,
+        color: scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.sectionRadius),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minWidth: math.max(0, math.min(minFlyoutWidth - 32,
+                  MediaQuery.sizeOf(context).width - 64)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
-                if (content != null) content!,
-                const SizedBox(
-                  height: 12,
+                Semantics(
+                  header: true,
+                  child: Text(title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 16)),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [const Spacer(), ...actions],
+                if (content != null) ...[
+                  const SizedBox(height: 8),
+                  content!,
+                ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OverflowBar(
+                    alignment: MainAxisAlignment.end,
+                    spacing: 8,
+                    overflowSpacing: 8,
+                    overflowAlignment: OverflowBarAlignment.end,
+                    children: actions,
+                  ),
                 ),
               ],
             ),
           ),
-        ).paddingAll(4),
+        ),
       ),
     );
   }

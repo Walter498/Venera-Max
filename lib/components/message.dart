@@ -33,14 +33,20 @@ class _ToastOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 24 + MediaQuery.viewInsetsOf(context).bottom,
-      left: 0,
-      right: 0,
+      bottom: 24 + math.max(
+        MediaQuery.viewInsetsOf(context).bottom,
+        MediaQuery.paddingOf(context).bottom,
+      ),
+      left: 16,
+      right: 16,
       child: Align(
         alignment: Alignment.bottomCenter,
-        child: Material(
+        child: Semantics(
+          liveRegion: true,
+          container: true,
+          child: Material(
           color: Theme.of(context).colorScheme.inverseSurface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
           elevation: 2,
           textStyle:
               ts.withColor(Theme.of(context).colorScheme.onInverseSurface),
@@ -52,27 +58,37 @@ class _ToastOverlay extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
                 constraints: BoxConstraints(
-                  maxWidth: context.width - 32,
+                  maxWidth: math.min(560, context.width - 32),
+                  maxHeight: math.max(48, MediaQuery.sizeOf(context).height -
+                      MediaQuery.viewInsetsOf(context).bottom -
+                      MediaQuery.paddingOf(context).top - 64),
                 ),
-                child: Row(
+                child: SingleChildScrollView(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (icon != null) icon!.paddingRight(8),
-                    Expanded(
-                      child: Text(
-                        message,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w500),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (icon != null) icon!.paddingRight(8),
+                        Expanded(
+                          child: Text(
+                            message,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
                     ),
                     if (trailing != null)
                       // The toast surface is inverseSurface; a default
                       // TextButton keeps the theme's primary foreground which
                       // is near-invisible on it (issue #136). Force the
                       // inverse-scheme accent for any trailing action.
-                      TextButtonTheme(
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: TextButtonTheme(
                         data: TextButtonThemeData(
                           style: TextButton.styleFrom(
                             foregroundColor:
@@ -80,11 +96,14 @@ class _ToastOverlay extends StatelessWidget {
                           ),
                         ),
                         child: trailing!,
-                      ).paddingLeft(8)
+                        ),
+                      )
                   ],
+                ),
                 ),
               ),
             ),
+          ),
           ),
         ),
       ),
@@ -261,7 +280,11 @@ LoadingDialogController showLoadingDialog(
               title: controller._message ?? 'Loading',
               dismissible: barrierDismissible,
               content: LinearProgressIndicator(
-                value: controller._progress,
+                value: controller._progress ??
+                    (VeneraMotion.reduce(context) ? 0.65 : null),
+                semanticsLabel: controller._message ?? 'Loading'.tl,
+                semanticsValue: controller._progress == null && VeneraMotion.reduce(context)
+                    ? 'Loading'.tl : null,
                 backgroundColor: context.colorScheme.surfaceContainer,
               ).paddingHorizontal(16).paddingVertical(16),
               actions: [
@@ -325,47 +348,63 @@ class ContentDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          title != null
-              ? Appbar(
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: dismissible ? context.pop : null,
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconButton(
+                    tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                    icon: const Icon(Icons.close),
+                    onPressed: dismissible ? context.pop : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(title!, style: Theme.of(context).textTheme.titleLarge),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            title: Text(title!),
-            backgroundColor: Colors.transparent,
-          )
-              : const SizedBox.shrink(),
           this.content.paddingHorizontal(16),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          OverflowBar(
+            alignment: MainAxisAlignment.end,
+            spacing: 8,
+            overflowSpacing: 8,
+            overflowAlignment: OverflowBarAlignment.end,
             children: actions,
-          ).paddingRight(12),
+          ).paddingHorizontal(16),
           const SizedBox(height: 16),
         ],
       ),
     );
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).sectionRadius),
         side: context.brightness == Brightness.dark
             ? BorderSide(color: context.colorScheme.outlineVariant)
             : BorderSide.none,
       ),
-      insetPadding: context.width < 400
-          ? const EdgeInsets.symmetric(horizontal: 4)
-          : const EdgeInsets.symmetric(horizontal: 16),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       elevation: 2,
       shadowColor: context.colorScheme.shadow,
       backgroundColor: context.colorScheme.surface,
       child: AnimatedSize(
-        duration: const Duration(milliseconds: 200),
+        duration: VeneraMotion.duration(context, const Duration(milliseconds: 200)),
+        curve: VeneraMotion.move,
         alignment: Alignment.topCenter,
         child: IntrinsicWidth(
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: 600,
-              minWidth: math.min(400, context.width - 16),
+              minWidth: math.min(400, context.width - 32),
             ),
             child: MediaQuery.removePadding(
               removeTop: true,

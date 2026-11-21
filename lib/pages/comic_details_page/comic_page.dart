@@ -422,11 +422,15 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
       floatingActionButton: showFAB
           ? FloatingActionButton(
               onPressed: () {
-                scrollController.animateTo(
-                  0,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.ease,
-                );
+                if (VeneraMotion.reduce(context)) {
+                  scrollController.jumpTo(0);
+                } else {
+                  scrollController.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 200),
+                    curve: VeneraMotion.move,
+                  );
+                }
               },
               child: const Icon(Icons.arrow_upward),
             )
@@ -797,7 +801,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     yield SliverAppbar(
       title: AnimatedOpacity(
         opacity: showAppbarTitle ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 200),
+        duration: VeneraMotion.duration(context, const Duration(milliseconds: 200)),
         child: Text(comic.title),
       ),
       actions: [
@@ -906,7 +910,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         (isWide
                 ? Theme.of(context).textTheme.titleLarge
                 : Theme.of(context).textTheme.titleMedium)
-            ?.copyWith(height: 1.2);
+            ?.copyWith(height: 1.25, fontWeight: FontWeight.w600);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1301,7 +1305,8 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                 Padding(
                   padding: const EdgeInsets.fromLTRB(0, 2, 0, 12),
                   child: AnimatedSize(
-                    duration: const Duration(milliseconds: 180),
+                    duration: VeneraMotion.duration(context, const Duration(milliseconds: 180)),
+                    curve: VeneraMotion.move,
                     alignment: Alignment.topCenter,
                     child: collapsed
                         // Truncated preview: a plain Text renders the ellipsis
@@ -3209,82 +3214,115 @@ class _ComicPageLoadingPlaceHolder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget buildContainer(
-      double? width,
-      double? height, {
-      Color? color,
-      double? radius,
-    }) {
+    final tokens = VeneraDesignTokens.of(context);
+    Widget block(double? width, double height, {bool control = false}) {
       return Container(
         height: height,
         width: width,
         decoration: BoxDecoration(
-          color: color ?? context.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(
-            radius ?? VeneraDesignTokens.of(context).cardRadius,
-          ),
+          color: context.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(control ? tokens.controlRadius : 4),
         ),
       );
     }
 
-    return Shimmer(
-      color: VeneraDesignTokens.of(context).controlSurfacePressed,
-      child: Column(
-        children: [
-          Appbar(title: Text(""), backgroundColor: context.colorScheme.surface),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(width: _comicDetailsPageInset(context)),
-              buildImage(context, context.width >= 840 ? 162 : 112),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
+    // Use the loaded header's content-width breakpoints, cover ratio and
+    // insets. Loading should not jump from a 112px cover to a 96px cover.
+    return Column(
+      children: [
+        Appbar(title: const Text(''), backgroundColor: context.colorScheme.surface),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              _comicDetailsPageInset(context), 12,
+              _comicDetailsPageInset(context), 24,
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= _comicDetailsWideBreakpoint;
+                final coverWidth = isWide ? 162.0 : constraints.maxWidth < 400 ? 96.0 : 112.0;
+                final coverHeight = coverWidth / .72;
+                final summary = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (title != null)
-                      Text(title ?? "", style: ts.s18)
+                      Text(
+                        title!,
+                        style: (isWide
+                            ? Theme.of(context).textTheme.titleLarge
+                            : Theme.of(context).textTheme.titleMedium)
+                            ?.copyWith(height: 1.25, fontWeight: FontWeight.w600),
+                      )
                     else
-                      buildContainer(200, 25),
+                      block(double.infinity, 24),
+                    const SizedBox(height: 12),
+                    FractionallySizedBox(widthFactor: .6, child: block(null, 14)),
+                    const SizedBox(height: 12),
+                    block(double.infinity, 14),
                     const SizedBox(height: 8),
-                    buildContainer(80, 20),
+                    FractionallySizedBox(widthFactor: .8, child: block(null, 14)),
                   ],
-                ),
-              ),
-              if (context.width >= 840) ...[
-                const SizedBox(width: 24),
-                SizedBox(
-                  width: 220,
-                  child: Column(
-                    children: [
-                      buildContainer(null, 52, radius: 14),
-                      const SizedBox(height: 10),
-                      buildContainer(null, 52, radius: 14),
+                );
+                Widget placeholders = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildImage(context, coverWidth),
+                        SizedBox(width: isWide ? 24 : 16),
+                        Expanded(child: summary),
+                        if (isWide) ...[
+                          const SizedBox(width: 24),
+                          SizedBox(width: 220, child: block(null, coverHeight, control: true)),
+                        ],
+                      ],
+                    ),
+                    if (!isWide) ...[
+                      const SizedBox(height: 18),
+                      block(null, 52, control: true),
                     ],
-                  ),
-                ),
-              ],
-              SizedBox(width: _comicDetailsPageInset(context)),
-            ],
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [for (var i = 0; i < 3; i++) block(88, 44, control: true)],
+                    ),
+                    const SizedBox(height: 24),
+                    block(double.infinity, 14),
+                    const SizedBox(height: 8),
+                    FractionallySizedBox(
+                      alignment: AlignmentDirectional.centerStart,
+                      widthFactor: .72,
+                      child: block(null, 14),
+                    ),
+                  ],
+                );
+                if (!VeneraMotion.reduce(context)) {
+                  placeholders = Shimmer(
+                    color: tokens.controlSurfacePressed,
+                    child: placeholders,
+                  );
+                }
+                return Column(
+                  children: [
+                    ExcludeSemantics(child: placeholders),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        semanticsLabel: 'Loading'.tl,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
-          const SizedBox(height: 8),
-          if (context.width < 840)
-            Column(
-              children: [
-                buildContainer(null, 52, radius: 14),
-                const SizedBox(height: 10),
-                buildContainer(null, 52, radius: 14),
-              ],
-            ).paddingHorizontal(_comicDetailsPageInset(context)),
-          const SizedBox(height: 20),
-          Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2.4,
-            ).fixHeight(24).fixWidth(24),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -3310,8 +3348,8 @@ class _ComicPageLoadingPlaceHolder extends StatelessWidget {
       tag: "cover$heroID",
       child: Container(
         decoration: BoxDecoration(
-          color: context.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(14),
+          color: context.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(VeneraDesignTokens.of(context).cardRadius),
         ),
         height: width / 0.72,
         width: width,
